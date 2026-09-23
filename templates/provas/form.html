@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        Editar prova
+    {% else %}
+        Criar prova
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- Título da página -->
+    <div class="mb-4">
+        <h1>
+            {% if form.instance.pk %}
+                Editar prova
+            {% else %}
+                Criar prova
+            {% endif %}
+        </h1>
+
+        <p class="text-muted">
+            Cadastre a prova e envie os arquivos PDF.
+        </p>
+    </div>
+
+    <!-- Formulário -->
+    <form method="post" enctype="multipart/form-data">
+
+        {% csrf_token %}
+
+        <!-- Erros gerais -->
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <!-- Nome -->
+        <div class="mb-3">
+            <label for="{{ form.nome.id_for_label }}" class="form-label">
+                {{ form.nome.label }}
+            </label>
+
+            {{ form.nome }}
+
+            {% if form.nome.errors %}
+                <div class="text-danger small mt-1">
+                    {{ form.nome.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tipo -->
+        <div class="mb-3">
+            <label for="{{ form.tipo.id_for_label }}" class="form-label">
+                {{ form.tipo.label }}
+            </label>
+
+            {{ form.tipo }}
+
+            {% if form.tipo.errors %}
+                <div class="text-danger small mt-1">
+                    {{ form.tipo.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Ano -->
+        <div class="mb-3">
+            <label for="{{ form.ano.id_for_label }}" class="form-label">
+                {{ form.ano.label }}
+            </label>
+
+            {{ form.ano }}
+
+            {% if form.ano.errors %}
+                <div class="text-danger small mt-1">
+                    {{ form.ano.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Descrição -->
+        <div class="mb-3">
+            <label for="{{ form.descricao.id_for_label }}" class="form-label">
+                {{ form.descricao.label }}
+            </label>
+
+            {{ form.descricao }}
+
+            {% if form.descricao.errors %}
+                <div class="text-danger small mt-1">
+                    {{ form.descricao.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- PDF da prova -->
+        <div class="mb-3">
+            <label for="{{ form.arquivo_pdf.id_for_label }}" class="form-label">
+                {{ form.arquivo_pdf.label }}
+            </label>
+
+            {{ form.arquivo_pdf }}
+
+            <div class="form-text">
+                Envie o PDF contendo as questões da prova.
+            </div>
+
+            {% if form.arquivo_pdf.errors %}
+                <div class="text-danger small mt-1">
+                    {{ form.arquivo_pdf.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- PDF do gabarito -->
+        <div class="mb-3">
+            <label for="{{ form.arquivo_gabarito.id_for_label }}" class="form-label">
+                {{ form.arquivo_gabarito.label }}
+            </label>
+
+            {{ form.arquivo_gabarito }}
+
+            <div class="form-text">
+                Envie o PDF do gabarito, caso esteja separado da prova.
+            </div>
+
+            {% if form.arquivo_gabarito.errors %}
+                <div class="text-danger small mt-1">
+                    {{ form.arquivo_gabarito.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Prova ativa -->
+        <div class="form-check mb-4">
+            {{ form.ativa }}
+
+            <label class="form-check-label" for="{{ form.ativa.id_for_label }}">
+                {{ form.ativa.label }}
+            </label>
+        </div>
+
+        <!-- Botões -->
+        <div class="d-flex gap-2">
+
+            <button type="submit" class="btn btn-primary">
+                {% if form.instance.pk %}
+                    Salvar alterações
+                {% else %}
+                    Cadastrar prova
+                {% endif %}
+            </button>
+
+            <a href="{% url 'provas:lista' %}" class="btn btn-secondary">
+                Cancelar
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

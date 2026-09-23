@@ -3,10 +3,11 @@ from django.db import models
 
 
 class Perfil(models.Model):
+    # Tipos de usuários disponíveis.
     TIPOS_USUARIO = [
         ('aluno', 'Aluno'),
-        ('professor', 'Professor'),
-    ]
+        ('desenvolvedor', 'Desenvolvedor'),
+]
 
     ESCOLARIDADES = [
         ('fundamental', 'Ensino Fundamental'),

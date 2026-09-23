@@ -129,3 +129,9 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+# URL utilizada para acessar arquivos enviados pelos usuários.
+MEDIA_URL = '/media/'
+
+# Pasta onde os arquivos enviados serão armazenados.
+MEDIA_ROOT = BASE_DIR / 'media'

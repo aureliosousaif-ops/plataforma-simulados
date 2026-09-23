@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Disciplinas
+{% endblock %}
+
+{% block content %}
+
+<!-- Área principal da página. -->
+<div class="container py-4">
+
+    <!-- Cabeçalho. -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <!-- Título. -->
+            <h1 class="mb-1">
+                Disciplinas
+            </h1>
+
+            <!-- Descrição. -->
+            <p class="text-muted mb-0">
+                Disciplinas utilizadas nas questões.
+            </p>
+
+        </div>
+
+        <!-- Botão para desenvolvedores. -->
+        {% if user.perfil.tipo == 'desenvolvedor' %}
+
+            <a
+                href="{% url 'provas:criar_disciplina' %}"
+                class="btn btn-primary"
+            >
+                + Criar disciplina
+            </a>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- Mensagens. -->
+    {% if messages %}
+
+        {% for message in messages %}
+
+            <div class="alert alert-success">
+                {{ message }}
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+
+    <!-- Lista de disciplinas. -->
+    {% if disciplinas %}
+
+        <div class="row">
+
+            {% for disciplina in disciplinas %}
+
+                <div class="col-md-6 col-lg-4 mb-4">
+
+                    <div class="card h-100 shadow-sm">
+
+                        <div class="card-body">
+
+                            <!-- Nome da disciplina. -->
+                            <h5 class="card-title">
+                                {{ disciplina.nome }}
+                            </h5>
+
+                            <!-- Descrição. -->
+                            {% if disciplina.descricao %}
+
+                                <p class="card-text text-muted">
+                                    {{ disciplina.descricao }}
+                                </p>
+
+                            {% endif %}
+
+
+                            <!-- Ações do desenvolvedor. -->
+                            {% if user.perfil.tipo == 'desenvolvedor' %}
+
+                                <div class="d-flex gap-2 mt-3">
+
+                                    <a
+                                        href="{% url 'provas:editar_disciplina' disciplina.id %}"
+                                        class="btn btn-outline-primary btn-sm"
+                                    >
+                                        Editar
+                                    </a>
+
+                                    <a
+                                        href="{% url 'provas:excluir_disciplina' disciplina.id %}"
+                                        class="btn btn-outline-danger btn-sm"
+                                    >
+                                        Excluir
+                                    </a>
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <!-- Mensagem quando não existem disciplinas. -->
+        <div class="alert alert-info">
+            Nenhuma disciplina cadastrada.
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

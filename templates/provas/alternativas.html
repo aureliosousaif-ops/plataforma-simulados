@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Alternativas
+{% endblock %}
+
+{% block content %}
+
+<!-- Área principal. -->
+<div class="container py-4">
+
+    <!-- Informações da questão. -->
+    <div class="mb-4">
+
+        <h1>
+            Questão {{ questao.numero }}
+        </h1>
+
+        <p class="text-muted">
+            {{ questao.prova }} —
+            {{ questao.disciplina }}
+        </p>
+
+    </div>
+
+
+    <!-- Enunciado. -->
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <h5>
+                Enunciado
+            </h5>
+
+            <p class="mb-0">
+                {{ questao.enunciado }}
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- Cabeçalho das alternativas. -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <h2 class="h4 mb-0">
+            Alternativas
+        </h2>
+
+         <a
+    href="{% url 'provas:criar_alternativas' questao.id %}"
+    class="btn btn-primary"
+>
+    + Cadastrar alternativas
+        </a>
+
+    </div>
+
+
+    <!-- Lista de alternativas. -->
+    {% if alternativas %}
+
+        {% for alternativa in alternativas %}
+
+            <div class="card mb-2">
+
+                <div class="card-body">
+
+                    <strong>
+                        {{ alternativa.letra }}
+                    </strong>
+
+                    —
+                    {{ alternativa.texto }}
+
+                    {% if alternativa.correta %}
+
+                        <span class="badge bg-success ms-2">
+                            Correta
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="alert alert-info">
+            Nenhuma alternativa cadastrada.
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

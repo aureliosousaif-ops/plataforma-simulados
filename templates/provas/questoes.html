@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Questões
+{% endblock %}
+
+{% block content %}
+
+<!-- Área principal da página. -->
+<div class="container py-4">
+
+    <!-- Cabeçalho. -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <!-- Título. -->
+            <h1 class="mb-1">
+                Questões
+            </h1>
+
+            <!-- Descrição. -->
+            <p class="text-muted mb-0">
+                Gerencie as questões das provas.
+            </p>
+
+        </div>
+
+        <!-- Botão para criar questão. -->
+        {% if user.perfil.tipo == 'desenvolvedor' %}
+
+            <a
+                href="{% url 'provas:criar_questao' %}"
+                class="btn btn-primary"
+            >
+                + Criar questão
+            </a>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- Lista de questões. -->
+    {% if questoes %}
+
+        {% for questao in questoes %}
+
+            <div class="card shadow-sm mb-3">
+
+                <div class="card-body">
+
+                    <!-- Informações da questão. -->
+                    <h5>
+                        Questão {{ questao.numero }}
+                    </h5>
+
+                    <p class="mb-1">
+                        <strong>Prova:</strong>
+                        {{ questao.prova }}
+                    </p>
+
+                    <p class="mb-1">
+                        <strong>Disciplina:</strong>
+                        {{ questao.disciplina }}
+                    </p>
+
+                    <p class="mb-3">
+                        <strong>Dificuldade:</strong>
+                        {{ questao.get_dificuldade_display }}
+                    </p>
+
+                    <!-- Enunciado resumido. -->
+                    <p>
+                        {{ questao.enunciado|truncatewords:30 }}
+                    </p>
+
+                    <!-- Acesso às alternativas. -->
+                    {% if user.perfil.tipo == 'desenvolvedor' %}
+
+                        <a
+                            href="{% url 'provas:alternativas' questao.id %}"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            Gerenciar alternativas
+                        </a>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <!-- Mensagem quando não existem questões. -->
+        <div class="alert alert-info">
+            Nenhuma questão cadastrada.
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Excluir prova
+{% endblock %}
+
+{% block content %}
+
+<!-- Área principal da página. -->
+<div class="container py-4">
+
+    <!-- Caixa de confirmação. -->
+    <div class="card shadow-sm">
+
+        <div class="card-body">
+
+            <!-- Título. -->
+            <h1 class="h3 mb-3">
+                Excluir prova
+            </h1>
+
+            <!-- Mensagem de confirmação. -->
+            <p>
+                Tem certeza que deseja excluir a prova
+                <strong>{{ prova.nome }}</strong>?
+            </p>
+
+            <!-- Aviso sobre a exclusão. -->
+            <p class="text-danger">
+                Essa ação não poderá ser desfeita.
+            </p>
+
+
+            <!-- Formulário de exclusão. -->
+            <form method="post">
+
+                <!-- Proteção contra CSRF. -->
+                {% csrf_token %}
+
+                <!-- Botão de confirmação. -->
+                <button
+                    type="submit"
+                    class="btn btn-danger"
+                >
+                    Sim, excluir
+                </button>
+
+                <!-- Botão para cancelar. -->
+                <a
+                    href="{% url 'provas:lista' %}"
+                    class="btn btn-secondary"
+                >
+                    Cancelar
+                </a>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Cadastrar alternativas
+{% endblock %}
+
+{% block content %}
+
+<!-- Área principal da página. -->
+<div class="container py-4">
+
+    <!-- Cabeçalho. -->
+    <div class="mb-4">
+
+        <h1>
+            Cadastrar alternativas
+        </h1>
+
+        <p class="text-muted">
+            Questão {{ questao.numero }} —
+            {{ questao.prova }}
+        </p>
+
+    </div>
+
+
+    <!-- Enunciado da questão. -->
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <h5>
+                Enunciado
+            </h5>
+
+            <p class="mb-0">
+                {{ questao.enunciado }}
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- Formulário das alternativas. -->
+    <form method="post">
+
+        <!-- Proteção contra CSRF. -->
+        {% csrf_token %}
+
+        <!-- Erros gerais do formulário. -->
+        {{ form.non_field_errors }}
+
+
+        <!-- Alternativa A. -->
+        <div class="mb-3">
+
+            {{ form.alternativa_a.label_tag }}
+
+            {{ form.alternativa_a }}
+
+            {% for error in form.alternativa_a.errors %}
+
+                <div class="text-danger">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- Alternativa B. -->
+        <div class="mb-3">
+
+            {{ form.alternativa_b.label_tag }}
+
+            {{ form.alternativa_b }}
+
+            {% for error in form.alternativa_b.errors %}
+
+                <div class="text-danger">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- Alternativa C. -->
+        <div class="mb-3">
+
+            {{ form.alternativa_c.label_tag }}
+
+            {{ form.alternativa_c }}
+
+            {% for error in form.alternativa_c.errors %}
+
+                <div class="text-danger">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- Alternativa D. -->
+        <div class="mb-3">
+
+            {{ form.alternativa_d.label_tag }}
+
+            {{ form.alternativa_d }}
+
+            {% for error in form.alternativa_d.errors %}
+
+                <div class="text-danger">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- Alternativa E. -->
+        <div class="mb-3">
+
+            {{ form.alternativa_e.label_tag }}
+
+            {{ form.alternativa_e }}
+
+            {% for error in form.alternativa_e.errors %}
+
+                <div class="text-danger">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- Escolha da resposta correta. -->
+        <div class="mb-4">
+
+            <label class="form-label">
+                {{ form.correta.label }}
+            </label>
+
+            {{ form.correta }}
+
+            {% for error in form.correta.errors %}
+
+                <div class="text-danger">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- Botões. -->
+        <div class="d-flex gap-2">
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                Salvar alternativas
+            </button>
+
+            <a
+                href="{% url 'provas:alternativas' questao.id %}"
+                class="btn btn-secondary"
+            >
+                Cancelar
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

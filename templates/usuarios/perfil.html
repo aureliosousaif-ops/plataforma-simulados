@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Meu perfil
+{% endblock %}
+
+{% block content %}
+
+<h2 class="mb-4">
+    Meu perfil
+</h2>
+
+<div class="card">
+
+    <div class="card-body">
+
+        <h5 class="card-title">
+            {{ user.username }}
+        </h5>
+
+        <p>
+            <strong>E-mail:</strong>
+            {{ user.email }}
+        </p>
+
+        <p>
+            <strong>Tipo:</strong>
+            {{ user.perfil.get_tipo_display }}
+        </p>
+
+        <p>
+            <strong>Idade:</strong>
+            {{ user.perfil.idade|default:"Não informado" }}
+        </p>
+
+        <p>
+            <strong>Escolaridade:</strong>
+            {{ user.perfil.get_escolaridade_display|default:"Não informado" }}
+        </p>
+
+        <p>
+            <strong>Objetivo:</strong>
+            {{ user.perfil.get_objetivo_display|default:"Não informado" }}
+        </p>
+
+    </div>
+
+</div>
+
+{% endblock %}

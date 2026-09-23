@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Início - Plataforma de Simulados
+{% endblock %}
+
+{% block content %}
+
+<div class="text-center py-5">
+
+    <h1 class="display-5 fw-bold">
+        Plataforma de Simulados
+    </h1>
+
+    <p class="lead mt-3">
+        Prepare-se para vestibulares, concursos e avaliações
+        através de simulados online.
+    </p>
+
+    {% if user.is_authenticated %}
+
+        <p class="mt-4">
+            Olá, <strong>{{ user.first_name|default:user.username }}</strong>!
+        </p>
+
+        <a
+            href="{% url 'usuarios:perfil' %}"
+            class="btn btn-primary"
+        >
+            Meu perfil
+        </a>
+
+    {% else %}
+
+        <div class="mt-4">
+
+            <a
+                href="{% url 'usuarios:cadastro' %}"
+                class="btn btn-primary me-2"
+            >
+                Criar minha conta
+            </a>
+
+            <a
+                href="{% url 'usuarios:login' %}"
+                class="btn btn-outline-primary"
+            >
+                Entrar
+            </a>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

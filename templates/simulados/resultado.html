@@ -1,0 +1,468 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Resultado - {{ simulado.prova.nome }}
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- ========================================== -->
+    <!-- CABEÇALHO -->
+    <!-- ========================================== -->
+
+    <div class="mb-4">
+
+        <h1>
+            Resultado do simulado
+        </h1>
+
+        <p class="text-muted mb-0">
+            {{ simulado.prova.nome }}
+        </p>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- APROVEITAMENTO -->
+    <!-- ========================================== -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body text-center py-5">
+
+            <h2 class="display-4 fw-bold mb-2">
+
+                {{ simulado.percentual }}%
+
+            </h2>
+
+            <p class="text-muted mb-0">
+                Aproveitamento
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- RESUMO -->
+    <!-- ========================================== -->
+
+    <div class="row g-4 mb-4">
+
+
+        <!-- ACERTOS -->
+
+        <div class="col-md-3">
+
+            <div class="card h-100 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <h3 class="text-success">
+
+                        {{ simulado.acertos }}
+
+                    </h3>
+
+                    <p class="mb-0 text-muted">
+                        Acertos
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ERROS -->
+
+        <div class="col-md-3">
+
+            <div class="card h-100 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <h3 class="text-danger">
+
+                        {{ simulado.erros }}
+
+                    </h3>
+
+                    <p class="mb-0 text-muted">
+                        Erros
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- NÃO RESPONDIDAS -->
+
+        <div class="col-md-3">
+
+            <div class="card h-100 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <h3 class="text-warning">
+
+                        {{ nao_respondidas }}
+
+                    </h3>
+
+                    <p class="mb-0 text-muted">
+                        Não respondidas
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- TOTAL -->
+
+        <div class="col-md-3">
+
+            <div class="card h-100 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <h3>
+
+                        {{ total_questoes }}
+
+                    </h3>
+
+                    <p class="mb-0 text-muted">
+                        Total
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- TEMPO -->
+    <!-- ========================================== -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <div>
+
+                    <h5 class="mb-1">
+                        Tempo total
+                    </h5>
+
+                    <p class="text-muted mb-0">
+                        Tempo utilizado no simulado
+                    </p>
+
+                </div>
+
+
+                <span class="badge text-bg-dark fs-5">
+
+                    {{ tempo_formatado }}
+
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- DESEMPENHO POR DISCIPLINA -->
+    <!-- ========================================== -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <h5 class="card-title mb-4">
+                Desempenho por disciplina
+            </h5>
+
+
+            {% if desempenho_disciplinas %}
+
+                {% for disciplina, dados in desempenho_disciplinas %}
+
+                    <div class="mb-4">
+
+                        <!-- NOME E PERCENTUAL -->
+
+                        <div
+                            class="d-flex justify-content-between mb-2"
+                        >
+
+                            <strong>
+                                {{ disciplina }}
+                            </strong>
+
+                            <span>
+                                {{ dados.percentual }}%
+                            </span>
+
+                        </div>
+
+
+                        <!-- BARRA -->
+
+                        <div
+                            class="progress mb-2"
+                            style="height: 10px;"
+                        >
+
+                            <div
+                                class="progress-bar"
+                                role="progressbar"
+                                style="width: {{ dados.percentual }}%;"
+                            ></div>
+
+                        </div>
+
+
+                        <!-- DETALHES -->
+
+                        <div class="small text-muted">
+
+                            {{ dados.acertos }} acertos
+
+                            ·
+
+                            {{ dados.erros }} erros
+
+                            ·
+
+                            {{ dados.nao_respondidas }}
+                            não respondidas
+
+                            ·
+
+                            {{ dados.total }}
+                            questões
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div class="alert alert-info mb-0">
+
+                    Não foi possível calcular o desempenho
+                    por disciplina.
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- QUESTÕES -->
+    <!-- ========================================== -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <h5 class="card-title mb-4">
+                Revisão das questões
+            </h5>
+
+
+            {% for resposta in respostas %}
+
+                <div class="border rounded p-3 mb-3">
+
+
+                    <!-- CABEÇALHO DA QUESTÃO -->
+
+                    <div
+                        class="d-flex justify-content-between
+                        align-items-center mb-2"
+                    >
+
+                        <strong>
+
+                            Questão
+                            {{ resposta.questao.numero }}
+
+                        </strong>
+
+
+                        {% if not resposta.respondida %}
+
+                            <span class="badge text-bg-warning">
+
+                                Não respondida
+
+                            </span>
+
+                        {% elif resposta.correta %}
+
+                            <span class="badge text-bg-success">
+
+                                Acertou
+
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge text-bg-danger">
+
+                                Errou
+
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- DISCIPLINA -->
+
+                    <small class="text-muted d-block mb-2">
+
+                        {{ resposta.questao.disciplina.nome }}
+
+                    </small>
+
+
+                    <!-- TEMPO -->
+
+                    <small class="text-muted d-block mb-3">
+
+                        Tempo:
+                        {{ resposta.tempo_segundos }} segundos
+
+                    </small>
+
+
+                    <!-- RESPOSTA DO ALUNO -->
+
+                    {% if resposta.respondida %}
+
+                        <div class="mb-2">
+
+                            <strong>
+                                Sua resposta:
+                            </strong>
+
+                            {{ resposta.alternativa.letra }})
+                            {{ resposta.alternativa.texto }}
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="text-muted">
+
+                            Você não respondeu esta questão.
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- RESPOSTA CORRETA -->
+
+                    {% if not resposta.correta %}
+
+                        <div class="mt-2">
+
+                            <strong>
+                                Resposta correta:
+                            </strong>
+
+                            {% for alternativa in resposta.questao.alternativas.all %}
+
+                                {% if alternativa.correta %}
+
+                                    {{ alternativa.letra }})
+                                    {{ alternativa.texto }}
+
+                                {% endif %}
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            {% empty %}
+
+                <div class="alert alert-info">
+
+                    Nenhuma questão encontrada.
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- BOTÕES -->
+    <!-- ========================================== -->
+
+    <div class="d-flex gap-2 flex-wrap">
+
+        <a
+            href="{% url 'simulados:lista' %}"
+            class="btn btn-primary"
+        >
+
+            Fazer outro simulado
+
+        </a>
+
+
+        <a
+            href="{% url 'home' %}"
+            class="btn btn-secondary"
+        >
+
+            Página inicial
+
+        </a>
+
+    </div>
+
+</div>
+
+{% endblock %}

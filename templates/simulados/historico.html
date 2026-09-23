@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Meus simulados
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- ========================================== -->
+    <!-- CABEÇALHO -->
+    <!-- ========================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h1>
+                Meus simulados
+            </h1>
+
+            <p class="text-muted mb-0">
+                Consulte seus resultados anteriores.
+            </p>
+
+        </div>
+
+
+        <!-- Botão para iniciar novo simulado -->
+
+        <a
+            href="{% url 'simulados:lista' %}"
+            class="btn btn-primary"
+        >
+            Novo simulado
+        </a>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- HISTÓRICO -->
+    <!-- ========================================== -->
+
+    {% if historico_simulados %}
+
+        <div class="row g-4">
+
+            {% for item in historico_simulados %}
+
+                <div class="col-12">
+
+                    <div class="card shadow-sm">
+
+                        <div class="card-body">
+
+
+                            <!-- ================================= -->
+                            <!-- CABEÇALHO DO CARD -->
+                            <!-- ================================= -->
+
+                            <div
+                                class="d-flex justify-content-between
+                                align-items-start mb-3"
+                            >
+
+                                <div>
+
+                                    <h4 class="mb-1">
+
+                                        {{ item.simulado.prova.nome }}
+
+                                    </h4>
+
+
+                                    <p class="text-muted mb-0">
+
+                                        {{ item.simulado.prova.get_tipo_display }}
+
+                                        —
+
+                                        {{ item.simulado.prova.ano }}
+
+                                    </p>
+
+                                </div>
+
+
+                                <!-- Aproveitamento -->
+
+                                <span
+                                    class="badge text-bg-primary fs-6"
+                                >
+
+                                    {{ item.simulado.percentual }}%
+
+                                </span>
+
+                            </div>
+
+
+                            <!-- ================================= -->
+                            <!-- INFORMAÇÕES -->
+                            <!-- ================================= -->
+
+                            <div class="row g-3 mb-3">
+
+
+                                <!-- DATA -->
+
+                                <div class="col-md-3">
+
+                                    <div class="border rounded p-3 h-100">
+
+                                        <small class="text-muted d-block">
+                                            Data
+                                        </small>
+
+                                        <strong>
+
+                                            {{ item.simulado.finalizado_em|date:"d/m/Y H:i" }}
+
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- ACERTOS -->
+
+                                <div class="col-md-3">
+
+                                    <div class="border rounded p-3 h-100">
+
+                                        <small class="text-muted d-block">
+                                            Acertos
+                                        </small>
+
+                                        <strong class="text-success">
+
+                                            {{ item.simulado.acertos }}
+
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- ERROS -->
+
+                                <div class="col-md-3">
+
+                                    <div class="border rounded p-3 h-100">
+
+                                        <small class="text-muted d-block">
+                                            Erros
+                                        </small>
+
+                                        <strong class="text-danger">
+
+                                            {{ item.simulado.erros }}
+
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- NÃO RESPONDIDAS -->
+
+                                <div class="col-md-3">
+
+                                    <div class="border rounded p-3 h-100">
+
+                                        <small class="text-muted d-block">
+                                            Não respondidas
+                                        </small>
+
+                                        <strong class="text-warning">
+
+                                            {{ item.nao_respondidas }}
+
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- ================================= -->
+                            <!-- TEMPO E TOTAL -->
+                            <!-- ================================= -->
+
+                            <div
+                                class="d-flex justify-content-between
+                                align-items-center flex-wrap gap-2"
+                            >
+
+                                <div class="text-muted">
+
+                                    <strong>
+                                        {{ item.total }}
+                                    </strong>
+
+                                    questões
+
+                                    ·
+
+                                    Tempo:
+
+                                    <strong>
+
+                                        {{ item.tempo_formatado }}
+
+                                    </strong>
+
+                                </div>
+
+
+                                <!-- Botão de resultado -->
+
+                                <a
+                                    href="{% url 'simulados:resultado' item.simulado.id %}"
+                                    class="btn btn-outline-primary"
+                                >
+
+                                    Ver resultado
+
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <!-- ========================================== -->
+        <!-- HISTÓRICO VAZIO -->
+        <!-- ========================================== -->
+
+        <div class="card shadow-sm">
+
+            <div class="card-body text-center py-5">
+
+                <h3 class="mb-3">
+                    Nenhum simulado realizado
+                </h3>
+
+                <p class="text-muted mb-4">
+
+                    Você ainda não possui simulados
+                    finalizados no seu histórico.
+
+                </p>
+
+
+                <a
+                    href="{% url 'simulados:lista' %}"
+                    class="btn btn-primary"
+                >
+
+                    Fazer meu primeiro simulado
+
+                </a>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

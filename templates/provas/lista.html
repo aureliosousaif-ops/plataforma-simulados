@@ -1,106 +1,85 @@
 {% extends 'base.html' %}
 
 {% block title %}
-Provas
+    Provas
 {% endblock %}
 
 {% block content %}
 
-<!-- Área principal da página. -->
 <div class="container py-4">
 
-    <!-- Cabeçalho da página. -->
+    <!-- Cabeçalho -->
     <div class="d-flex justify-content-between align-items-center mb-4">
 
         <div>
+            <h1>Provas</h1>
 
-            <!-- Título da página. -->
-            <h1 class="mb-1">
-                Provas
-            </h1>
-
-            <!-- Descrição da página. -->
             <p class="text-muted mb-0">
                 Provas disponíveis na plataforma.
             </p>
-
         </div>
 
-
-        <!-- Botão disponível somente para professores. -->
-        {% if user.perfil.tipo == 'desenvolvedor' %}
-
-            <a
-                href="{% url 'provas:criar' %}"
-                class="btn btn-primary"
-            >
-                + Criar prova
-            </a>
-
-        {% endif %}
+        <!-- Botão para criar uma nova prova -->
+        <a
+            href="{% url 'provas:criar' %}"
+            class="btn btn-primary"
+        >
+            + Criar prova
+        </a>
 
     </div>
 
-
-    <!-- Exibe mensagens do sistema. -->
-    {% if messages %}
-
-        {% for message in messages %}
-
-            <div class="alert alert-success">
-                {{ message }}
-            </div>
-
-        {% endfor %}
-
-    {% endif %}
-
-
-    <!-- Verifica se existem provas. -->
+    <!-- Lista de provas -->
     {% if provas %}
 
-        <div class="row">
+        <div class="row g-4">
 
             {% for prova in provas %}
 
-                <div class="col-md-6 col-lg-4 mb-4">
+                <div class="col-md-6 col-lg-4">
 
-                    <!-- Card da prova. -->
                     <div class="card h-100 shadow-sm">
 
                         <div class="card-body">
 
-                            <!-- Nome da prova. -->
+                            <!-- Nome da prova -->
                             <h5 class="card-title">
-                                {{ prova.nome }}
+
+                                <a
+                                    href="{% url 'provas:detalhe' prova.id %}"
+                                    class="text-decoration-none"
+                                >
+                                    {{ prova.nome }}
+                                </a>
+
                             </h5>
 
-                            <!-- Tipo da prova. -->
-                            <p class="card-text">
+                            <!-- Tipo -->
+                            <p class="mb-2">
                                 <strong>Tipo:</strong>
                                 {{ prova.get_tipo_display }}
                             </p>
 
-                            <!-- Ano da prova. -->
-                            <p class="card-text">
+                            <!-- Ano -->
+                            <p class="mb-2">
                                 <strong>Ano:</strong>
                                 {{ prova.ano }}
                             </p>
 
-                            <!-- Status da prova. -->
-                            <p class="card-text">
+                            <!-- Status da prova -->
+                            <p class="mb-2">
 
                                 <strong>Status:</strong>
 
                                 {% if prova.ativa %}
 
-                                    <span class="badge bg-success">
+                                    <span class="badge text-bg-success">
                                         Ativa
                                     </span>
 
                                 {% else %}
 
-                                    <span class="badge bg-secondary">
+                                    <span class="badge text-bg-secondary">
                                         Inativa
                                     </span>
 
@@ -108,41 +87,26 @@ Provas
 
                             </p>
 
-
-                            <!-- Descrição da prova. -->
+                            <!-- Descrição -->
                             {% if prova.descricao %}
 
-                                <p class="card-text text-muted">
+                                <p class="text-muted small">
                                     {{ prova.descricao }}
                                 </p>
 
                             {% endif %}
 
+                        </div>
 
-                            <!-- Botões exclusivos para professores. -->
-                            {% if user.perfil.tipo == 'professor' %}
+                        <!-- Rodapé do card -->
+                        <div class="card-footer bg-white">
 
-                                <div class="d-flex gap-2 mt-3">
-
-                                    <!-- Botão editar. -->
-                                    <a
-                                        href="{% url 'provas:editar' prova.id %}"
-                                        class="btn btn-outline-primary btn-sm"
-                                    >
-                                        Editar
-                                    </a>
-
-                                    <!-- Botão excluir. -->
-                                    <a
-                                        href="{% url 'provas:excluir' prova.id %}"
-                                        class="btn btn-outline-danger btn-sm"
-                                    >
-                                        Excluir
-                                    </a>
-
-                                </div>
-
-                            {% endif %}
+                            <a
+                                href="{% url 'provas:detalhe' prova.id %}"
+                                class="btn btn-outline-primary w-100"
+                            >
+                                Ver prova
+                            </a>
 
                         </div>
 
@@ -156,19 +120,9 @@ Provas
 
     {% else %}
 
-        <!-- Mensagem quando não existem provas. -->
+        <!-- Nenhuma prova cadastrada -->
         <div class="alert alert-info">
-
-            Nenhuma prova foi cadastrada ainda.
-
-            {% if user.perfil.tipo == 'professor' %}
-
-                <a href="{% url 'provas:criar' %}">
-                    Criar primeira prova
-                </a>
-
-            {% endif %}
-
+            Nenhuma prova cadastrada ainda.
         </div>
 
     {% endif %}

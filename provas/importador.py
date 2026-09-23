@@ -65,6 +65,8 @@ def encontrar_marcadores_questoes(texto):
 
     # Retorna todos os marcadores encontrados.
     return list(padrao.finditer(texto))
+
+
 def separar_questoes_enem(texto):
     """
     Separa as 90 questões principais do ENEM.
@@ -204,130 +206,137 @@ def separar_questoes_enem(texto):
 
     # Retorna as questões processadas.
     return questoes
-
 def extrair_alternativas(conteudo):
     """
     Separa as alternativas A, B, C, D e E.
 
-    O PDF pode conter letras A-E dentro do enunciado.
-    Por isso, procuramos uma sequência completa:
-
-    A -> B -> C -> D -> E
-
-    e usamos a última sequência encontrada.
+    Também remove rodapés e informações repetidas
+    inseridas pelo PDF entre as questões.
     """
 
-    # Procura letras A-E no início das linhas.
-    #
-    # Aceita formatos como:
-    # A
-    # A.
-    # A)
-    # A texto
-    # A. texto
-    # A) texto
-    padrao = re.compile(
-        r'(?m)^[ \t]*([ABCDE])(?:[ \t]*[\.\)])?(?=[ \t]+|\n|$)'
+    # Remove o rodapé do ENEM quando ele aparece
+    # depois do conteúdo da alternativa.
+    conteudo = re.sub(
+        r'\*010175AZ2\*.*',
+        '',
+        conteudo,
+        flags=re.DOTALL
     )
 
-    # Localiza todos os possíveis marcadores.
+    # Remove linhas de identificação do caderno.
+    conteudo = re.sub(
+        r'(?mi)^.*LINGUAGENS,\s*CÓDIGOS\s*E\s*SUAS\s*TECNOLOGIAS.*$',
+        '',
+        conteudo
+    )
+
+    # Remove repetições do nome ENEM2024.
+    conteudo = re.sub(
+        r'ENEM2024',
+        '',
+        conteudo,
+        flags=re.IGNORECASE
+    )
+
+    # Remove identificadores técnicos do arquivo.
+    conteudo = re.sub(
+        r'\b\d{8}[A-Z]{2}\.indb\b',
+        '',
+        conteudo,
+        flags=re.IGNORECASE
+    )
+
+    # Limpa espaços e linhas vazias.
+    conteudo = re.sub(
+        r'\n\s*\n+',
+        '\n',
+        conteudo
+    ).strip()
+
+    # Procura as letras das alternativas.
+    padrao = re.compile(
+        r'(?m)^[ \t]*([ABCDE])'
+        r'(?:[ \t]*[\.\)])?'
+        r'(?=[ \t]+|\n|$)'
+    )
+
     marcadores = list(
         padrao.finditer(conteudo)
     )
 
-    # Guarda as sequências A-B-C-D-E encontradas.
     sequencias_validas = []
 
-    # Percorre todos os possíveis pontos de início.
     for indice, marcador in enumerate(marcadores):
 
-        # A sequência precisa começar com A.
         if marcador.group(1) != 'A':
             continue
 
-        # Guarda os marcadores encontrados.
         sequencia = [marcador]
-
-        # Próxima letra esperada.
         proxima_letra = 'B'
 
-        # Procura B, C, D e E depois do A.
         for outro in marcadores[indice + 1:]:
 
-            # Pega a letra encontrada.
             letra = outro.group(1)
 
-            # Verifica se é a próxima letra esperada.
             if letra == proxima_letra:
 
-                # Adiciona à sequência.
                 sequencia.append(outro)
 
-                # Define a próxima letra.
                 if proxima_letra == 'B':
                     proxima_letra = 'C'
+
                 elif proxima_letra == 'C':
                     proxima_letra = 'D'
+
                 elif proxima_letra == 'D':
                     proxima_letra = 'E'
+
                 elif proxima_letra == 'E':
                     break
 
-            # Se aparecer outra letra fora da ordem,
-            # continua procurando a letra esperada.
-
-        # Só aceita sequências completas.
         if len(sequencia) == 5:
             sequencias_validas.append(sequencia)
 
-    # Se não encontrou uma sequência completa,
-    # retorna uma lista vazia.
+    # Nenhuma sequência válida encontrada.
     if not sequencias_validas:
         return []
 
-    # Usa a última sequência encontrada.
+    # Usa a última sequência A-B-C-D-E encontrada.
     sequencia = sequencias_validas[-1]
 
-    # Lista final das alternativas.
     alternativas = []
 
-    # Percorre A, B, C, D e E.
     for indice, marcador in enumerate(sequencia):
 
-        # Guarda a letra.
         letra = marcador.group(1)
 
-        # O texto começa depois do marcador.
         inicio = marcador.end()
 
-        # Define onde termina esta alternativa.
         if indice + 1 < len(sequencia):
 
-            # Termina no próximo marcador.
-            fim = sequencia[indice + 1].start()
+            fim = sequencia[
+                indice + 1
+            ].start()
 
         else:
 
-            # A última alternativa vai até o final da questão.
             fim = len(conteudo)
 
-        # Extrai o texto.
-        texto_alternativa = conteudo[inicio:fim]
+        texto_alternativa = conteudo[
+            inicio:fim
+        ]
 
-        # Remove quebras de linha.
         texto_alternativa = texto_alternativa.replace(
             '\n',
             ' '
         )
 
-        # Remove espaços repetidos.
         texto_alternativa = re.sub(
             r'\s+',
             ' ',
             texto_alternativa
         ).strip()
 
-        # Adiciona a alternativa.
         alternativas.append(
             {
                 'letra': letra,
@@ -335,8 +344,9 @@ def extrair_alternativas(conteudo):
             }
         )
 
-    # Retorna as cinco alternativas.
     return alternativas
+
+
 def extrair_gabarito_enem(texto):
     """
     Extrai o gabarito do ENEM.

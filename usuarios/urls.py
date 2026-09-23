@@ -12,8 +12,32 @@ app_name = 'usuarios'
 
 
 urlpatterns = [
-    path('cadastro/', cadastro, name='cadastro'),
-    path('login/', LoginUsuarioView.as_view(), name='login'),
-    path('logout/', LogoutUsuarioView.as_view(), name='logout'),
-    path('perfil/', perfil, name='perfil'),
+
+    # Cadastro.
+    path(
+        'cadastro/',
+        cadastro,
+        name='cadastro'
+    ),
+
+    # Login.
+    path(
+        'login/',
+        LoginUsuarioView.as_view(),
+        name='login'
+    ),
+
+    # Logout.
+    path(
+        'logout/',
+        LogoutUsuarioView.as_view(),
+        name='logout'
+    ),
+
+    # Perfil.
+    path(
+        'perfil/',
+        perfil,
+        name='perfil'
+    ),
 ]

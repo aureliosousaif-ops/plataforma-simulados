@@ -1,52 +1,265 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    Início - Plataforma de Simulados
+    Início
 {% endblock %}
+
 
 {% block content %}
 
-<div class="text-center py-5">
-
-    <h1 class="display-5 fw-bold">
-        Plataforma de Simulados
-    </h1>
-
-    <p class="lead mt-3">
-        Prepare-se para vestibulares, concursos e avaliações
-        através de simulados online.
-    </p>
+<div class="container py-5">
 
     {% if user.is_authenticated %}
 
-        <p class="mt-4">
-            Olá, <strong>{{ user.first_name|default:user.username }}</strong>!
-        </p>
+        <!-- ========================================== -->
+        <!-- SAUDAÇÃO -->
+        <!-- ========================================== -->
 
-        <a
-            href="{% url 'usuarios:perfil' %}"
-            class="btn btn-primary"
-        >
-            Meu perfil
-        </a>
+        <div class="mb-5">
+
+            <h1 class="fw-bold">
+                Olá, {{ user.username }}! 👋
+            </h1>
+
+            <p class="text-muted">
+                Continue seus estudos e acompanhe sua evolução.
+            </p>
+
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- CARDS DE RESUMO -->
+        <!-- ========================================== -->
+
+        <div class="row g-4 mb-5">
+
+            <!-- Total de simulados -->
+            <div class="col-md-4">
+
+                <div class="card shadow-sm h-100">
+
+                    <div class="card-body">
+
+                        <h6 class="text-muted">
+                            Simulados realizados
+                        </h6>
+
+                        <h2 class="fw-bold">
+                            {{ total_simulados }}
+                        </h2>
+
+                        <p class="mb-0">
+                            Simulados finalizados
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Média -->
+            <div class="col-md-4">
+
+                <div class="card shadow-sm h-100">
+
+                    <div class="card-body">
+
+                        <h6 class="text-muted">
+                            Desempenho médio
+                        </h6>
+
+                        <h2 class="fw-bold">
+                            {{ media_desempenho }}%
+                        </h2>
+
+                        <p class="mb-0">
+                            Média dos seus resultados
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Último simulado -->
+            <div class="col-md-4">
+
+                <div class="card shadow-sm h-100">
+
+                    <div class="card-body">
+
+                        <h6 class="text-muted">
+                            Último simulado
+                        </h6>
+
+                        {% if ultimo_simulado %}
+
+                            <h5 class="fw-bold">
+                                {{ ultimo_simulado.prova.titulo }}
+                            </h5>
+
+                            <p class="mb-0">
+                                Resultado disponível
+                            </p>
+
+                        {% else %}
+
+                            <h5 class="fw-bold">
+                                Nenhum ainda
+                            </h5>
+
+                            <p class="mb-0">
+                                Comece seu primeiro simulado.
+                            </p>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- AÇÕES PRINCIPAIS -->
+        <!-- ========================================== -->
+
+        <div class="row g-4">
+
+            <!-- Fazer simulado -->
+            <div class="col-md-4">
+
+                <div class="card shadow-sm h-100">
+
+                    <div class="card-body">
+
+                        <h4 class="fw-bold">
+                            📝 Fazer simulado
+                        </h4>
+
+                        <p class="text-muted">
+                            Escolha uma prova disponível
+                            e comece a responder.
+                        </p>
+
+                        <a
+                            href="{% url 'simulados:lista' %}"
+                            class="btn btn-primary"
+                        >
+                            Ver simulados
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Histórico -->
+            <div class="col-md-4">
+
+                <div class="card shadow-sm h-100">
+
+                    <div class="card-body">
+
+                        <h4 class="fw-bold">
+                            📋 Histórico
+                        </h4>
+
+                        <p class="text-muted">
+                            Consulte os simulados que você
+                            já realizou.
+                        </p>
+
+                        <a
+                            href="{% url 'simulados:historico' %}"
+                            class="btn btn-outline-primary"
+                        >
+                            Meus simulados
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Desempenho -->
+            <div class="col-md-4">
+
+                <div class="card shadow-sm h-100">
+
+                    <div class="card-body">
+
+                        <h4 class="fw-bold">
+                            📊 Desempenho
+                        </h4>
+
+                        <p class="text-muted">
+                            Veja seus resultados e acompanhe
+                            sua evolução.
+                        </p>
+
+                        <a
+                            href="{% url 'desempenho:dashboard' %}"
+                            class="btn btn-outline-primary"
+                        >
+                            Ver desempenho
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
 
     {% else %}
 
-        <div class="mt-4">
+        <!-- ========================================== -->
+        <!-- USUÁRIO NÃO LOGADO -->
+        <!-- ========================================== -->
 
-            <a
-                href="{% url 'usuarios:cadastro' %}"
-                class="btn btn-primary me-2"
-            >
-                Criar minha conta
-            </a>
+        <div class="text-center py-5">
 
-            <a
-                href="{% url 'usuarios:login' %}"
-                class="btn btn-outline-primary"
-            >
-                Entrar
-            </a>
+            <h1 class="display-5 fw-bold">
+                Plataforma de Simulados
+            </h1>
+
+            <p class="lead text-muted mt-3">
+                Prepare-se para vestibulares, concursos
+                e outras avaliações.
+            </p>
+
+            <div class="mt-4">
+
+                <a
+                    href="{% url 'usuarios:cadastro' %}"
+                    class="btn btn-primary btn-lg me-2"
+                >
+                    Criar conta
+                </a>
+
+                <a
+                    href="{% url 'usuarios:login' %}"
+                    class="btn btn-outline-secondary btn-lg"
+                >
+                    Entrar
+                </a>
+
+            </div>
 
         </div>
 

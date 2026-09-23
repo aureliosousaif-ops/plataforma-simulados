@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Simulados
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- Cabeçalho -->
+    <div class="mb-4">
+
+        <h1>
+            Simulados
+        </h1>
+
+        <p class="text-muted">
+            Escolha uma prova para iniciar seu simulado.
+        </p>
+
+    </div>
+
+    {% if provas %}
+
+        <div class="row g-4">
+
+            {% for prova in provas %}
+
+                <div class="col-md-6 col-lg-4">
+
+                    <div class="card h-100 shadow-sm">
+
+                        <div class="card-body">
+
+                            <!-- Nome da prova -->
+                            <h5 class="card-title">
+                                {{ prova.nome }}
+                            </h5>
+
+                            <!-- Informações -->
+                            <p class="mb-2">
+                                <strong>Tipo:</strong>
+                                {{ prova.get_tipo_display }}
+                            </p>
+
+                            <p class="mb-3">
+                                <strong>Ano:</strong>
+                                {{ prova.ano }}
+                            </p>
+
+                            {% if prova.descricao %}
+
+                                <p class="text-muted small">
+                                    {{ prova.descricao }}
+                                </p>
+
+                            {% endif %}
+
+                        </div>
+
+                        <!-- Ação -->
+                        <div class="card-footer bg-white">
+
+                            <form
+                                method="post"
+                                action="{% url 'simulados:iniciar' prova.id %}"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary w-100"
+                                >
+                                    Iniciar simulado
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="alert alert-info">
+
+            Nenhuma prova está disponível para simulado no momento.
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

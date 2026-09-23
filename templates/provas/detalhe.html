@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{ prova.nome }}
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- Cabeçalho da prova -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h1>{{ prova.nome }}</h1>
+
+            <p class="text-muted mb-0">
+                {{ prova.tipo }} — {{ prova.ano }}
+            </p>
+        </div>
+
+        <!-- Botão para voltar à lista -->
+        <a
+            href="{% url 'provas:lista' %}"
+            class="btn btn-secondary"
+        >
+            Voltar
+        </a>
+
+    </div>
+
+    <!-- Mensagens do Django -->
+    {% if messages %}
+
+        {% for message in messages %}
+
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+    <!-- Informações da prova -->
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <h5 class="card-title">
+                Informações da prova
+            </h5>
+
+            <!-- Descrição -->
+            {% if prova.descricao %}
+
+                <p>
+                    <strong>Descrição:</strong>
+                    {{ prova.descricao }}
+                </p>
+
+            {% endif %}
+
+            <!-- Status -->
+            <p class="mb-3">
+
+                <strong>Status:</strong>
+
+                {% if prova.status_importacao == 'pendente' %}
+
+                    <span class="badge text-bg-secondary">
+                        Pendente
+                    </span>
+
+                {% elif prova.status_importacao == 'processando' %}
+
+                    <span class="badge text-bg-warning">
+                        Processando
+                    </span>
+
+                {% elif prova.status_importacao == 'processada' %}
+
+                    <span class="badge text-bg-success">
+                        Processada
+                    </span>
+
+                {% elif prova.status_importacao == 'erro' %}
+
+                    <span class="badge text-bg-danger">
+                        Erro
+                    </span>
+
+                {% endif %}
+
+            </p>
+
+            <!-- Arquivos -->
+            <div class="mb-3">
+
+                <strong>Arquivos:</strong>
+
+                <ul class="mt-2">
+
+                    <!-- PDF da prova -->
+                    {% if prova.arquivo_pdf %}
+
+                        <li>
+                            <a
+                                href="{{ prova.arquivo_pdf.url }}"
+                                target="_blank"
+                            >
+                                Abrir PDF da prova
+                            </a>
+                        </li>
+
+                    {% endif %}
+
+                    <!-- PDF do gabarito -->
+                    {% if prova.arquivo_gabarito %}
+
+                        <li>
+                            <a
+                                href="{{ prova.arquivo_gabarito.url }}"
+                                target="_blank"
+                            >
+                                Abrir PDF do gabarito
+                            </a>
+                        </li>
+
+                    {% endif %}
+
+                </ul>
+
+            </div>
+
+            <!-- Botão de processamento -->
+            {% if prova.status_importacao != 'processando' %}
+
+                <form
+                    method="post"
+                    action="{% url 'provas:processar' prova.id %}"
+                >
+
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Processar prova
+                    </button>
+
+                </form>
+
+            {% else %}
+
+                <!-- Mensagem enquanto processa -->
+                <div class="alert alert-warning mb-0">
+
+                    A prova está sendo processada.
+                    Aguarde alguns instantes.
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <!-- Mensagem de erro -->
+    {% if prova.status_importacao == 'erro' and prova.mensagem_importacao %}
+
+        <div class="alert alert-danger">
+
+            <h5 class="alert-heading">
+                Detalhes do erro
+            </h5>
+
+            <pre class="mb-0">{{ prova.mensagem_importacao }}</pre>
+
+        </div>
+
+    {% endif %}
+
+    <!-- Questões importadas -->
+    <div class="card shadow-sm">
+
+        <div class="card-body">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+
+                <h5 class="card-title mb-0">
+                    Questões importadas
+                </h5>
+
+                <span class="badge text-bg-primary">
+                    {{ questoes|length }} questões
+                </span>
+
+            </div>
+
+            {% if questoes %}
+
+                <div class="list-group">
+
+                    {% for questao in questoes %}
+
+                        <div class="list-group-item">
+
+                            <strong>
+                                Questão {{ questao.numero }}
+                            </strong>
+
+                            <span class="text-muted">
+                                — {{ questao.disciplina.nome }}
+                            </span>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="alert alert-light mb-0">
+
+                    Nenhuma questão foi importada ainda.
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

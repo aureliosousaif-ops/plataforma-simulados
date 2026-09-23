@@ -1,114 +1,75 @@
-# Importa mensagens para mostrar informações ao usuário.
 from django.contrib import messages
-
-# Permite exigir autenticação.
 from django.contrib.auth.decorators import login_required
-
-# Exceção utilizada para bloquear usuários sem permissão.
-from django.core.exceptions import PermissionDenied
-
-# Funções auxiliares do Django.
 from django.shortcuts import get_object_or_404, redirect, render
 
-# Importa os formulários.
-from .forms import (
-    AlternativaForm,
-    AlternativasForm,
-    DisciplinaForm,
-    ProvaForm,
-    QuestaoForm,
-)
+from .models import Prova
+from .forms import ProvaForm
 
-# Importa os modelos.
-from .models import (
-    Alternativa,
-    Disciplina,
-    Prova,
-    Questao,
+from .importador import (
+    extrair_texto_pdf,
+    extrair_gabarito_enem,
+    separar_questoes_enem,
+    validar_questoes_com_gabarito,
+    preparar_questoes_para_importacao,
+    importar_questoes_no_banco,
 )
 
 
-# Verifica se o usuário é desenvolvedor.
-def desenvolvedor_required(view_function):
-
-    # Função executada antes da view.
-    def wrapper(request, *args, **kwargs):
-
-        # Verifica se o usuário está autenticado.
-        if not request.user.is_authenticated:
-            return redirect('usuarios:login')
-
-        # Verifica se o perfil existe.
-        if not hasattr(request.user, 'perfil'):
-            raise PermissionDenied
-
-        # Verifica o tipo de usuário.
-        if request.user.perfil.tipo != 'desenvolvedor':
-            raise PermissionDenied
-
-        # Executa a view original.
-        return view_function(request, *args, **kwargs)
-
-    # Mantém o nome da função.
-    wrapper.__name__ = view_function.__name__
-
-    return wrapper
-
-
-# ==========================================================
-# PROVAS
-# ==========================================================
-
-
-# Lista as provas.
 @login_required
-def lista_provas(request):
+def lista(request):
+    """
+    Mostra todas as provas cadastradas na plataforma.
+    """
 
-    # Busca todas as provas.
+    # Busca todas as provas cadastradas.
     provas = Prova.objects.all()
 
-    # Renderiza a página.
+    # Envia as provas para o template.
     return render(
         request,
         'provas/lista.html',
         {
-            'provas': provas,
+            'provas': provas
         }
     )
 
 
-# Cria uma prova.
 @login_required
-@desenvolvedor_required
-def criar_prova(request):
+def criar(request):
+    """
+    Cria uma nova prova através da plataforma.
+    """
 
-    # Verifica o envio do formulário.
+    # Verifica se o formulário foi enviado.
     if request.method == 'POST':
 
-        # Carrega os dados enviados.
+        # Cria o formulário com os dados e arquivos enviados.
         form = ProvaForm(
             request.POST,
             request.FILES
         )
 
-        # Valida os dados.
+        # Verifica se todos os dados são válidos.
         if form.is_valid():
 
-            # Salva a prova.
-            form.save()
+            # Salva a prova no banco de dados.
+            prova = form.save()
 
-            # Mostra mensagem.
+            # Exibe uma mensagem de sucesso.
             messages.success(
                 request,
-                'Prova criada com sucesso!'
+                'Prova cadastrada com sucesso!'
             )
 
-            # Volta para a lista.
-            return redirect('provas:lista')
+            # Vai para a página de detalhes da prova.
+            return redirect(
+                'provas:detalhe',
+                prova_id=prova.id
+            )
 
     else:
 
-        # Cria formulário vazio.
+        # Cria um formulário vazio quando a página é aberta.
         form = ProvaForm()
 
     # Exibe o formulário.
@@ -116,519 +77,284 @@ def criar_prova(request):
         request,
         'provas/form.html',
         {
-            'form': form,
-            'titulo': 'Criar prova',
+            'form': form
         }
     )
 
 
-# Edita uma prova.
 @login_required
-@desenvolvedor_required
-def editar_prova(request, prova_id):
+def detalhe(request, prova_id):
+    """
+    Mostra os detalhes de uma prova e suas questões.
+    """
 
-    # Busca a prova.
+    # Procura a prova pelo ID.
     prova = get_object_or_404(
         Prova,
         id=prova_id
     )
 
-    # Verifica o envio.
-    if request.method == 'POST':
+    # Busca todas as questões relacionadas à prova.
+    questoes = prova.questoes.all()
 
-        # Carrega os dados.
-        form = ProvaForm(
-            request.POST,
-            request.FILES,
-            instance=prova
-        )
+    # Verifica se a prova já possui simulados.
+    possui_simulados = prova.simulados.exists()
 
-        # Valida os dados.
-        if form.is_valid():
-
-            # Salva as alterações.
-            form.save()
-
-            # Mostra mensagem.
-            messages.success(
-                request,
-                'Prova atualizada com sucesso!'
-            )
-
-            # Volta para a lista.
-            return redirect('provas:lista')
-
-    else:
-
-        # Carrega os dados atuais.
-        form = ProvaForm(
-            instance=prova
-        )
-
-    # Exibe o formulário.
+    # Exibe a página de detalhes.
     return render(
         request,
-        'provas/form.html',
-        {
-            'form': form,
-            'titulo': 'Editar prova',
-            'prova': prova,
-        }
-    )
-
-
-# Exclui uma prova.
-@login_required
-@desenvolvedor_required
-def excluir_prova(request, prova_id):
-
-    # Busca a prova.
-    prova = get_object_or_404(
-        Prova,
-        id=prova_id
-    )
-
-    # Confirma a exclusão.
-    if request.method == 'POST':
-
-        # Guarda o nome.
-        nome = prova.nome
-
-        # Exclui a prova.
-        prova.delete()
-
-        # Mostra mensagem.
-        messages.success(
-            request,
-            f'Prova "{nome}" excluída com sucesso!'
-        )
-
-        # Volta para a lista.
-        return redirect('provas:lista')
-
-    # Exibe confirmação.
-    return render(
-        request,
-        'provas/excluir.html',
+        'provas/detalhe.html',
         {
             'prova': prova,
-        }
-    )
-
-
-# ==========================================================
-# DISCIPLINAS
-# ==========================================================
-
-
-# Lista disciplinas.
-@login_required
-def lista_disciplinas(request):
-
-    # Busca todas as disciplinas.
-    disciplinas = Disciplina.objects.all()
-
-    # Renderiza a página.
-    return render(
-        request,
-        'provas/disciplinas.html',
-        {
-            'disciplinas': disciplinas,
-        }
-    )
-
-
-# Cria uma disciplina.
-@login_required
-@desenvolvedor_required
-def criar_disciplina(request):
-
-    # Verifica o envio.
-    if request.method == 'POST':
-
-        # Carrega os dados.
-        form = DisciplinaForm(
-            request.POST
-        )
-
-        # Valida os dados.
-        if form.is_valid():
-
-            # Salva a disciplina.
-            form.save()
-
-            # Mostra mensagem.
-            messages.success(
-                request,
-                'Disciplina criada com sucesso!'
-            )
-
-            # Volta para a lista.
-            return redirect(
-                'provas:disciplinas'
-            )
-
-    else:
-
-        # Cria formulário vazio.
-        form = DisciplinaForm()
-
-    # Exibe o formulário.
-    return render(
-        request,
-        'provas/form.html',
-        {
-            'form': form,
-            'titulo': 'Criar disciplina',
-        }
-    )
-
-
-# Edita uma disciplina.
-@login_required
-@desenvolvedor_required
-def editar_disciplina(request, disciplina_id):
-
-    # Busca a disciplina.
-    disciplina = get_object_or_404(
-        Disciplina,
-        id=disciplina_id
-    )
-
-    # Verifica o envio.
-    if request.method == 'POST':
-
-        # Carrega os dados.
-        form = DisciplinaForm(
-            request.POST,
-            instance=disciplina
-        )
-
-        # Valida os dados.
-        if form.is_valid():
-
-            # Salva as alterações.
-            form.save()
-
-            # Mostra mensagem.
-            messages.success(
-                request,
-                'Disciplina atualizada com sucesso!'
-            )
-
-            # Volta para a lista.
-            return redirect(
-                'provas:disciplinas'
-            )
-
-    else:
-
-        # Carrega os dados atuais.
-        form = DisciplinaForm(
-            instance=disciplina
-        )
-
-    # Exibe o formulário.
-    return render(
-        request,
-        'provas/form.html',
-        {
-            'form': form,
-            'titulo': 'Editar disciplina',
-        }
-    )
-
-
-# Exclui uma disciplina.
-@login_required
-@desenvolvedor_required
-def excluir_disciplina(request, disciplina_id):
-
-    # Busca a disciplina.
-    disciplina = get_object_or_404(
-        Disciplina,
-        id=disciplina_id
-    )
-
-    # Confirma a exclusão.
-    if request.method == 'POST':
-
-        # Guarda o nome.
-        nome = disciplina.nome
-
-        # Exclui a disciplina.
-        disciplina.delete()
-
-        # Mostra mensagem.
-        messages.success(
-            request,
-            f'Disciplina "{nome}" excluída com sucesso!'
-        )
-
-        # Volta para a lista.
-        return redirect(
-            'provas:disciplinas'
-        )
-
-    # Exibe confirmação.
-    return render(
-        request,
-        'provas/excluir_disciplina.html',
-        {
-            'disciplina': disciplina,
-        }
-    )
-
-
-# ==========================================================
-# QUESTÕES
-# ==========================================================
-
-
-# Lista todas as questões.
-@login_required
-def lista_questoes(request):
-
-    # Busca questões com prova e disciplina.
-    questoes = Questao.objects.select_related(
-        'prova',
-        'disciplina'
-    ).all()
-
-    # Renderiza a página.
-    return render(
-        request,
-        'provas/questoes.html',
-        {
             'questoes': questoes,
+            'possui_simulados': possui_simulados,
         }
     )
 
 
-# Cria uma questão.
 @login_required
-@desenvolvedor_required
-def criar_questao(request):
+def processar(request, prova_id):
+    """
+    Processa automaticamente uma prova.
 
-    # Verifica o envio do formulário.
-    if request.method == 'POST':
+    O sistema:
+    1. Lê o PDF da prova.
+    2. Lê o PDF do gabarito.
+    3. Identifica as questões.
+    4. Identifica as alternativas.
+    5. Identifica as respostas corretas.
+    6. Salva tudo no banco de dados.
+    """
 
-        # Carrega os dados.
-        form = QuestaoForm(
-            request.POST,
-            request.FILES
-        )
+    # O processamento deve acontecer somente
+    # através do formulário POST da plataforma.
+    if request.method != 'POST':
 
-        # Valida os dados.
-        if form.is_valid():
-
-            # Salva a questão.
-            questao = form.save()
-
-            # Mostra mensagem.
-            messages.success(
-                request,
-                'Questão criada com sucesso!'
-            )
-
-            # Vai para o cadastro das alternativas.
-            return redirect(
-                'provas:alternativas',
-                questao_id=questao.id
-            )
-
-    else:
-
-        # Cria formulário vazio.
-        form = QuestaoForm()
-
-    # Exibe o formulário.
-    return render(
-        request,
-        'provas/form.html',
-        {
-            'form': form,
-            'titulo': 'Criar questão',
-        }
-    )
-
-
-# ==========================================================
-# ALTERNATIVAS
-# ==========================================================
-
-
-# Lista as alternativas da questão.
-@login_required
-@desenvolvedor_required
-def lista_alternativas(request, questao_id):
-
-    # Busca a questão.
-    questao = get_object_or_404(
-        Questao,
-        id=questao_id
-    )
-
-    # Busca as alternativas.
-    alternativas = questao.alternativas.all()
-
-    # Renderiza a página.
-    return render(
-        request,
-        'provas/alternativas.html',
-        {
-            'questao': questao,
-            'alternativas': alternativas,
-        }
-    )
-
-
-# Cria as cinco alternativas de uma vez.
-@login_required
-@desenvolvedor_required
-def criar_alternativas(request, questao_id):
-
-    # Busca a questão.
-    questao = get_object_or_404(
-        Questao,
-        id=questao_id
-    )
-
-    # Verifica se já existem alternativas.
-    alternativas_existentes = questao.alternativas.exists()
-
-    # Se já existirem, não permite duplicar.
-    if alternativas_existentes:
-
-        messages.warning(
+        messages.error(
             request,
-            'Esta questão já possui alternativas cadastradas.'
+            'O processamento deve ser iniciado pelo botão da plataforma.'
         )
 
         return redirect(
-            'provas:alternativas',
-            questao_id=questao.id
+            'provas:detalhe',
+            prova_id=prova_id
         )
 
-    # Verifica o envio.
-    if request.method == 'POST':
-
-        # Carrega os dados enviados.
-        form = AlternativasForm(
-            request.POST
-        )
-
-        # Valida o formulário.
-        if form.is_valid():
-
-            # Obtém a alternativa correta.
-            correta = form.cleaned_data['correta']
-
-            # Define os textos das alternativas.
-            dados = {
-                'A': form.cleaned_data['alternativa_a'],
-                'B': form.cleaned_data['alternativa_b'],
-                'C': form.cleaned_data['alternativa_c'],
-                'D': form.cleaned_data['alternativa_d'],
-                'E': form.cleaned_data['alternativa_e'],
-            }
-
-            # Cria as cinco alternativas.
-            for letra, texto in dados.items():
-
-                # Salva cada alternativa.
-                Alternativa.objects.create(
-                    questao=questao,
-                    letra=letra,
-                    texto=texto,
-                    correta=(letra == correta)
-                )
-
-            # Mostra mensagem.
-            messages.success(
-                request,
-                'As cinco alternativas foram cadastradas com sucesso!'
-            )
-
-            # Volta para a questão.
-            return redirect(
-                'provas:alternativas',
-                questao_id=questao.id
-            )
-
-    else:
-
-        # Cria formulário vazio.
-        form = AlternativasForm()
-
-    # Exibe o formulário.
-    return render(
-        request,
-        'provas/alternativas_form.html',
-        {
-            'form': form,
-            'questao': questao,
-        }
+    # Busca a prova pelo ID.
+    prova = get_object_or_404(
+        Prova,
+        id=prova_id
     )
 
+    # ---------------------------------------------------------
+    # PROTEÇÃO CONTRA REPROCESSAMENTO
+    # ---------------------------------------------------------
 
-# Mantém o cadastro individual de alternativa disponível.
-@login_required
-@desenvolvedor_required
-def criar_alternativa(request, questao_id):
+    # Se a prova já foi utilizada em algum simulado,
+    # não permitimos apagar e recriar suas questões.
+    #
+    # Isso protege o histórico dos alunos.
+    if prova.simulados.exists():
 
-    # Busca a questão.
-    questao = get_object_or_404(
-        Questao,
-        id=questao_id
-    )
-
-    # Verifica o envio.
-    if request.method == 'POST':
-
-        # Carrega os dados.
-        form = AlternativaForm(
-            request.POST
+        messages.error(
+            request,
+            'Esta prova já possui simulados vinculados '
+            'e não pode ser reprocessada para preservar '
+            'o histórico dos alunos.'
         )
 
-        # Valida os dados.
-        if form.is_valid():
+        return redirect(
+            'provas:detalhe',
+            prova_id=prova.id
+        )
 
-            # Cria a alternativa sem salvar.
-            alternativa = form.save(
-                commit=False
+    # ---------------------------------------------------------
+    # VERIFICAÇÃO DO PDF DA PROVA
+    # ---------------------------------------------------------
+
+    # Verifica se o PDF da prova foi enviado.
+    if not prova.arquivo_pdf:
+
+        messages.error(
+            request,
+            'Esta prova não possui um PDF.'
+        )
+
+        return redirect(
+            'provas:detalhe',
+            prova_id=prova.id
+        )
+
+    # ---------------------------------------------------------
+    # VERIFICAÇÃO DO GABARITO
+    # ---------------------------------------------------------
+
+    # Verifica se o PDF do gabarito foi enviado.
+    if not prova.arquivo_gabarito:
+
+        messages.error(
+            request,
+            'Esta prova não possui um PDF de gabarito.'
+        )
+
+        return redirect(
+            'provas:detalhe',
+            prova_id=prova.id
+        )
+
+    try:
+
+        # -----------------------------------------------------
+        # MARCA A PROVA COMO PROCESSANDO
+        # -----------------------------------------------------
+
+        prova.status_importacao = 'processando'
+
+        # Limpa uma mensagem de erro anterior.
+        prova.mensagem_importacao = ''
+
+        # Salva somente esses campos.
+        prova.save(
+            update_fields=[
+                'status_importacao',
+                'mensagem_importacao'
+            ]
+        )
+
+        # -----------------------------------------------------
+        # EXTRAI O TEXTO DO PDF DA PROVA
+        # -----------------------------------------------------
+
+        texto_prova = extrair_texto_pdf(
+            prova.arquivo_pdf.path
+        )
+
+        # -----------------------------------------------------
+        # SEPARA AS QUESTÕES
+        # -----------------------------------------------------
+
+        questoes = separar_questoes_enem(
+            texto_prova
+        )
+
+        # -----------------------------------------------------
+        # EXTRAI O TEXTO DO GABARITO
+        # -----------------------------------------------------
+
+        texto_gabarito = extrair_texto_pdf(
+            prova.arquivo_gabarito.path
+        )
+
+        # -----------------------------------------------------
+        # EXTRAI AS RESPOSTAS DO GABARITO
+        # -----------------------------------------------------
+
+        gabarito = extrair_gabarito_enem(
+            texto_gabarito
+        )
+
+        # -----------------------------------------------------
+        # VALIDA AS QUESTÕES
+        # -----------------------------------------------------
+
+        problemas = validar_questoes_com_gabarito(
+            questoes,
+            gabarito
+        )
+
+        # Se existirem problemas, não salva as questões.
+        if problemas:
+
+            # Junta todos os problemas em uma única mensagem.
+            mensagem = '\n'.join(
+                problemas
             )
 
-            # Vincula a questão.
-            alternativa.questao = questao
+            # Marca a prova como erro.
+            prova.status_importacao = 'erro'
 
-            # Salva a alternativa.
-            alternativa.save()
+            # Salva os detalhes do problema.
+            prova.mensagem_importacao = mensagem
 
-            # Mostra mensagem.
-            messages.success(
+            prova.save(
+                update_fields=[
+                    'status_importacao',
+                    'mensagem_importacao'
+                ]
+            )
+
+            # Mostra uma mensagem para o usuário.
+            messages.error(
                 request,
-                'Alternativa adicionada com sucesso!'
+                'A prova não pôde ser processada. '
+                'Verifique os detalhes.'
             )
 
-            # Volta para a questão.
             return redirect(
-                'provas:alternativas',
-                questao_id=questao.id
+                'provas:detalhe',
+                prova_id=prova.id
             )
 
-    else:
+        # -----------------------------------------------------
+        # PREPARA AS QUESTÕES
+        # -----------------------------------------------------
 
-        # Cria formulário vazio.
-        form = AlternativaForm()
+        questoes_preparadas = (
+            preparar_questoes_para_importacao(
+                questoes,
+                gabarito
+            )
+        )
 
-    # Exibe o formulário.
-    return render(
-        request,
-        'provas/form.html',
-        {
-            'form': form,
-            'titulo': 'Criar alternativa',
-            'questao': questao,
-        }
+        # -----------------------------------------------------
+        # SALVA AS QUESTÕES NO BANCO
+        # -----------------------------------------------------
+
+        quantidade = importar_questoes_no_banco(
+            prova,
+            questoes_preparadas
+        )
+
+        # -----------------------------------------------------
+        # SUCESSO
+        # -----------------------------------------------------
+
+        messages.success(
+            request,
+            f'Prova processada com sucesso! '
+            f'{quantidade} questões foram importadas.'
+        )
+
+    except Exception as erro:
+
+        # -----------------------------------------------------
+        # TRATAMENTO DE ERRO
+        # -----------------------------------------------------
+
+        # Marca a prova como erro.
+        prova.status_importacao = 'erro'
+
+        # Salva a mensagem técnica do erro.
+        prova.mensagem_importacao = str(
+            erro
+        )
+
+        # Atualiza o banco.
+        prova.save(
+            update_fields=[
+                'status_importacao',
+                'mensagem_importacao'
+            ]
+        )
+
+        # Mostra uma mensagem simples para o usuário.
+        messages.error(
+            request,
+            'Ocorreu um erro durante o processamento da prova.'
+        )
+
+    # Volta para a página da prova.
+    return redirect(
+        'provas:detalhe',
+        prova_id=prova.id
     )

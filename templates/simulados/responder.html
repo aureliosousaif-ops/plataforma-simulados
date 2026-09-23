@@ -1,0 +1,574 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{ simulado.prova.nome }}
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- ========================================== -->
+    <!-- CABEÇALHO -->
+    <!-- ========================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h1>
+                {{ simulado.prova.nome }}
+            </h1>
+
+            <p class="text-muted mb-0">
+
+                Questão {{ numero_atual }}
+                de {{ total_questoes }}
+
+            </p>
+
+        </div>
+
+
+        <!-- CRONÔMETRO -->
+
+        <div class="text-end">
+
+            <small class="text-muted d-block">
+                Tempo
+            </small>
+
+            <span
+                id="cronometro"
+                class="badge text-bg-dark fs-5"
+            >
+                00:00:00
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- BARRA DE PROGRESSO -->
+    <!-- ========================================== -->
+
+    <div
+        class="progress mb-4"
+        style="height: 8px;"
+    >
+
+        <div
+            class="progress-bar"
+            role="progressbar"
+            style="width: {% widthratio numero_atual total_questoes 100 %}%"
+        ></div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- FORMULÁRIO -->
+    <!-- ========================================== -->
+
+    <form
+        method="post"
+        id="form-resposta"
+    >
+
+        {% csrf_token %}
+
+
+        <!-- Campo oculto da ação -->
+
+        <input
+            type="hidden"
+            name="acao"
+            id="campo-acao"
+            value="proxima"
+        >
+
+
+        <div class="card shadow-sm">
+
+            <div class="card-body">
+
+
+                <!-- NÚMERO DA QUESTÃO -->
+
+                <h4 class="mb-4">
+
+                    Questão
+                    {{ resposta.questao.numero }}
+
+                </h4>
+
+
+                <!-- ENUNCIADO -->
+
+                <div class="mb-4">
+
+                    <p class="fs-5">
+
+                        {{ resposta.questao.enunciado }}
+
+                    </p>
+
+                </div>
+
+
+                <!-- ========================================== -->
+                <!-- ALTERNATIVAS -->
+                <!-- ========================================== -->
+
+                <div>
+
+                    {% for alternativa in resposta.questao.alternativas.all %}
+
+                        <div
+                            class="form-check border rounded p-3 mb-3"
+                        >
+
+                            <input
+                                class="form-check-input ms-0 me-2"
+                                type="radio"
+                                name="alternativa"
+                                value="{{ alternativa.id }}"
+                                id="alternativa{{ alternativa.id }}"
+
+                                {% if resposta.alternativa_id == alternativa.id %}
+                                    checked
+                                {% endif %}
+                            >
+
+
+                            <label
+                                class="form-check-label"
+                                for="alternativa{{ alternativa.id }}"
+                            >
+
+                                <strong>
+
+                                    {{ alternativa.letra }})
+
+                                </strong>
+
+                                {{ alternativa.texto }}
+
+                            </label>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- BOTÕES -->
+            <!-- ========================================== -->
+
+            <div class="card-footer bg-white">
+
+                <div class="d-flex justify-content-between">
+
+
+                    <!-- ANTERIOR -->
+
+                    <button
+                        type="submit"
+                        name="acao"
+                        value="anterior"
+                        class="btn btn-outline-secondary"
+
+                        {% if numero_atual == 1 %}
+                            disabled
+                        {% endif %}
+                    >
+
+                        ← Anterior
+
+                    </button>
+
+
+                    <div>
+
+                        {% if numero_atual == total_questoes %}
+
+
+                            <!-- FINALIZAR -->
+
+                            <button
+                                type="submit"
+                                name="acao"
+                                value="finalizar"
+                                class="btn btn-success"
+                                id="botao-finalizar"
+                            >
+
+                                Finalizar simulado
+
+                            </button>
+
+
+                        {% else %}
+
+
+                            <!-- PRÓXIMA -->
+
+                            <button
+                                type="submit"
+                                name="acao"
+                                value="proxima"
+                                class="btn btn-primary"
+                            >
+
+                                Próxima →
+
+                            </button>
+
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </form>
+
+
+    <!-- ========================================== -->
+    <!-- NAVEGAÇÃO DAS QUESTÕES -->
+    <!-- ========================================== -->
+
+    <div class="card shadow-sm mt-4">
+
+        <div class="card-body">
+
+
+            <div
+                class="d-flex justify-content-between align-items-center mb-3"
+            >
+
+                <h5 class="mb-0">
+
+                    Questões
+
+                </h5>
+
+
+                <small class="text-muted">
+
+                    Clique para acessar
+
+                </small>
+
+            </div>
+
+
+            <!-- NÚMEROS DAS QUESTÕES -->
+
+            <div class="d-flex flex-wrap gap-2">
+
+                {% for item in respostas %}
+
+                    <a
+                        href="{% url 'simulados:responder' simulado.id %}?questao={{ forloop.counter }}"
+                        class="btn btn-sm
+
+                        {% if forloop.counter == numero_atual %}
+
+                            btn-primary
+
+                        {% elif item.respondida %}
+
+                            btn-success
+
+                        {% else %}
+
+                            btn-outline-secondary
+
+                        {% endif %}
+
+                        "
+                        style="width: 42px;"
+                    >
+
+                        {{ forloop.counter }}
+
+                    </a>
+
+                {% endfor %}
+
+            </div>
+
+
+            <!-- LEGENDA -->
+
+            <div
+                class="d-flex flex-wrap gap-3 mt-3 small"
+            >
+
+
+                <div>
+
+                    <span class="badge text-bg-primary">
+                        &nbsp;
+                    </span>
+
+                    Atual
+
+                </div>
+
+
+                <div>
+
+                    <span class="badge text-bg-success">
+                        &nbsp;
+                    </span>
+
+                    Respondida
+
+                </div>
+
+
+                <div>
+
+                    <span class="badge text-bg-light border">
+                        &nbsp;
+                    </span>
+
+                    Não respondida
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ================================================= -->
+<!-- CRONÔMETRO -->
+<!-- ================================================= -->
+
+<script>
+
+    /*
+     * Momento em que o simulado começou.
+     *
+     * O Django envia o horário real
+     * para o navegador.
+     */
+    const inicioSimulado = new Date(
+        "{{ simulado.iniciado_em|date:'c' }}"
+    );
+
+
+    /*
+     * Formata segundos para HH:MM:SS.
+     */
+    function formatarTempo(segundos) {
+
+        const horas = Math.floor(
+            segundos / 3600
+        );
+
+
+        const minutos = Math.floor(
+            (segundos % 3600) / 60
+        );
+
+
+        const segundosRestantes =
+            segundos % 60;
+
+
+        const horasFormatadas =
+            String(horas).padStart(
+                2,
+                '0'
+            );
+
+
+        const minutosFormatados =
+            String(minutos).padStart(
+                2,
+                '0'
+            );
+
+
+        const segundosFormatados =
+            String(segundosRestantes).padStart(
+                2,
+                '0'
+            );
+
+
+        return (
+            horasFormatadas +
+            ':' +
+            minutosFormatados +
+            ':' +
+            segundosFormatados
+        );
+    }
+
+
+    /*
+     * Atualiza o cronômetro.
+     */
+    function atualizarCronometro() {
+
+        const agora = new Date();
+
+
+        /*
+         * Calcula a diferença entre
+         * o horário atual e o início.
+         */
+        const diferenca =
+            Math.floor(
+                (
+                    agora -
+                    inicioSimulado
+                ) / 1000
+            );
+
+
+        /*
+         * Evita valores negativos.
+         */
+        const segundos =
+            Math.max(
+                0,
+                diferenca
+            );
+
+
+        /*
+         * Atualiza o cronômetro na tela.
+         */
+        document.getElementById(
+            'cronometro'
+        ).textContent =
+            formatarTempo(
+                segundos
+            );
+    }
+
+
+    /*
+     * Atualiza imediatamente.
+     */
+    atualizarCronometro();
+
+
+    /*
+     * Atualiza a cada segundo.
+     */
+    setInterval(
+        atualizarCronometro,
+        1000
+    );
+
+
+
+    /* ============================================== */
+    /* CONFIRMAÇÃO AO FINALIZAR */
+    /* ============================================== */
+
+    const botaoFinalizar =
+        document.getElementById(
+            'botao-finalizar'
+        );
+
+
+    /*
+     * Verifica se o botão existe.
+     *
+     * Ele somente aparece na última questão.
+     */
+    if (botaoFinalizar) {
+
+        botaoFinalizar.addEventListener(
+            'click',
+            function(event) {
+
+                /*
+                 * Recebe do Django a quantidade
+                 * de questões ainda não respondidas.
+                 */
+                const naoRespondidas =
+                    {{ nao_respondidas }};
+
+
+                /*
+                 * Guarda a mensagem da confirmação.
+                 */
+                let mensagemConfirmacao;
+
+
+                /*
+                 * Verifica se existem questões
+                 * sem resposta.
+                 */
+                if (naoRespondidas > 0) {
+
+                    mensagemConfirmacao =
+                        'Atenção! Você ainda possui ' +
+                        naoRespondidas +
+                        ' questão(ões) não respondida(s).' +
+                        '\n\n' +
+                        'Deseja realmente finalizar o simulado?';
+
+                } else {
+
+                    /*
+                     * Todas as questões foram respondidas.
+                     */
+                    mensagemConfirmacao =
+                        'Você respondeu todas as questões.' +
+                        '\n\n' +
+                        'Deseja realmente finalizar o simulado?';
+                }
+
+
+                /*
+                 * Mostra a confirmação.
+                 */
+                const confirmar =
+                    confirm(
+                        mensagemConfirmacao
+                    );
+
+
+                /*
+                 * Se o aluno cancelar,
+                 * impede o envio.
+                 */
+                if (!confirmar) {
+
+                    event.preventDefault();
+
+                }
+
+            }
+        );
+
+    }
+
+</script>
+
+{% endblock %}

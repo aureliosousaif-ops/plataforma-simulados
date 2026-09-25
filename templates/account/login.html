@@ -1,7 +1,9 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
+{% load static %}
 
 {% block title %}
-    Entrar com Google | Examix
+    Entrar | Examix
 {% endblock %}
 
 {% block content %}
@@ -10,49 +12,180 @@
 
     <div class="examix-auth-card">
 
-        <!-- Logo -->
+        <!-- Logo do Examix -->
         <div class="examix-auth-logo">
+
             <img
                 src="{% static 'images/logosistema.png' %}"
                 alt="Logo Examix"
             >
+
         </div>
 
         <!-- Título -->
         <h1>
-            Entrar com Google
+            Entrar
         </h1>
 
+        <!-- Descrição -->
         <p class="examix-auth-description">
-            Você está prestes a entrar no Examix
-            usando sua conta Google.
+            Entre na sua conta para continuar.
         </p>
 
-        <!-- Formulário do allauth -->
+        <!-- Formulário de login -->
         <form method="post">
 
             {% csrf_token %}
 
+            <!-- Exibe erros gerais do formulário -->
+            {% if form.non_field_errors %}
+
+                <div class="alert alert-danger">
+
+                    {% for error in form.non_field_errors %}
+
+                        {{ error }}
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+            <!-- Campo de usuário -->
+            <div class="mb-3">
+
+                <label
+                    for="{{ form.login.id_for_label }}"
+                    class="form-label"
+                >
+                    Usuário ou e-mail
+                </label>
+
+                {{ form.login }}
+
+                {% if form.login.errors %}
+
+                    <div class="text-danger small mt-1">
+
+                        {% for error in form.login.errors %}
+
+                            {{ error }}
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+            <!-- Campo de senha -->
+            <div class="mb-3">
+
+                <label
+                    for="{{ form.password.id_for_label }}"
+                    class="form-label"
+                >
+                    Senha
+                </label>
+
+                {{ form.password }}
+
+                {% if form.password.errors %}
+
+                    <div class="text-danger small mt-1">
+
+                        {% for error in form.password.errors %}
+
+                            {{ error }}
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+            <!-- Lembrar sessão -->
+            {% if form.remember %}
+
+                <div class="form-check mb-3">
+
+                    {{ form.remember }}
+
+                    <label
+                        class="form-check-label"
+                        for="{{ form.remember.id_for_label }}"
+                    >
+                        Lembrar de mim
+                    </label>
+
+                </div>
+
+            {% endif %}
+
+            <!-- Botão entrar -->
             <button
                 type="submit"
-                class="examix-google-button"
+                class="btn btn-primary w-100"
             >
-                <span class="examix-google-icon">
-                    G
-                </span>
-
-                Continuar com Google
+                Entrar
             </button>
 
         </form>
 
-        <!-- Voltar -->
+        <!-- Login com Google -->
+        <div class="text-center my-3">
+
+            <span class="text-muted">
+                ou
+            </span>
+
+        </div>
+
         <a
-            href="{% url 'usuarios:login' %}"
-            class="examix-auth-back"
+            href="{% url 'google_login' %}"
+            class="examix-google-button text-decoration-none"
         >
-            ← Voltar para o login
+
+            <span class="examix-google-icon">
+                G
+            </span>
+
+            Continuar com Google
+
         </a>
+
+        <!-- Links -->
+        <div class="text-center mt-4">
+
+            <p class="mb-2">
+
+                <a
+                    href="{% url 'account_reset_password' %}"
+                    class="text-decoration-none"
+                >
+                    Esqueci minha senha
+                </a>
+
+            </p>
+
+            <p class="mb-0">
+
+                Ainda não possui uma conta?
+
+                <a
+                    href="{% url 'usuarios:cadastro' %}"
+                    class="text-decoration-none fw-bold"
+                >
+                    Criar conta
+                </a>
+
+            </p>
+
+        </div>
 
     </div>
 

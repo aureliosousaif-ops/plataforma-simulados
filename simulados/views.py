@@ -7,20 +7,22 @@ from provas.models import Prova, Alternativa
 from .models import RespostaSimulado, Simulado
 
 
-@login_required
 def lista(request):
     """
-    Mostra as provas disponíveis para iniciar
-    um novo simulado.
+    Mostra as provas disponíveis.
+
+    Esta página é pública.
+    Qualquer visitante pode visualizar
+    os simulados disponíveis sem fazer login.
     """
 
     # Busca somente provas ativas e já processadas.
-    # Esta página mostra PROVAS, e não tentativas.
     provas = Prova.objects.filter(
         ativa=True,
         status_importacao='processada'
     )
 
+    # Exibe a lista de provas.
     return render(
         request,
         'simulados/lista.html',
@@ -30,18 +32,46 @@ def lista(request):
     )
 
 
-@login_required
 def iniciar(request, prova_id):
     """
-    Cria uma nova tentativa de simulado.
+    Inicia um novo simulado.
+
+    A lista de provas é pública, mas para
+    realmente iniciar uma prova o usuário
+    precisa estar autenticado.
     """
 
-    # O simulado deve ser iniciado através do botão.
+    # ==========================================
+    # VERIFICA LOGIN
+    # ==========================================
+
+    if not request.user.is_authenticated:
+
+        # O visitante tentou iniciar um simulado.
+        # Guardamos o endereço da prova para que,
+        # depois do login, ele possa continuar.
+        destino = request.path
+
+        # Envia o visitante para a página de login.
+        return redirect(
+            f'/usuarios/login/?next={destino}'
+        )
+
+    # ==========================================
+    # VERIFICA MÉTODO DA REQUISIÇÃO
+    # ==========================================
+
+    # O simulado deve ser iniciado através
+    # do formulário POST do botão.
     if request.method != 'POST':
 
         return redirect(
             'simulados:lista'
         )
+
+    # ==========================================
+    # BUSCA A PROVA
+    # ==========================================
 
     # Busca somente uma prova válida.
     prova = get_object_or_404(
@@ -51,18 +81,29 @@ def iniciar(request, prova_id):
         status_importacao='processada'
     )
 
-    # Cria uma nova tentativa.
+    # ==========================================
+    # CRIA O SIMULADO
+    # ==========================================
+
+    # Cria uma nova tentativa para
+    # o usuário atualmente logado.
     simulado = Simulado.objects.create(
         usuario=request.user,
         prova=prova
     )
 
-    # Busca todas as questões ativas da prova.
+    # Busca todas as questões ativas
+    # pertencentes à prova.
     questoes = prova.questoes.filter(
         ativa=True
     )
 
-    # Cria uma resposta vazia para cada questão.
+    # ==========================================
+    # CRIA AS RESPOSTAS
+    # ==========================================
+
+    # Cria uma resposta vazia para
+    # cada questão do simulado.
     respostas = [
         RespostaSimulado(
             simulado=simulado,
@@ -76,7 +117,11 @@ def iniciar(request, prova_id):
         respostas
     )
 
-    # Vai para a primeira questão.
+    # ==========================================
+    # PRIMEIRA QUESTÃO
+    # ==========================================
+
+    # Envia o usuário para a primeira questão.
     return redirect(
         'simulados:responder',
         simulado_id=simulado.id
@@ -129,7 +174,11 @@ def responder(request, simulado_id):
             'simulados:lista'
         )
 
-    # Pega a questão pela URL.
+    # ==========================================
+    # QUESTÃO ATUAL
+    # ==========================================
+
+    # Pega o número da questão pela URL.
     numero = request.GET.get(
         'questao',
         '1'
@@ -159,6 +208,10 @@ def responder(request, simulado_id):
         numero - 1
     ]
 
+    # ==========================================
+    # INÍCIO DA QUESTÃO
+    # ==========================================
+
     # Registra quando a questão foi visualizada.
     if resposta_atual.iniciada_em is None:
 
@@ -169,6 +222,10 @@ def responder(request, simulado_id):
                 'iniciada_em'
             ]
         )
+
+    # ==========================================
+    # TEMPO DO SIMULADO
+    # ==========================================
 
     # Calcula o tempo total desde o início
     # do simulado.
@@ -286,6 +343,10 @@ def responder(request, simulado_id):
                 f'?questao={numero + 1}'
             )
 
+    # ==========================================
+    # QUESTÕES NÃO RESPONDIDAS
+    # ==========================================
+
     # Conta as questões ainda não respondidas.
     nao_respondidas = sum(
         1
@@ -293,7 +354,10 @@ def responder(request, simulado_id):
         if not resposta.respondida
     )
 
-    # Renderiza a questão atual.
+    # ==========================================
+    # RENDERIZA A QUESTÃO
+    # ==========================================
+
     return render(
         request,
         'simulados/responder.html',
@@ -601,6 +665,7 @@ def resultado(request, simulado_id):
     # TEMPO FORMATADO
     # ==========================================
 
+    # Tempo total salvo.
     tempo_total = (
         simulado.tempo_total_segundos
     )
@@ -625,7 +690,10 @@ def resultado(request, simulado_id):
         f'{segundos:02d}'
     )
 
-    # Envia os dados para o template.
+    # ==========================================
+    # RESULTADO
+    # ==========================================
+
     return render(
         request,
         'simulados/resultado.html',
@@ -747,7 +815,10 @@ def historico(request):
             }
         )
 
-    # Renderiza a página.
+    # ==========================================
+    # RENDERIZA O HISTÓRICO
+    # ==========================================
+
     return render(
         request,
         'simulados/historico.html',

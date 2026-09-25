@@ -10,10 +10,12 @@ from .models import RespostaSimulado, Simulado
 @login_required
 def lista(request):
     """
-    Mostra as provas disponíveis para iniciar um simulado.
+    Mostra as provas disponíveis para iniciar
+    um novo simulado.
     """
 
     # Busca somente provas ativas e já processadas.
+    # Esta página mostra PROVAS, e não tentativas.
     provas = Prova.objects.filter(
         ativa=True,
         status_importacao='processada'
@@ -49,13 +51,13 @@ def iniciar(request, prova_id):
         status_importacao='processada'
     )
 
-    # Cria o simulado.
+    # Cria uma nova tentativa.
     simulado = Simulado.objects.create(
         usuario=request.user,
         prova=prova
     )
 
-    # Busca todas as questões ativas.
+    # Busca todas as questões ativas da prova.
     questoes = prova.questoes.filter(
         ativa=True
     )
@@ -87,14 +89,16 @@ def responder(request, simulado_id):
     Exibe uma questão e salva a resposta do aluno.
     """
 
-    # Busca somente o simulado do usuário logado.
+    # Busca somente o simulado pertencente ao
+    # usuário atualmente logado.
     simulado = get_object_or_404(
         Simulado,
         id=simulado_id,
         usuario=request.user
     )
 
-    # Se já terminou, mostra o resultado.
+    # Se o simulado já foi finalizado,
+    # mostra diretamente o resultado.
     if simulado.status == 'finalizado':
 
         return redirect(
@@ -102,7 +106,7 @@ def responder(request, simulado_id):
             simulado_id=simulado.id
         )
 
-    # Busca todas as respostas.
+    # Busca todas as respostas do simulado.
     respostas = list(
         simulado.respostas
         .select_related(
@@ -117,7 +121,8 @@ def responder(request, simulado_id):
         )
     )
 
-    # Caso não existam questões.
+    # Caso não existam questões,
+    # volta para a lista de provas.
     if not respostas:
 
         return redirect(
@@ -130,7 +135,7 @@ def responder(request, simulado_id):
         '1'
     )
 
-    # Tenta transformar em número.
+    # Tenta transformar o número em inteiro.
     try:
 
         numero = int(numero)
@@ -154,7 +159,7 @@ def responder(request, simulado_id):
         numero - 1
     ]
 
-    # Registra o início da questão.
+    # Registra quando a questão foi visualizada.
     if resposta_atual.iniciada_em is None:
 
         resposta_atual.iniciada_em = timezone.now()
@@ -165,7 +170,8 @@ def responder(request, simulado_id):
             ]
         )
 
-    # Calcula o tempo desde o início.
+    # Calcula o tempo total desde o início
+    # do simulado.
     tempo_decorrido = int(
         (
             timezone.now()
@@ -190,7 +196,7 @@ def responder(request, simulado_id):
             'alternativa'
         )
 
-        # Define a ação.
+        # Define a ação solicitada.
         acao = request.POST.get(
             'acao',
             'proxima'
@@ -202,8 +208,8 @@ def responder(request, simulado_id):
 
         if alternativa_id:
 
-            # Busca a alternativa somente
-            # dentro da questão atual.
+            # Busca a alternativa somente dentro
+            # da questão atual.
             alternativa = get_object_or_404(
                 Alternativa,
                 id=alternativa_id,
@@ -213,19 +219,19 @@ def responder(request, simulado_id):
             # Horário atual.
             agora = timezone.now()
 
-            # Salva a alternativa.
+            # Salva a alternativa escolhida.
             resposta_atual.alternativa = alternativa
 
             # Marca como respondida.
             resposta_atual.respondida = True
 
-            # Verifica se acertou.
+            # Verifica se a alternativa está correta.
             resposta_atual.correta = alternativa.correta
 
             # Registra o horário da resposta.
             resposta_atual.respondida_em = agora
 
-            # Calcula o tempo da questão.
+            # Calcula o tempo gasto na questão.
             if resposta_atual.iniciada_em:
 
                 tempo_questao = (
@@ -238,7 +244,7 @@ def responder(request, simulado_id):
                     int(tempo_questao)
                 )
 
-            # Salva.
+            # Salva a resposta.
             resposta_atual.save()
 
         # ==========================================
@@ -280,14 +286,14 @@ def responder(request, simulado_id):
                 f'?questao={numero + 1}'
             )
 
-    # Conta questões não respondidas.
+    # Conta as questões ainda não respondidas.
     nao_respondidas = sum(
         1
         for resposta in respostas
         if not resposta.respondida
     )
 
-    # Renderiza a questão.
+    # Renderiza a questão atual.
     return render(
         request,
         'simulados/responder.html',
@@ -470,7 +476,7 @@ def finalizar(request, simulado_id):
             simulado_id=simulado_id
         )
 
-    # Busca o simulado do usuário.
+    # Busca o simulado pertencente ao usuário.
     simulado = get_object_or_404(
         Simulado,
         id=simulado_id,
@@ -640,23 +646,20 @@ def resultado(request, simulado_id):
 @login_required
 def historico(request):
     """
-    Mostra o histórico de simulados do aluno.
+    Mostra todos os simulados do usuário.
 
-    Somente simulados finalizados do usuário
-    atualmente logado são exibidos.
+    Aqui aparecem tanto os simulados que ainda
+    estão em andamento quanto os finalizados.
     """
 
-    # Busca somente os simulados do usuário.
-    #
-    # O filtro também impede que simulados
-    # ainda em andamento apareçam no histórico.
+    # Busca somente os simulados pertencentes
+    # ao usuário atualmente logado.
     simulados = Simulado.objects.filter(
-        usuario=request.user,
-        status='finalizado'
+        usuario=request.user
     ).select_related(
         'prova'
     ).order_by(
-        '-finalizado_em'
+        '-iniciado_em'
     )
 
     # Lista que receberá os dados preparados
@@ -667,12 +670,48 @@ def historico(request):
     for simulado in simulados:
 
         # ==========================================
+        # QUESTÕES
+        # ==========================================
+
+        # Total de questões.
+        total = simulado.respostas.count()
+
+        # Quantidade de questões respondidas.
+        respondidas = simulado.respostas.filter(
+            respondida=True
+        ).count()
+
+        # Quantidade ainda não respondida.
+        nao_respondidas = (
+            total
+            - respondidas
+        )
+
+        # ==========================================
         # TEMPO
         # ==========================================
 
-        tempo_total = (
-            simulado.tempo_total_segundos
-        )
+        # Tempo salvo no banco.
+        tempo_total = simulado.tempo_total_segundos
+
+        # Para simulados em andamento, o tempo
+        # salvo pode ainda ser zero.
+        if (
+            simulado.status != 'finalizado'
+            and simulado.iniciado_em
+        ):
+
+            tempo_total = int(
+                (
+                    timezone.now()
+                    - simulado.iniciado_em
+                ).total_seconds()
+            )
+
+            tempo_total = max(
+                0,
+                tempo_total
+            )
 
         # Calcula horas.
         horas = tempo_total // 3600
@@ -695,21 +734,6 @@ def historico(request):
         )
 
         # ==========================================
-        # QUESTÕES NÃO RESPONDIDAS
-        # ==========================================
-
-        total = simulado.respostas.count()
-
-        respondidas = simulado.respostas.filter(
-            respondida=True
-        ).count()
-
-        nao_respondidas = (
-            total
-            - respondidas
-        )
-
-        # ==========================================
         # ADICIONA AO HISTÓRICO
         # ==========================================
 
@@ -717,6 +741,7 @@ def historico(request):
             {
                 'simulado': simulado,
                 'total': total,
+                'respondidas': respondidas,
                 'nao_respondidas': nao_respondidas,
                 'tempo_formatado': tempo_formatado,
             }

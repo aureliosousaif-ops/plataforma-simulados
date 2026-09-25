@@ -375,3 +375,29 @@ SOCIALACCOUNT_PROVIDERS = {
 # Os valores são lidos do arquivo .env.
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+
+# =========================================================
+# LOGS DE ERROS
+# =========================================================
+
+# Envia erros do Django para o log do Render.
+LOGGING = {
+    'version': 1,
+
+    # Mantém os loggers padrão do Django.
+    'disable_existing_loggers': False,
+
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}

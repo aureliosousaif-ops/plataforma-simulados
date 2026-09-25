@@ -1,0 +1,64 @@
+{% load static %}
+
+{% extends 'base.html' %}
+
+{% block title %}
+    Entrar com Google | Examix
+{% endblock %}
+
+{% block content %}
+
+<section class="examix-auth">
+
+    <div class="examix-auth-card">
+
+        <!-- Logo Examix -->
+        <div class="examix-auth-logo">
+            <img
+                src="{% static 'images/logosistema.png' %}"
+                alt="Logo Examix"
+            >
+        </div>
+
+        <!-- Título -->
+        <h1>
+            Entrar com Google
+        </h1>
+
+        <!-- Explicação -->
+        <p class="examix-auth-description">
+            Você está prestes a iniciar sessão
+            usando sua conta Google.
+        </p>
+
+        <!-- Formulário do Google -->
+        <form method="post">
+
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                class="examix-google-button"
+            >
+                <span class="examix-google-icon">
+                    G
+                </span>
+
+                Continuar com Google
+            </button>
+
+        </form>
+
+        <!-- Voltar -->
+        <a
+            href="{% url 'usuarios:login' %}"
+            class="examix-auth-back"
+        >
+            ← Voltar para o login
+        </a>
+
+    </div>
+
+</section>
+
+{% endblock %}

@@ -1,365 +1,400 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {{ simulado.prova.nome }} | Examix
+    Responder simulado | Examix
 {% endblock %}
-
 
 {% block content %}
 
-<section class="examix-responder">
+<div class="container py-4">
 
-    <div class="container">
+    <!-- ========================================== -->
+    <!-- CABEÇALHO DO SIMULADO -->
+    <!-- ========================================== -->
 
+    <div class="d-flex justify-content-between align-items-start mb-4">
 
-        <!-- =================================================
-             CABEÇALHO DO SIMULADO
-             ================================================= -->
+        <div>
 
-        <div class="examix-responder-header">
-
-            <div class="examix-responder-title">
-
-                <span class="examix-section-label">
-                    SIMULADO EM ANDAMENTO
-                </span>
-
-                <h1>
-                    {{ simulado.prova.nome }}
-                </h1>
-
+            <!-- Status -->
+            <div class="text-primary fw-bold small mb-2">
+                SIMULADO EM ANDAMENTO
             </div>
 
+            <!-- Nome da prova -->
+            <h1 class="fw-bold mb-0">
+                {{ simulado.prova.nome }}
+            </h1>
 
-            <!-- =================================================
-                 CRONÔMETRO
-                 ================================================= -->
+        </div>
 
-            <div class="examix-timer-box">
+        <!-- ====================================== -->
+        <!-- CRONÔMETRO -->
+        <!-- ====================================== -->
 
-                <span class="examix-timer-label">
-                    Tempo
-                </span>
+        <div
+            class="card border-0 shadow-sm"
+            style="min-width: 150px;"
+        >
 
-                <strong
+            <div class="card-body text-center py-3">
+
+                <div class="text-muted small mb-1">
+                    TEMPO
+                </div>
+
+                <div
                     id="cronometro"
-                    data-inicio="{{ simulado.iniciado_em|date:'c' }}"
+                    class="fw-bold text-primary fs-4"
                 >
                     00:00:00
-                </strong>
+                </div>
 
             </div>
 
         </div>
 
-
-        <!-- =================================================
-             FORMULÁRIO
-             ================================================= -->
-
-        <form
-            method="post"
-            id="form-simulado"
-        >
-
-            {% csrf_token %}
+    </div>
 
 
-            <!-- =================================================
-                 QUESTÃO
-                 ================================================= -->
+    <!-- ========================================== -->
+    <!-- QUESTÃO -->
+    <!-- ========================================== -->
 
-            <div class="examix-question-card">
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body p-4">
+
+            <!-- Número da questão -->
+            <div class="mb-4">
+
+                <span class="badge bg-primary-subtle text-primary px-3 py-2">
+                    Questão {{ numero_atual }}
+                </span>
+
+            </div>
+
+            <!-- Texto da questão -->
+            <div class="fs-5 mb-4">
+
+                {{ resposta.questao.texto|linebreaks }}
+
+            </div>
 
 
-                <!-- Número da questão -->
+            <!-- ================================== -->
+            <!-- ALTERNATIVAS -->
+            <!-- ================================== -->
 
-                <div class="examix-question-number">
+            <form
+                method="post"
+                id="form-resposta"
+            >
 
-                    Questão {{ numero_questao }}
+                {% csrf_token %}
 
-                </div>
+                <!-- Ação do formulário -->
+                <input
+                    type="hidden"
+                    name="acao"
+                    id="campo-acao"
+                    value="proxima"
+                >
 
+                <div class="d-flex flex-column gap-3">
 
-                <!-- Enunciado -->
-
-                <div class="examix-question-text">
-
-                    {{ questao.enunciado|linebreaks }}
-
-                </div>
-
-
-                <!-- =================================================
-                     ALTERNATIVAS
-                     ================================================= -->
-
-                <div class="examix-alternatives">
-
-                    {% for alternativa in questao.alternativas.all %}
+                    {% for alternativa in resposta.questao.alternativas.all %}
 
                         <label
-                            class="examix-alternative"
-                            for="alternativa-{{ alternativa.id }}"
+                            class="border rounded p-3 d-flex align-items-start gap-3"
+                            style="cursor: pointer;"
                         >
 
+                            <!-- Radio -->
                             <input
                                 type="radio"
                                 name="alternativa"
                                 value="{{ alternativa.id }}"
-                                id="alternativa-{{ alternativa.id }}"
-                                {% if resposta_atual == alternativa.id %}
+                                class="form-check-input mt-1"
+                                {% if resposta.alternativa_id == alternativa.id %}
                                     checked
                                 {% endif %}
                             >
 
-                            <span class="examix-alternative-letter">
+                            <!-- Letra -->
+                            <strong>
+                                {{ alternativa.letra }})
+                            </strong>
 
-                                {{ alternativa.letra }}
-
-                            </span>
-
-                            <span class="examix-alternative-text">
-
-                                {{ alternativa.texto }}
-
+                            <!-- Texto -->
+                            <span>
+                                {{ alternativa.texto|linebreaksbr }}
                             </span>
 
                         </label>
 
-                    {% endfor %}
+                    {% empty %}
 
-                </div>
-
-            </div>
-
-
-            <!-- =================================================
-                 NAVEGAÇÃO PRINCIPAL
-                 ================================================= -->
-
-            <div class="examix-question-navigation">
-
-
-                <!-- Questão anterior -->
-
-                {% if numero_questao > 1 %}
-
-                    <button
-                        type="submit"
-                        name="acao"
-                        value="anterior"
-                        class="examix-secondary-button"
-                    >
-                        ← Anterior
-                    </button>
-
-                {% else %}
-
-                    <span></span>
-
-                {% endif %}
-
-
-                <!-- Próxima / Finalizar -->
-
-                {% if numero_questao < total_questoes %}
-
-                    <button
-                        type="submit"
-                        name="acao"
-                        value="proxima"
-                        class="examix-primary-button examix-navigation-button"
-                    >
-                        Próxima →
-                    </button>
-
-                {% else %}
-
-                    <button
-                        type="submit"
-                        name="acao"
-                        value="finalizar"
-                        class="examix-finish-button"
-                        onclick="return confirm('Tem certeza que deseja finalizar o simulado?');"
-                    >
-                        Finalizar simulado
-                    </button>
-
-                {% endif %}
-
-            </div>
-
-
-            <!-- =================================================
-                 NAVEGAÇÃO RÁPIDA
-                 ================================================= -->
-
-            <div class="examix-question-map">
-
-                <div class="examix-question-map-header">
-
-                    <div>
-
-                        <h2>
-                            Navegação
-                        </h2>
-
-                        <p>
-                            Selecione uma questão para acessá-la rapidamente.
-                        </p>
-
-                    </div>
-
-                    <span>
-                        {{ numero_questao }}/{{ total_questoes }}
-                    </span>
-
-                </div>
-
-
-                <div class="examix-question-grid">
-
-                    {% for numero in numeros_questoes %}
-
-                        {% if numero == numero_questao %}
-
-                            <button
-                                type="submit"
-                                name="questao"
-                                value="{{ numero }}"
-                                class="examix-question-button active"
-                            >
-                                {{ numero }}
-                            </button>
-
-                        {% else %}
-
-                            <button
-                                type="submit"
-                                name="questao"
-                                value="{{ numero }}"
-                                class="examix-question-button"
-                            >
-                                {{ numero }}
-                            </button>
-
-                        {% endif %}
+                        <div class="alert alert-warning">
+                            Nenhuma alternativa encontrada para esta questão.
+                        </div>
 
                     {% endfor %}
 
                 </div>
 
-            </div>
 
+                <!-- ================================== -->
+                <!-- BOTÕES DE NAVEGAÇÃO -->
+                <!-- ================================== -->
+
+                <div class="d-flex justify-content-between align-items-center mt-4">
+
+                    <!-- Anterior -->
+                    {% if numero_atual > 1 %}
+
+                        <button
+                            type="submit"
+                            class="btn btn-outline-secondary"
+                            onclick="document.getElementById('campo-acao').value='anterior';"
+                        >
+                            ← Anterior
+                        </button>
+
+                    {% else %}
+
+                        <div></div>
+
+                    {% endif %}
+
+
+                    <!-- Próxima -->
+                    {% if numero_atual < total_questoes %}
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            onclick="document.getElementById('campo-acao').value='proxima';"
+                        >
+                            Próxima →
+                        </button>
+
+                    {% endif %}
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- FINALIZAR SIMULADO -->
+    <!-- ========================================== -->
+
+    <div class="d-flex justify-content-end mb-4">
+
+        <form
+            method="post"
+            action="{% url 'simulados:finalizar' simulado.id %}"
+            onsubmit="return confirmarFinalizacao();"
+        >
+
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                class="btn btn-danger px-4"
+            >
+                Finalizar simulado
+            </button>
 
         </form>
 
     </div>
 
-</section>
 
-{% endblock %}
+    <!-- ========================================== -->
+    <!-- NAVEGAÇÃO DAS QUESTÕES -->
+    <!-- ========================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+
+                <div>
+
+                    <h5 class="fw-bold mb-1">
+                        Navegação
+                    </h5>
+
+                    <p class="text-muted mb-0">
+                        Selecione uma questão para acessá-la rapidamente.
+                    </p>
+
+                </div>
+
+                <span class="badge bg-light text-dark fs-6">
+
+                    {{ numero_atual }}/{{ total_questoes }}
+
+                </span>
+
+            </div>
 
 
-{% block extra_js %}
+            <!-- Grade de questões -->
+
+            <div class="d-flex flex-wrap gap-2">
+
+                {% for item in respostas %}
+
+                    <a
+                        href="?questao={{ forloop.counter }}"
+                        class="btn
+                        {% if forloop.counter == numero_atual %}
+                            btn-primary
+                        {% elif item.respondida %}
+                            btn-success
+                        {% else %}
+                            btn-outline-secondary
+                        {% endif %}
+                        "
+                    >
+                        {{ forloop.counter }}
+                    </a>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================== -->
+<!-- JAVASCRIPT -->
+<!-- ========================================== -->
 
 <script>
 
     /*
-     * =========================================================
-     * CRONÔMETRO DO SIMULADO
-     * =========================================================
+     * ==========================================
+     * CRONÔMETRO
+     * ==========================================
      *
-     * O horário inicial vem do Django.
-     *
-     * O cronômetro calcula a diferença entre o horário atual
-     * e o horário em que o simulado foi iniciado.
-     *
-     * Dessa forma, trocar de questão não reinicia o tempo.
+     * O tempo é calculado usando o momento em
+     * que o simulado foi iniciado no banco.
      */
 
-    document.addEventListener('DOMContentLoaded', function () {
-
-        const cronometro = document.getElementById('cronometro');
-
-        if (!cronometro) {
-            return;
-        }
+    const inicioSimulado = new Date(
+        "{{ simulado.iniciado_em|date:'c' }}"
+    );
 
 
-        // Obtém o horário inicial enviado pelo Django.
-        const inicioTexto = cronometro.dataset.inicio;
+    /*
+     * Atualiza o cronômetro.
+     */
+    function atualizarCronometro() {
 
-        if (!inicioTexto) {
-            return;
-        }
+        const agora = new Date();
 
+        /*
+         * Calcula a diferença em segundos.
+         */
+        let segundos = Math.floor(
+            (agora - inicioSimulado) / 1000
+        );
 
-        // Converte a data para timestamp.
-        const inicio = new Date(inicioTexto).getTime();
+        /*
+         * Evita valores negativos.
+         */
+        segundos = Math.max(
+            0,
+            segundos
+        );
 
 
         /*
-         * Atualiza o relógio.
+         * Horas.
          */
-        function atualizarCronometro() {
-
-            const agora = Date.now();
-
-            let diferenca = Math.floor(
-                (agora - inicio) / 1000
-            );
-
-
-            // Evita valores negativos.
-            if (diferenca < 0) {
-                diferenca = 0;
-            }
-
-
-            // Calcula horas.
-            const horas = Math.floor(
-                diferenca / 3600
-            );
-
-
-            // Calcula minutos.
-            const minutos = Math.floor(
-                (diferenca % 3600) / 60
-            );
-
-
-            // Calcula segundos.
-            const segundos = diferenca % 60;
-
-
-            // Formata cada parte com dois dígitos.
-            const horasFormatadas = String(horas).padStart(2, '0');
-
-            const minutosFormatados = String(minutos).padStart(2, '0');
-
-            const segundosFormatados = String(segundos).padStart(2, '0');
-
-
-            // Atualiza o texto.
-            cronometro.textContent =
-                `${horasFormatadas}:${minutosFormatados}:${segundosFormatados}`;
-
-        }
-
-
-        // Atualiza imediatamente.
-        atualizarCronometro();
-
-
-        // Atualiza a cada segundo.
-        setInterval(
-            atualizarCronometro,
-            1000
+        const horas = Math.floor(
+            segundos / 3600
         );
 
-    });
+
+        /*
+         * Minutos.
+         */
+        const minutos = Math.floor(
+            (segundos % 3600) / 60
+        );
+
+
+        /*
+         * Segundos restantes.
+         */
+        const segundosRestantes = segundos % 60;
+
+
+        /*
+         * Formata com dois dígitos.
+         */
+        const horasFormatadas =
+            String(horas).padStart(2, '0');
+
+        const minutosFormatados =
+            String(minutos).padStart(2, '0');
+
+        const segundosFormatados =
+            String(segundosRestantes).padStart(2, '0');
+
+
+        /*
+         * Atualiza a tela.
+         */
+        document.getElementById(
+            'cronometro'
+        ).textContent =
+            `${horasFormatadas}:${minutosFormatados}:${segundosFormatados}`;
+    }
+
+
+    /*
+     * Executa imediatamente.
+     */
+    atualizarCronometro();
+
+
+    /*
+     * Atualiza a cada segundo.
+     */
+    setInterval(
+        atualizarCronometro,
+        1000
+    );
+
+
+    /*
+     * ==========================================
+     * CONFIRMAÇÃO DA FINALIZAÇÃO
+     * ==========================================
+     */
+
+    function confirmarFinalizacao() {
+
+        return confirm(
+            'Tem certeza que deseja finalizar o simulado?'
+        );
+
+    }
 
 </script>
 

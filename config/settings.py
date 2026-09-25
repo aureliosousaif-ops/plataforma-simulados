@@ -181,18 +181,33 @@ TEMPLATES = [
 ]
 
 
-# ==========================================
+# =========================================================
 # BANCO DE DADOS
-# ==========================================
+# =========================================================
 
-# Se DATABASE_URL existir, o projeto utiliza PostgreSQL.
-# Caso contrário, utiliza SQLite localmente.
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-    )
-}
+# Obtém a URL do banco através do arquivo .env.
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+# Se DATABASE_URL existir, utiliza PostgreSQL.
+if DATABASE_URL:
+
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
+    }
+
+# Caso contrário, continua utilizando SQLite local.
+else:
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # ==========================================

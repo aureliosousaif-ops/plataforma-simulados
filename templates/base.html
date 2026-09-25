@@ -1,33 +1,54 @@
 {% load static %}
 
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 
 <head>
 
-    <!-- Configurações básicas -->
+    <!-- =====================================================
+         CONFIGURAÇÕES BÁSICAS
+         ===================================================== -->
+
     <meta charset="UTF-8">
 
-    <!-- Responsividade -->
+    <!-- Responsividade para PC, tablet e celular -->
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1"
+        content="width=device-width, initial-scale=1.0"
     >
 
     <!-- Título da página -->
     <title>
         {% block title %}
-            Plataforma de Simulados
+            Examix
         {% endblock %}
     </title>
 
-    <!-- Bootstrap -->
+
+    <!-- =====================================================
+         BOOTSTRAP
+         ===================================================== -->
+
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
     >
 
-    <!-- CSS adicional de cada página -->
+
+    <!-- =====================================================
+         CSS PRINCIPAL DO EXAMIX
+         ===================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/examix.css' %}"
+    >
+
+
+    <!-- =====================================================
+         CSS ESPECÍFICO DA PÁGINA
+         ===================================================== -->
+
     {% block extra_css %}
     {% endblock %}
 
@@ -36,25 +57,46 @@
 
 <body>
 
-    <!-- ========================================== -->
-    <!-- BARRA DE NAVEGAÇÃO -->
-    <!-- ========================================== -->
 
-    <nav class="navbar navbar-expand-lg bg-dark navbar-dark">
+    <!-- =====================================================
+         NAVBAR
+         ===================================================== -->
+
+    <nav
+        class="navbar navbar-expand-lg examix-navbar sticky-top"
+    >
 
         <div class="container">
 
-            <!-- Nome da plataforma -->
+
+            <!-- =================================================
+                 LOGO E NOME DO EXAMIX
+                 ================================================= -->
 
             <a
-                class="navbar-brand fw-bold"
+                class="examix-brand"
                 href="{% url 'home' %}"
+                aria-label="Página inicial do Examix"
             >
-                Plataforma de Simulados
+
+                <!-- Logo oficial -->
+                <img
+                    src="{% static 'images/logosistema.png' %}"
+                    alt="Logo Examix"
+                    class="examix-brand-logo"
+                >
+
+                <!-- Nome da plataforma -->
+                <span class="examix-brand-name">
+                    Examix
+                </span>
+
             </a>
 
 
-            <!-- Botão para celular -->
+            <!-- =================================================
+                 BOTÃO DO MENU MOBILE
+                 ================================================= -->
 
             <button
                 class="navbar-toggler"
@@ -71,26 +113,25 @@
             </button>
 
 
-            <!-- ====================================== -->
-            <!-- MENU PRINCIPAL -->
-            <!-- ====================================== -->
+            <!-- =================================================
+                 MENU PRINCIPAL
+                 ================================================= -->
 
             <div
                 class="collapse navbar-collapse"
                 id="menuPrincipal"
             >
 
+
+                <!-- Links principais -->
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
 
-                    <!-- ================================== -->
-                    <!-- INÍCIO -->
-                    <!-- ================================== -->
-
+                    <!-- Início -->
                     <li class="nav-item">
 
                         <a
-                            class="nav-link"
+                            class="nav-link examix-nav-link"
                             href="{% url 'home' %}"
                         >
                             Início
@@ -102,14 +143,11 @@
                     {% if user.is_authenticated %}
 
 
-                        <!-- ================================== -->
-                        <!-- ÁREA DO ALUNO -->
-                        <!-- ================================== -->
-
+                        <!-- Simulados -->
                         <li class="nav-item">
 
                             <a
-                                class="nav-link"
+                                class="nav-link examix-nav-link"
                                 href="{% url 'simulados:lista' %}"
                             >
                                 Simulados
@@ -118,10 +156,11 @@
                         </li>
 
 
+                        <!-- Meus simulados -->
                         <li class="nav-item">
 
                             <a
-                                class="nav-link"
+                                class="nav-link examix-nav-link"
                                 href="{% url 'simulados:historico' %}"
                             >
                                 Meus simulados
@@ -130,10 +169,11 @@
                         </li>
 
 
+                        <!-- Meu desempenho -->
                         <li class="nav-item">
 
                             <a
-                                class="nav-link"
+                                class="nav-link examix-nav-link"
                                 href="{% url 'desempenho:dashboard' %}"
                             >
                                 Meu desempenho
@@ -142,16 +182,13 @@
                         </li>
 
 
-                        <!-- ================================== -->
-                        <!-- ÁREA DO DESENVOLVEDOR -->
-                        <!-- ================================== -->
-
-                        {% if user.perfil.tipo == 'desenvolvedor' %}
+                        <!-- Área do desenvolvedor -->
+                        {% if is_desenvolvedor %}
 
                             <li class="nav-item">
 
                                 <a
-                                    class="nav-link text-warning"
+                                    class="nav-link examix-nav-link"
                                     href="{% url 'provas:lista' %}"
                                 >
                                     ⚙ Gerenciar provas
@@ -167,63 +204,60 @@
                 </ul>
 
 
-                <!-- ====================================== -->
-                <!-- ÁREA DO USUÁRIO -->
-                <!-- ====================================== -->
+                <!-- =================================================
+                     ÁREA DO USUÁRIO
+                     ================================================= -->
 
                 <ul class="navbar-nav">
+
 
                     {% if user.is_authenticated %}
 
 
-                        <!-- Nome do usuário -->
-
+                        <!-- Usuário logado -->
                         <li class="nav-item dropdown">
 
                             <a
-                                class="nav-link dropdown-toggle"
+                                class="nav-link dropdown-toggle examix-nav-link"
                                 href="#"
                                 role="button"
                                 data-bs-toggle="dropdown"
                                 aria-expanded="false"
                             >
 
-                                {{ user.username }}
+                                👤 {{ user.username }}
 
                             </a>
 
 
                             <!-- Menu do usuário -->
-
                             <ul
-                                class="dropdown-menu dropdown-menu-end"
+                                class="dropdown-menu dropdown-menu-end examix-dropdown"
                             >
 
-                                <!-- Perfil -->
 
+                                <!-- Perfil -->
                                 <li>
 
                                     <a
                                         class="dropdown-item"
                                         href="{% url 'usuarios:perfil' %}"
                                     >
-                                        Meu perfil
+                                        👤 Meu perfil
                                     </a>
 
                                 </li>
 
 
-                                {% if user.perfil.tipo == 'desenvolvedor' %}
+                                {% if is_desenvolvedor %}
 
                                     <!-- Separador -->
-
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
 
 
-                                    <!-- Área de provas -->
-
+                                    <!-- Gerenciar provas -->
                                     <li>
 
                                         <a
@@ -239,14 +273,12 @@
 
 
                                 <!-- Separador -->
-
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
 
 
                                 <!-- Sair -->
-
                                 <li>
 
                                     <form
@@ -260,7 +292,7 @@
                                             type="submit"
                                             class="dropdown-item"
                                         >
-                                            Sair
+                                            🚪 Sair
                                         </button>
 
                                     </form>
@@ -275,14 +307,15 @@
                     {% else %}
 
 
-                        <!-- ================================== -->
-                        <!-- USUÁRIO NÃO LOGADO -->
-                        <!-- ================================== -->
+                        <!-- =================================================
+                             USUÁRIO NÃO LOGADO
+                             ================================================= -->
 
+                        <!-- Entrar -->
                         <li class="nav-item">
 
                             <a
-                                class="nav-link"
+                                class="nav-link examix-nav-link"
                                 href="{% url 'usuarios:login' %}"
                             >
                                 Entrar
@@ -291,10 +324,11 @@
                         </li>
 
 
+                        <!-- Criar conta -->
                         <li class="nav-item">
 
                             <a
-                                class="btn btn-primary btn-sm mt-1"
+                                class="examix-navbar-button"
                                 href="{% url 'usuarios:cadastro' %}"
                             >
                                 Criar conta
@@ -314,24 +348,28 @@
     </nav>
 
 
-    <!-- ========================================== -->
-    <!-- MENSAGENS DO SISTEMA -->
-    <!-- ========================================== -->
+    <!-- =====================================================
+         MENSAGENS DO SISTEMA
+         ===================================================== -->
 
     {% if messages %}
 
-        <div class="container mt-3">
+        <div class="container mt-3 examix-messages">
 
             {% for message in messages %}
 
                 <div
-                    class="alert
-                    {% if message.tags %}
-                        alert-{{ message.tags }}
-                    {% else %}
-                        alert-info
-                    {% endif %}
-                    alert-dismissible fade show"
+                    class="
+                        alert
+                        {% if message.tags %}
+                            alert-{{ message.tags }}
+                        {% else %}
+                            alert-info
+                        {% endif %}
+                        alert-dismissible
+                        fade
+                        show
+                    "
                     role="alert"
                 >
 
@@ -353,9 +391,9 @@
     {% endif %}
 
 
-    <!-- ========================================== -->
-    <!-- CONTEÚDO PRINCIPAL -->
-    <!-- ========================================== -->
+    <!-- =====================================================
+         CONTEÚDO PRINCIPAL
+         ===================================================== -->
 
     <main>
 
@@ -365,35 +403,73 @@
     </main>
 
 
-    <!-- ========================================== -->
-    <!-- RODAPÉ -->
-    <!-- ========================================== -->
+    <!-- =====================================================
+         RODAPÉ
+         ===================================================== -->
 
-    <footer class="border-top mt-5 py-4">
+    <footer class="examix-footer">
 
-        <div class="container text-center">
+        <div class="container">
 
-            <p class="text-muted mb-0">
-                Plataforma de Simulados
-            </p>
+            <div class="row align-items-center">
+
+
+                <!-- Nome e slogan -->
+                <div class="col-md-6 text-center text-md-start">
+
+                    <div class="examix-footer-title">
+                        Examix
+                    </div>
+
+                    <div class="examix-footer-text">
+                        Estude. Pratique. Evolua.
+                    </div>
+
+                </div>
+
+
+                <!-- Copyright -->
+                <div
+                    class="
+                        col-md-6
+                        text-center
+                        text-md-end
+                        mt-3
+                        mt-md-0
+                    "
+                >
+
+                    <div class="examix-footer-text">
+
+                        © {% now "Y" %} Examix
+
+                    </div>
+
+                </div>
+
+            </div>
 
         </div>
 
     </footer>
 
 
-    <!-- ========================================== -->
-    <!-- BOOTSTRAP JAVASCRIPT -->
-    <!-- ========================================== -->
+    <!-- =====================================================
+         BOOTSTRAP JAVASCRIPT
+         ===================================================== -->
 
     <script
         src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
     ></script>
 
 
-    <!-- JavaScript adicional -->
+    <!-- =====================================================
+         JAVASCRIPT ESPECÍFICO DA PÁGINA
+         ===================================================== -->
+
     {% block extra_js %}
     {% endblock %}
+
 
 </body>
 

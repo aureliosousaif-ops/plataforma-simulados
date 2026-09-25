@@ -101,27 +101,46 @@ INSTALLED_APPS = [
     'provas',
     'simulados',
     'desempenho',
+    
+      # Django Allauth.
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
 
 
 # ==========================================
 # MIDDLEWARE
 # ==========================================
-
 MIDDLEWARE = [
+    # Proteção de segurança do Django.
     'django.middleware.security.SecurityMiddleware',
 
     # Permite servir arquivos estáticos em produção.
     'whitenoise.middleware.WhiteNoiseMiddleware',
 
+    # Gerencia as sessões dos usuários.
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
 
+    # Recursos comuns do Django.
+    'django.middleware.common.CommonMiddleware',
+
+    # Proteção contra ataques CSRF.
+    'django.middleware.csrf.CsrfViewMiddleware',
+
+    # Identifica o usuário logado.
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+
+    # Sistema de mensagens do Django.
+    'django.contrib.messages.middleware.MessageMiddleware',
+
+    # Proteção contra carregamento da página em frames.
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # Middleware obrigatório do django-allauth.
+    'allauth.account.middleware.AccountMiddleware',
+]
 
 # ==========================================
 # CONFIGURAÇÃO PRINCIPAL
@@ -223,27 +242,18 @@ USE_TZ = True
 # ARQUIVOS ESTÁTICOS
 # ==========================================
 
-# URL dos arquivos estáticos.
+# URL utilizada para acessar arquivos estáticos.
 STATIC_URL = '/static/'
 
-# Pasta onde o Django reunirá os arquivos
-# estáticos para produção.
+# Pasta principal onde ficam nossos arquivos estáticos
+# durante o desenvolvimento.
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+# Pasta onde o Django reunirá os arquivos estáticos
+# para produção.
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# Configuração do armazenamento de arquivos.
-STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
-    },
-
-    'staticfiles': {
-        'BACKEND': (
-            'whitenoise.storage.'
-            'CompressedManifestStaticFilesStorage'
-        ),
-    },
-}
-
 
 # ==========================================
 # ARQUIVOS DE MÍDIA
@@ -281,3 +291,70 @@ LOGIN_REDIRECT_URL = '/'
 
 # Página para onde o usuário vai após o logout.
 LOGOUT_REDIRECT_URL = '/'
+
+# Define o backend utilizado pelo django-allauth.
+AUTHENTICATION_BACKENDS = [
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+
+# ==========================================
+# LOGIN COM GOOGLE
+# ==========================================
+
+# Credenciais do Google OAuth.
+# Os valores são lidos do arquivo .env.
+GOOGLE_CLIENT_ID = os.environ.get(
+    'GOOGLE_CLIENT_ID'
+)
+
+GOOGLE_CLIENT_SECRET = os.environ.get(
+    'GOOGLE_CLIENT_SECRET'
+)
+
+
+# Configuração do login com Google.
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+
+        # Credenciais do aplicativo criado
+        # no Google Cloud.
+        'APPS': [
+            {
+                'client_id': GOOGLE_CLIENT_ID,
+                'secret': GOOGLE_CLIENT_SECRET,
+                'key': '',
+
+                # Configurações do acesso ao Google.
+                'settings': {
+                    'scope': [
+                        'profile',
+                        'email',
+                    ],
+
+                    # Não precisamos de refresh token
+                    # para o login.
+                    'auth_params': {
+                        'access_type': 'online',
+                    },
+                },
+            },
+        ],
+
+        # Permissões solicitadas ao Google.
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+
+        # Tipo de acesso utilizado.
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+    },
+}
+
+# Credenciais do Google OAuth.
+# Os valores são lidos do arquivo .env.
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')

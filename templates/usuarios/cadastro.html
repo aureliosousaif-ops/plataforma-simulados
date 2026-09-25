@@ -1,57 +1,220 @@
 {% extends 'base.html' %}
 
+{% load static %}
+{% load socialaccount %}
+
 {% block title %}
-    Criar conta
+    Criar conta | Examix
 {% endblock %}
+
 
 {% block content %}
 
-<div class="row justify-content-center">
+<!-- =====================================================
+     ÁREA DE CADASTRO
+     ===================================================== -->
 
-    <div class="col-md-7 col-lg-6">
+<section class="examix-auth">
 
-        <h2 class="mb-4">
-            Criar conta
-        </h2>
+    <!-- =================================================
+         CARD DO CADASTRO
+         ================================================= -->
 
-        <form method="post">
+    <div class="examix-auth-card examix-register-card">
+
+
+        <!-- =================================================
+             LOGO
+             ================================================= -->
+
+        <div class="examix-auth-logo">
+
+            <img
+                src="{% static 'images/logosistema.png' %}"
+                alt="Logo Examix"
+            >
+
+        </div>
+
+
+        <!-- =================================================
+             CABEÇALHO
+             ================================================= -->
+
+        <div class="examix-auth-header">
+
+            <h1>
+                Criar sua conta
+            </h1>
+
+            <p>
+                Crie sua conta gratuitamente e comece
+                a estudar com o Examix.
+            </p>
+
+        </div>
+
+
+        <!-- =================================================
+             FORMULÁRIO
+             ================================================= -->
+
+        <form
+            method="post"
+            class="examix-auth-form"
+            novalidate
+        >
 
             {% csrf_token %}
 
+
+            <!-- =================================================
+                 ERROS GERAIS
+                 ================================================= -->
+
+            {% if form.non_field_errors %}
+
+                <div class="examix-form-error">
+
+                    {% for error in form.non_field_errors %}
+
+                        <p>
+                            {{ error }}
+                        </p>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- =================================================
+                 CAMPOS
+                 ================================================= -->
+
             {% for field in form %}
 
-                <div class="mb-3">
+                <div class="examix-form-group">
+
+
+                    <!-- Nome do campo -->
 
                     <label
                         for="{{ field.id_for_label }}"
-                        class="form-label"
                     >
                         {{ field.label }}
                     </label>
 
+
+                    <!-- Campo -->
+
                     {{ field }}
 
+
+                    <!-- Texto de ajuda -->
+
+                    {% if field.help_text %}
+
+                        <small class="examix-help-text">
+                            {{ field.help_text }}
+                        </small>
+
+                    {% endif %}
+
+
+                    <!-- Erros do campo -->
+
                     {% if field.errors %}
-                        <div class="text-danger small">
-                            {{ field.errors }}
+
+                        <div class="examix-field-error">
+
+                            {% for error in field.errors %}
+
+                                <span>
+                                    {{ error }}
+                                </span>
+
+                            {% endfor %}
+
                         </div>
+
                     {% endif %}
 
                 </div>
 
             {% endfor %}
 
+
+            <!-- =================================================
+                 BOTÃO DE CADASTRO
+                 ================================================= -->
+
             <button
                 type="submit"
-                class="btn btn-primary w-100"
+                class="examix-login-button"
             >
-                Criar conta
+                Criar minha conta
             </button>
 
         </form>
 
+
+        <!-- =================================================
+             DIVISOR
+             ================================================= -->
+
+        <div class="examix-divider">
+
+            <span>
+                ou
+            </span>
+
+        </div>
+
+
+        <!-- =================================================
+             GOOGLE
+             ================================================= -->
+
+        <a
+            href="{% provider_login_url 'google' %}"
+            class="examix-google-button"
+        >
+
+            <span class="examix-google-icon">
+                G
+            </span>
+
+            <span>
+                Continuar com Google
+            </span>
+
+        </a>
+
+
+        <!-- =================================================
+             RODAPÉ
+             ================================================= -->
+
+        <div class="examix-auth-footer">
+
+            <p>
+
+                Já possui uma conta?
+
+                <a
+                    href="{% url 'usuarios:login' %}"
+                >
+                    Entrar
+                </a>
+
+            </p>
+
+        </div>
+
     </div>
 
-</div>
+</section>
 
 {% endblock %}

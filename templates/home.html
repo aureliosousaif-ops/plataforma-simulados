@@ -1,193 +1,76 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    Início
+    Início | Examix
 {% endblock %}
 
 
 {% block content %}
 
-<div class="container py-5">
+<section class="examix-home">
 
-    {% if user.is_authenticated %}
+    <div class="container">
 
-        <!-- ========================================== -->
-        <!-- SAUDAÇÃO -->
-        <!-- ========================================== -->
+        <!-- =================================================
+             SAUDAÇÃO
+             ================================================= -->
 
-        <div class="mb-5">
+        <div class="examix-home-welcome">
 
-            <h1 class="fw-bold">
+            <span class="examix-section-label">
+                ÁREA DO ESTUDANTE
+            </span>
+
+            <h1>
                 Olá, {{ user.username }}! 👋
             </h1>
 
-            <p class="text-muted">
+            <p>
                 Continue seus estudos e acompanhe sua evolução.
             </p>
 
         </div>
 
 
-        <!-- ========================================== -->
-        <!-- CARDS DE RESUMO -->
-        <!-- ========================================== -->
+        <!-- =================================================
+             BOTÃO PRINCIPAL
+             ================================================= -->
 
-        <div class="row g-4 mb-5">
+        <div class="examix-home-action">
 
-            <!-- Total de simulados -->
-            <div class="col-md-4">
-
-                <div class="card shadow-sm h-100">
-
-                    <div class="card-body">
-
-                        <h6 class="text-muted">
-                            Simulados realizados
-                        </h6>
-
-                        <h2 class="fw-bold">
-                            {{ total_simulados }}
-                        </h2>
-
-                        <p class="mb-0">
-                            Simulados finalizados
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- Média -->
-            <div class="col-md-4">
-
-                <div class="card shadow-sm h-100">
-
-                    <div class="card-body">
-
-                        <h6 class="text-muted">
-                            Desempenho médio
-                        </h6>
-
-                        <h2 class="fw-bold">
-                            {{ media_desempenho }}%
-                        </h2>
-
-                        <p class="mb-0">
-                            Média dos seus resultados
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- Último simulado -->
-            <div class="col-md-4">
-
-                <div class="card shadow-sm h-100">
-
-                    <div class="card-body">
-
-                        <h6 class="text-muted">
-                            Último simulado
-                        </h6>
-
-                        {% if ultimo_simulado %}
-
-                            <h5 class="fw-bold">
-                                {{ ultimo_simulado.prova.titulo }}
-                            </h5>
-
-                            <p class="mb-0">
-                                Resultado disponível
-                            </p>
-
-                        {% else %}
-
-                            <h5 class="fw-bold">
-                                Nenhum ainda
-                            </h5>
-
-                            <p class="mb-0">
-                                Comece seu primeiro simulado.
-                            </p>
-
-                        {% endif %}
-
-                    </div>
-
-                </div>
-
-            </div>
+            <a
+                href="{% url 'simulados:lista' %}"
+                class="examix-home-start"
+            >
+                🚀 Começar um simulado
+            </a>
 
         </div>
 
 
-        <!-- ========================================== -->
-        <!-- AÇÕES PRINCIPAIS -->
-        <!-- ========================================== -->
+        <!-- =================================================
+             RESUMO
+             ================================================= -->
 
-        <div class="row g-4">
+        <div class="examix-home-summary">
 
-            <!-- Fazer simulado -->
-            <div class="col-md-4">
+            <!-- Simulados -->
 
-                <div class="card shadow-sm h-100">
+            <div class="examix-summary-card">
 
-                    <div class="card-body">
-
-                        <h4 class="fw-bold">
-                            📝 Fazer simulado
-                        </h4>
-
-                        <p class="text-muted">
-                            Escolha uma prova disponível
-                            e comece a responder.
-                        </p>
-
-                        <a
-                            href="{% url 'simulados:lista' %}"
-                            class="btn btn-primary"
-                        >
-                            Ver simulados
-                        </a>
-
-                    </div>
-
+                <div class="examix-summary-icon">
+                    📝
                 </div>
 
-            </div>
+                <div>
 
+                    <strong>
+                        {{ total_simulados }}
+                    </strong>
 
-            <!-- Histórico -->
-            <div class="col-md-4">
-
-                <div class="card shadow-sm h-100">
-
-                    <div class="card-body">
-
-                        <h4 class="fw-bold">
-                            📋 Histórico
-                        </h4>
-
-                        <p class="text-muted">
-                            Consulte os simulados que você
-                            já realizou.
-                        </p>
-
-                        <a
-                            href="{% url 'simulados:historico' %}"
-                            class="btn btn-outline-primary"
-                        >
-                            Meus simulados
-                        </a>
-
-                    </div>
+                    <span>
+                        Simulados realizados
+                    </span>
 
                 </div>
 
@@ -195,29 +78,22 @@
 
 
             <!-- Desempenho -->
-            <div class="col-md-4">
 
-                <div class="card shadow-sm h-100">
+            <div class="examix-summary-card">
 
-                    <div class="card-body">
+                <div class="examix-summary-icon">
+                    📊
+                </div>
 
-                        <h4 class="fw-bold">
-                            📊 Desempenho
-                        </h4>
+                <div>
 
-                        <p class="text-muted">
-                            Veja seus resultados e acompanhe
-                            sua evolução.
-                        </p>
+                    <strong>
+                        {{ media_desempenho|floatformat:2 }}%
+                    </strong>
 
-                        <a
-                            href="{% url 'desempenho:dashboard' %}"
-                            class="btn btn-outline-primary"
-                        >
-                            Ver desempenho
-                        </a>
-
-                    </div>
+                    <span>
+                        Desempenho médio
+                    </span>
 
                 </div>
 
@@ -226,45 +102,47 @@
         </div>
 
 
-    {% else %}
+        <!-- =================================================
+             ÚLTIMO SIMULADO
+             ================================================= -->
 
-        <!-- ========================================== -->
-        <!-- USUÁRIO NÃO LOGADO -->
-        <!-- ========================================== -->
+        {% if ultimo_simulado %}
 
-        <div class="text-center py-5">
+            <div class="examix-last-simulado">
 
-            <h1 class="display-5 fw-bold">
-                Plataforma de Simulados
-            </h1>
+                <div>
 
-            <p class="lead text-muted mt-3">
-                Prepare-se para vestibulares, concursos
-                e outras avaliações.
-            </p>
+                    <span class="examix-section-label">
+                        ÚLTIMO SIMULADO
+                    </span>
 
-            <div class="mt-4">
+                    <h2>
+                        {{ ultimo_simulado.simulado.prova.nome }}
+                    </h2>
+
+                    <p>
+                        Aproveitamento:
+                        <strong>
+                            {{ ultimo_simulado.percentual|floatformat:2 }}%
+                        </strong>
+                    </p>
+
+                </div>
+
 
                 <a
-                    href="{% url 'usuarios:cadastro' %}"
-                    class="btn btn-primary btn-lg me-2"
+                    href="{% url 'simulados:historico' %}"
+                    class="examix-result-button"
                 >
-                    Criar conta
-                </a>
-
-                <a
-                    href="{% url 'usuarios:login' %}"
-                    class="btn btn-outline-secondary btn-lg"
-                >
-                    Entrar
+                    Ver resultado
                 </a>
 
             </div>
 
-        </div>
+        {% endif %}
 
-    {% endif %}
+    </div>
 
-</div>
+</section>
 
 {% endblock %}

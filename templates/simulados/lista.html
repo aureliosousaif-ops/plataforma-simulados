@@ -1,103 +1,139 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    Simulados
+    Simulados | Examix
 {% endblock %}
+
 
 {% block content %}
 
-<div class="container py-4">
+<section class="examix-page">
 
-    <!-- Cabeçalho -->
-    <div class="mb-4">
+    <div class="container">
 
-        <h1>
-            Simulados
-        </h1>
+        <!-- =================================================
+             CABEÇALHO DA PÁGINA
+             ================================================= -->
 
-        <p class="text-muted">
-            Escolha uma prova para iniciar seu simulado.
-        </p>
+        <div class="examix-page-header">
 
-    </div>
+            <div>
+                <span class="examix-section-label">
+                    EXAMIX
+                </span>
 
-    {% if provas %}
+                <h1>
+                    Simulados
+                </h1>
 
-        <div class="row g-4">
+                <p>
+                    Escolha um simulado e teste seus conhecimentos.
+                </p>
+            </div>
 
-            {% for prova in provas %}
+        </div>
 
-                <div class="col-md-6 col-lg-4">
 
-                    <div class="card h-100 shadow-sm">
+        <!-- =================================================
+             LISTA DE SIMULADOS
+             ================================================= -->
 
-                        <div class="card-body">
+        {% if simulados %}
 
-                            <!-- Nome da prova -->
-                            <h5 class="card-title">
-                                {{ prova.nome }}
-                            </h5>
+            <div class="examix-simulado-grid">
 
-                            <!-- Informações -->
-                            <p class="mb-2">
-                                <strong>Tipo:</strong>
-                                {{ prova.get_tipo_display }}
-                            </p>
+                {% for simulado in simulados %}
 
-                            <p class="mb-3">
-                                <strong>Ano:</strong>
-                                {{ prova.ano }}
-                            </p>
+                    <article class="examix-simulado-card">
 
-                            {% if prova.descricao %}
+                        <!-- Ícone -->
+                        <div class="examix-simulado-icon">
+                            📝
+                        </div>
 
-                                <p class="text-muted small">
-                                    {{ prova.descricao }}
+
+                        <!-- Conteúdo -->
+                        <div class="examix-simulado-content">
+
+                            <h2>
+                                {{ simulado.prova.nome }}
+                            </h2>
+
+                            {% if simulado.prova.descricao %}
+
+                                <p>
+                                    {{ simulado.prova.descricao }}
+                                </p>
+
+                            {% else %}
+
+                                <p>
+                                    Prepare-se e teste seus conhecimentos
+                                    neste simulado.
                                 </p>
 
                             {% endif %}
 
+
+                            <!-- Informações -->
+                            <div class="examix-simulado-info">
+
+                                <span>
+                                    📚
+                                    {{ simulado.prova.questoes.count }}
+                                    questões
+                                </span>
+
+                            </div>
+
                         </div>
 
-                        <!-- Ação -->
-                        <div class="card-footer bg-white">
 
-                            <form
-                                method="post"
-                                action="{% url 'simulados:iniciar' prova.id %}"
+                        <!-- Botão -->
+                        <div class="examix-simulado-action">
+
+                            <a
+                                href="{% url 'simulados:iniciar' simulado.id %}"
+                                class="examix-primary-button"
                             >
-
-                                {% csrf_token %}
-
-                                <button
-                                    type="submit"
-                                    class="btn btn-primary w-100"
-                                >
-                                    Iniciar simulado
-                                </button>
-
-                            </form>
+                                Começar simulado
+                            </a>
 
                         </div>
 
-                    </div>
+                    </article>
 
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <!-- =================================================
+                 NENHUM SIMULADO
+                 ================================================= -->
+
+            <div class="examix-empty-state">
+
+                <div class="examix-empty-icon">
+                    📚
                 </div>
 
-            {% endfor %}
+                <h2>
+                    Nenhum simulado disponível
+                </h2>
 
-        </div>
+                <p>
+                    No momento ainda não existem simulados
+                    disponíveis para você.
+                </p>
 
-    {% else %}
+            </div>
 
-        <div class="alert alert-info">
+        {% endif %}
 
-            Nenhuma prova está disponível para simulado no momento.
+    </div>
 
-        </div>
-
-    {% endif %}
-
-</div>
+</section>
 
 {% endblock %}

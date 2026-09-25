@@ -1,7 +1,7 @@
 # Importa as configurações de arquivos de mídia.
 from django.conf import settings
 from django.conf.urls.static import static
-
+from django.urls import path, include
 # Importa o painel administrativo do Django.
 from django.contrib import admin
 
@@ -110,6 +110,10 @@ urlpatterns = [
         'desempenho/',
         include('desempenho.urls')
     ),
+    # URLs do sistema de autenticação do django-allauth.
+    path('accounts/', include('allauth.urls')),
+    
+    
 ]
 
 

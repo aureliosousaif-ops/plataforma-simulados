@@ -18,6 +18,7 @@
         <div class="examix-page-header">
 
             <div>
+
                 <span class="examix-section-label">
                     EXAMIX
                 </span>
@@ -27,42 +28,45 @@
                 </h1>
 
                 <p>
-                    Escolha um simulado e teste seus conhecimentos.
+                    Escolha uma prova e teste seus conhecimentos.
                 </p>
+
             </div>
 
         </div>
 
 
         <!-- =================================================
-             LISTA DE SIMULADOS
+             LISTA DE PROVAS DISPONÍVEIS
              ================================================= -->
 
-        {% if simulados %}
+        {% if provas %}
 
             <div class="examix-simulado-grid">
 
-                {% for simulado in simulados %}
+                {% for prova in provas %}
 
                     <article class="examix-simulado-card">
 
-                        <!-- Ícone -->
+                        <!-- Ícone da prova -->
                         <div class="examix-simulado-icon">
                             📝
                         </div>
 
 
-                        <!-- Conteúdo -->
+                        <!-- Conteúdo da prova -->
                         <div class="examix-simulado-content">
 
                             <h2>
-                                {{ simulado.prova.nome }}
+                                {{ prova.nome }}
                             </h2>
 
-                            {% if simulado.prova.descricao %}
+
+                            <!-- Descrição -->
+                            {% if prova.descricao %}
 
                                 <p>
-                                    {{ simulado.prova.descricao }}
+                                    {{ prova.descricao }}
                                 </p>
 
                             {% else %}
@@ -75,25 +79,48 @@
                             {% endif %}
 
 
-                            <!-- Informações -->
+                            <!-- Informações da prova -->
                             <div class="examix-simulado-info">
 
                                 <span>
                                     📚
-                                    {{ simulado.prova.questoes.count }}
+                                    {{ prova.questoes.count }}
                                     questões
                                 </span>
+
+
+                                {% if prova.tipo %}
+
+                                    <span>
+                                        📋
+                                        {{ prova.tipo }}
+                                    </span>
+
+                                {% endif %}
+
+
+                                {% if prova.ano %}
+
+                                    <span>
+                                        📅
+                                        {{ prova.ano }}
+                                    </span>
+
+                                {% endif %}
 
                             </div>
 
                         </div>
 
 
-                        <!-- Botão -->
+                        <!-- =================================================
+                             BOTÃO PARA INICIAR
+                             ================================================= -->
+
                         <div class="examix-simulado-action">
 
                             <a
-                                href="{% url 'simulados:iniciar' simulado.id %}"
+                                href="{% url 'simulados:iniciar' prova.id %}"
                                 class="examix-primary-button"
                             >
                                 Começar simulado
@@ -110,7 +137,7 @@
         {% else %}
 
             <!-- =================================================
-                 NENHUM SIMULADO
+                 NENHUMA PROVA DISPONÍVEL
                  ================================================= -->
 
             <div class="examix-empty-state">

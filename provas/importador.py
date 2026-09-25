@@ -1,799 +1,1238 @@
-# Importa expressões regulares para localizar questões e alternativas.
+# ============================================================
+# IMPORTADOR DE PROVAS EM PDF
+# ============================================================
+#
+# Este arquivo é responsável por:
+#
+# 1. Extrair texto dos PDFs
+# 2. Localizar as questões
+# 3. Separar questões duplicadas
+# 4. Encontrar alternativas A, B, C, D e E
+# 5. Corrigir textos de apoio que entram na alternativa E
+# 6. Extrair gabaritos
+# 7. Validar as questões
+# 8. Preparar os dados para importação
+# 9. Importar questões para o banco de dados
+#
+# O parser é genérico e não depende de uma quantidade
+# específica de questões.
+#
+# Pode trabalhar com:
+#
+# 10, 20, 40, 45, 50, 90 etc.
+#
+# ============================================================
+
+
+# ============================================================
+# IMPORTAÇÕES
+# ============================================================
+
 import re
 
-# Importa o leitor de arquivos PDF.
 from pypdf import PdfReader
 
 
+# ============================================================
+# 1. EXTRAIR TEXTO DO PDF
+# ============================================================
+
 def extrair_texto_pdf(caminho_pdf):
     """
-    Lê todas as páginas de um PDF e retorna o texto extraído.
+    Extrai o texto de todas as páginas do PDF.
     """
 
     # Abre o arquivo PDF.
-    leitor = PdfReader(caminho_pdf)
+    reader = PdfReader(
+        caminho_pdf
+    )
 
-    # Guarda o texto de cada página.
-    textos = []
+    paginas = []
 
     # Percorre todas as páginas.
-    for pagina in leitor.pages:
+    for pagina in reader.pages:
 
-        # Extrai o texto da página.
         texto = pagina.extract_text()
 
-        # Guarda somente páginas que possuem texto.
-        if texto:
-            textos.append(texto)
+        # Algumas páginas podem não retornar texto.
+        if texto is None:
+            texto = ""
+
+        paginas.append(
+            texto
+        )
 
     # Junta todas as páginas.
-    texto_completo = '\n'.join(textos)
+    texto_completo = "\n".join(
+        paginas
+    )
 
-    # Faz uma limpeza básica.
-    return limpar_texto(texto_completo)
+    # Faz a limpeza inicial.
+    return limpar_texto(
+        texto_completo
+    )
 
+
+# ============================================================
+# 2. LIMPAR TEXTO
+# ============================================================
 
 def limpar_texto(texto):
     """
-    Faz uma limpeza básica no texto extraído.
+    Faz uma limpeza básica do texto extraído do PDF.
     """
 
-    # Padroniza as quebras de linha.
-    texto = texto.replace('\r\n', '\n')
-    texto = texto.replace('\r', '\n')
+    if not texto:
+        return ""
 
-    # Remove espaços e tabulações repetidos.
-    texto = re.sub(r'[ \t]+', ' ', texto)
+    # Padroniza as quebras de linha.
+    texto = texto.replace(
+        "\r\n",
+        "\n"
+    )
+
+    texto = texto.replace(
+        "\r",
+        "\n"
+    )
+
+    # Remove espaços e tabs repetidos.
+    texto = re.sub(
+        r"[ \t]+",
+        " ",
+        texto
+    )
 
     # Remove excesso de linhas vazias.
-    texto = re.sub(r'\n{3,}', '\n\n', texto)
+    texto = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        texto
+    )
 
-    # Remove espaços no início e no final.
     return texto.strip()
 
 
+# ============================================================
+# 3. LIMPAR CONTEÚDO DE UMA QUESTÃO
+# ============================================================
+
+def limpar_conteudo_questao(texto):
+    """
+    Limpa o conteúdo individual de uma questão.
+    """
+
+    if not texto:
+        return ""
+
+    # Remove espaços externos.
+    texto = texto.strip()
+
+    # Remove espaços repetidos.
+    texto = re.sub(
+        r"[ \t]+",
+        " ",
+        texto
+    )
+
+    # Evita excesso de linhas vazias.
+    texto = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        texto
+    )
+
+    return texto.strip()
+
+
+# ============================================================
+# 4. ENCONTRAR MARCADORES DAS QUESTÕES
+# ============================================================
+
 def encontrar_marcadores_questoes(texto):
     """
-    Localiza todas as ocorrências de QUESTÃO 01, QUESTÃO 02 etc.
+    Localiza onde cada questão começa.
+
+    Aceita diferentes formas que podem aparecer
+    durante a extração de um PDF:
+
+        QUESTÃO 01
+        QUESTAO 01
+        QUESTˆO 01
+        QUESTÃO 1
+        QUESTAO 1
     """
 
-    # Procura a palavra QUESTÃO seguida de um número.
-    padrao = re.compile(
-        r'QUESTÃO\s+(\d{1,3})',
-        re.IGNORECASE
-    )
+    linhas = texto.splitlines()
 
-    # Retorna todos os marcadores encontrados.
-    return list(padrao.finditer(texto))
+    marcadores = []
 
-
-def separar_questoes_enem(texto):
-    """
-    Separa as 90 questões principais do ENEM.
-
-    O PDF possui:
-    - Questões 01 a 45 na prova principal.
-    - Questões 01 a 05 novamente na opção espanhol.
-    - Questões 06 a 90 na sequência principal.
-
-    As questões em espanhol são ignoradas.
-    """
-
-    # Localiza todos os marcadores de questões.
-    marcadores = encontrar_marcadores_questoes(texto)
-
-    # Lista que receberá os marcadores da prova principal.
-    marcadores_principais = []
-
-    # Guarda a primeira ocorrência de cada número.
-    primeiras_ocorrencias = {}
-
-    # Percorre todos os marcadores encontrados.
-    for marcador in marcadores:
-
-        # Converte o número da questão para inteiro.
-        numero = int(marcador.group(1))
-
-        # Guarda somente a primeira ocorrência.
-        if numero not in primeiras_ocorrencias:
-            primeiras_ocorrencias[numero] = marcador
-
-    # Adiciona as questões 01 até 05 da prova principal.
-    for numero in range(1, 6):
-
-        # Verifica se a questão foi encontrada.
-        if numero in primeiras_ocorrencias:
-            marcadores_principais.append(
-                primeiras_ocorrencias[numero]
-            )
-
-    # Adiciona as questões 06 até 90.
-    for numero in range(6, 91):
-
-        # Procura a primeira ocorrência do número.
-        if numero in primeiras_ocorrencias:
-
-            # Adiciona o marcador encontrado.
-            marcadores_principais.append(
-                primeiras_ocorrencias[numero]
-            )
-
-    # Localiza a segunda ocorrência da questão 01.
-    # Ela marca o início da versão em espanhol.
-    ocorrencias_01 = [
-        marcador
-        for marcador in marcadores
-        if int(marcador.group(1)) == 1
-    ]
-
-    # Guarda o início do bloco em espanhol.
-    marcador_inicio_espanhol = None
-
-    # Verifica se existe uma segunda questão 01.
-    if len(ocorrencias_01) >= 2:
-        marcador_inicio_espanhol = ocorrencias_01[1]
-
-    # Ordena os marcadores pela posição no PDF.
-    marcadores_principais.sort(
-        key=lambda marcador: marcador.start()
-    )
-
-    # Lista final das questões.
-    questoes = []
-
-    # Percorre cada marcador principal.
-    for indice, marcador in enumerate(
-        marcadores_principais
+    # Percorre todas as linhas do PDF.
+    for indice, linha in enumerate(
+        linhas
     ):
 
-        # Obtém o número da questão.
-        numero = int(marcador.group(1))
+        linha_limpa = linha.strip()
 
-        # Define o início do conteúdo.
-        inicio = marcador.end()
-
-        # Define o final do conteúdo.
-        if (
-            numero == 5
-            and marcador_inicio_espanhol is not None
-        ):
-
-            # A questão 5 termina antes do bloco espanhol.
-            fim = marcador_inicio_espanhol.start()
-
-        elif indice + 1 < len(marcadores_principais):
-
-            # As outras questões terminam na próxima questão.
-            fim = marcadores_principais[
-                indice + 1
-            ].start()
-
-        else:
-
-            # A questão 90 termina no final do PDF.
-            fim = len(texto)
-
-        # Extrai o conteúdo da questão.
-        conteudo = texto[inicio:fim].strip()
-
-        # Remove o texto de separação do espanhol,
-        # caso ele ainda esteja presente.
-        conteudo = re.sub(
-            r'Questões de 01 a 05 \(opção espanhol\)\s*$',
-            '',
-            conteudo,
-            flags=re.IGNORECASE
-        ).strip()
-
-        # Extrai as alternativas A, B, C, D e E.
-        alternativas = extrair_alternativas(
-            conteudo
-        )
-
-        # Adiciona a questão à lista.
-        questoes.append(
-            {
-                'numero': numero,
-                'conteudo': conteudo,
-                'alternativas': alternativas,
-            }
-        )
-
-    # Garante a ordem numérica das questões.
-    questoes.sort(
-        key=lambda questao: questao['numero']
-    )
-
-    # Retorna as questões processadas.
-    return questoes
-def extrair_alternativas(conteudo):
-    """
-    Separa as alternativas A, B, C, D e E.
-
-    Também remove rodapés e informações repetidas
-    inseridas pelo PDF entre as questões.
-    """
-
-    # Remove o rodapé do ENEM quando ele aparece
-    # depois do conteúdo da alternativa.
-    conteudo = re.sub(
-        r'\*010175AZ2\*.*',
-        '',
-        conteudo,
-        flags=re.DOTALL
-    )
-
-    # Remove linhas de identificação do caderno.
-    conteudo = re.sub(
-        r'(?mi)^.*LINGUAGENS,\s*CÓDIGOS\s*E\s*SUAS\s*TECNOLOGIAS.*$',
-        '',
-        conteudo
-    )
-
-    # Remove repetições do nome ENEM2024.
-    conteudo = re.sub(
-        r'ENEM2024',
-        '',
-        conteudo,
-        flags=re.IGNORECASE
-    )
-
-    # Remove identificadores técnicos do arquivo.
-    conteudo = re.sub(
-        r'\b\d{8}[A-Z]{2}\.indb\b',
-        '',
-        conteudo,
-        flags=re.IGNORECASE
-    )
-
-    # Limpa espaços e linhas vazias.
-    conteudo = re.sub(
-        r'\n\s*\n+',
-        '\n',
-        conteudo
-    ).strip()
-
-    # Procura as letras das alternativas.
-    padrao = re.compile(
-        r'(?m)^[ \t]*([ABCDE])'
-        r'(?:[ \t]*[\.\)])?'
-        r'(?=[ \t]+|\n|$)'
-    )
-
-    marcadores = list(
-        padrao.finditer(conteudo)
-    )
-
-    sequencias_validas = []
-
-    for indice, marcador in enumerate(marcadores):
-
-        if marcador.group(1) != 'A':
+        if not linha_limpa:
             continue
 
-        sequencia = [marcador]
-        proxima_letra = 'B'
+        # ----------------------------------------------------
+        # Normaliza apenas o necessário para reconhecer
+        # "QUESTÃO".
+        # ----------------------------------------------------
 
-        for outro in marcadores[indice + 1:]:
+        linha_busca = (
+            linha_limpa.upper()
+        )
 
-            letra = outro.group(1)
+        # Corrige algumas representações comuns
+        # encontradas na extração de PDFs.
+        linha_busca = (
+            linha_busca
+            .replace(
+                "QUESTÃO",
+                "QUESTAO"
+            )
+            .replace(
+                "QUESTAO",
+                "QUESTAO"
+            )
+            .replace(
+                "QUESTˆO",
+                "QUESTAO"
+            )
+            .replace(
+                "QUESTÃƒO",
+                "QUESTAO"
+            )
+            .replace(
+                "QUESTÃƒO",
+                "QUESTAO"
+            )
+        )
 
-            if letra == proxima_letra:
+        # ----------------------------------------------------
+        # Procura o padrão:
+        #
+        # QUESTAO 01
+        # QUESTAO 1
+        # ----------------------------------------------------
 
-                sequencia.append(outro)
+        resultado = re.match(
+            r"^\s*QUESTAO\s*0*(\d{1,3})\s*$",
+            linha_busca
+        )
 
-                if proxima_letra == 'B':
-                    proxima_letra = 'C'
+        # ----------------------------------------------------
+        # Alguns PDFs podem possuir texto adicional na linha.
+        # ----------------------------------------------------
 
-                elif proxima_letra == 'C':
-                    proxima_letra = 'D'
+        if resultado is None:
 
-                elif proxima_letra == 'D':
-                    proxima_letra = 'E'
+            resultado = re.search(
+                r"\bQUESTAO\s*0*(\d{1,3})\b",
+                linha_busca
+            )
 
-                elif proxima_letra == 'E':
-                    break
+        # ----------------------------------------------------
+        # Se encontrou uma questão...
+        # ----------------------------------------------------
 
-        if len(sequencia) == 5:
-            sequencias_validas.append(sequencia)
+        if resultado:
 
-    # Nenhuma sequência válida encontrada.
-    if not sequencias_validas:
+            numero = int(
+                resultado.group(1)
+            )
+
+            marcadores.append(
+                {
+                    "numero": numero,
+                    "linha": indice,
+                }
+            )
+
+    return marcadores
+
+
+# ============================================================
+# 5. SELECIONAR BLOCO PRINCIPAL
+# ============================================================
+
+def selecionar_bloco_principal(marcadores):
+    """
+    Alguns PDFs possuem o mesmo bloco de questões repetido.
+
+    Exemplo:
+
+        1
+        2
+        3
+        ...
+        40
+
+        1
+        2
+        3
+        ...
+        40
+
+    Nesse caso, selecionamos somente o primeiro bloco.
+    """
+
+    if not marcadores:
         return []
 
-    # Usa a última sequência A-B-C-D-E encontrada.
-    sequencia = sequencias_validas[-1]
+    # --------------------------------------------------------
+    # Procura uma segunda ocorrência da questão 1.
+    # --------------------------------------------------------
+
+    primeira_ocorrencia_1 = None
+
+    for indice, marcador in enumerate(
+        marcadores
+    ):
+
+        if marcador["numero"] != 1:
+            continue
+
+        # Primeira questão 1 encontrada.
+        if primeira_ocorrencia_1 is None:
+
+            primeira_ocorrencia_1 = indice
+
+            continue
+
+        # Segunda questão 1 encontrada.
+        # O bloco anterior é considerado o principal.
+        return marcadores[
+            primeira_ocorrencia_1:
+            indice
+        ]
+
+    # Se não houver repetição,
+    # mantém todos os marcadores.
+    return marcadores
+
+
+# ============================================================
+# 6. EXTRAIR ALTERNATIVAS
+# ============================================================
+
+def extrair_alternativas_generico(texto):
+    """
+    Extrai as alternativas A, B, C, D e E.
+
+    Aceita formatos como:
+
+        (A) texto
+        (B) texto
+        (C) texto
+        (D) texto
+        (E) texto
+
+    Também aceita:
+
+        A) texto
+        B) texto
+
+        A. texto
+        B. texto
+
+    O método procura uma sequência completa:
+
+        A B C D E
+
+    e utiliza a última sequência encontrada.
+    """
+
+    if not texto:
+        return []
+
+    linhas = texto.splitlines()
+
+    encontrados = []
+
+    # --------------------------------------------------------
+    # Localiza possíveis alternativas.
+    # --------------------------------------------------------
+
+    for indice, linha in enumerate(
+        linhas
+    ):
+
+        linha_limpa = linha.strip()
+
+        if not linha_limpa:
+            continue
+
+        resultado = re.match(
+            r"^\(?([A-E])\)?[\.\:\-]?\s+(.*)$",
+            linha_limpa,
+            re.IGNORECASE
+        )
+
+        if resultado:
+
+            letra = (
+                resultado
+                .group(1)
+                .upper()
+            )
+
+            conteudo = (
+                resultado
+                .group(2)
+                .strip()
+            )
+
+            encontrados.append(
+                {
+                    "letra": letra,
+                    "linha": indice,
+                    "texto": conteudo,
+                }
+            )
+
+    # --------------------------------------------------------
+    # Se não encontrou alternativas.
+    # --------------------------------------------------------
+
+    if not encontrados:
+        return []
+
+    # --------------------------------------------------------
+    # Procura uma sequência A B C D E.
+    # --------------------------------------------------------
+
+    sequencias = []
+
+    for indice in range(
+        len(encontrados)
+    ):
+
+        bloco = encontrados[
+            indice:
+            indice + 5
+        ]
+
+        if len(bloco) < 5:
+            continue
+
+        letras = [
+            item["letra"]
+            for item in bloco
+        ]
+
+        if letras == [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+        ]:
+
+            sequencias.append(
+                bloco
+            )
+
+    # --------------------------------------------------------
+    # Se nenhuma sequência completa foi encontrada.
+    # --------------------------------------------------------
+
+    if not sequencias:
+        return []
+
+    # --------------------------------------------------------
+    # Utiliza a última sequência encontrada.
+    # --------------------------------------------------------
+
+    sequencia = sequencias[
+        -1
+    ]
 
     alternativas = []
 
-    for indice, marcador in enumerate(sequencia):
+    # --------------------------------------------------------
+    # Monta cada alternativa.
+    # --------------------------------------------------------
 
-        letra = marcador.group(1)
+    for indice, alternativa in enumerate(
+        sequencia
+    ):
 
-        inicio = marcador.end()
+        inicio = alternativa[
+            "linha"
+        ]
 
-        if indice + 1 < len(sequencia):
+        # Define o fim da alternativa.
+        if indice + 1 < len(
+            sequencia
+        ):
 
             fim = sequencia[
                 indice + 1
-            ].start()
+            ]["linha"]
 
         else:
 
-            fim = len(conteudo)
+            fim = len(
+                linhas
+            )
 
-        texto_alternativa = conteudo[
-            inicio:fim
+        # Pega todas as linhas da alternativa.
+        partes = linhas[
+            inicio:
+            fim
         ]
 
-        texto_alternativa = texto_alternativa.replace(
-            '\n',
-            ' '
-        )
+        if partes:
 
-        texto_alternativa = re.sub(
-            r'\s+',
-            ' ',
-            texto_alternativa
+            # Remove o marcador A), B), C), etc.
+            partes[0] = re.sub(
+                r"^\(?[A-E]\)?[\.\:\-]?\s*",
+                "",
+                partes[0],
+                flags=re.IGNORECASE
+            )
+
+        # Junta as linhas.
+        texto_alternativa = "\n".join(
+            partes
         ).strip()
+
+        # Limpa o texto.
+        texto_alternativa = (
+            limpar_conteudo_questao(
+                texto_alternativa
+            )
+        )
 
         alternativas.append(
             {
-                'letra': letra,
-                'texto': texto_alternativa,
+                "letra": alternativa[
+                    "letra"
+                ],
+                "texto": texto_alternativa,
             }
         )
 
     return alternativas
 
 
-def extrair_gabarito_enem(texto):
+# ============================================================
+# 7. SEPARAR TEXTO DE APOIO DA ALTERNATIVA E
+# ============================================================
+
+def separar_material_apos_alternativa(texto):
     """
-    Extrai o gabarito do ENEM.
+    Separa o texto de apoio que foi absorvido pela alternativa E.
 
-    O PDF possui dois blocos:
+    Exemplos:
 
-    1. Questões 46 a 90:
-       número + resposta
+        (E) resposta da questão.
+        Leia o Texto II para responder às questões 03 e 04.
 
-       Exemplo:
-       46 C
-       47 E
+    ou:
 
-    2. Questões 1 a 45:
-       número + resposta em Inglês + resposta em Espanhol
-
-       Exemplo:
-       1 C C
-       2 A D
-
-    Como a prova importada é a versão em Inglês,
-    usamos a primeira resposta das questões 1 a 5.
+        (E) resposta da questão.
+        Fonte: SILVA, Luiza Helena...
     """
 
-    # Limpa o texto extraído do PDF.
-    texto = limpar_texto(texto)
+    # --------------------------------------------------------
+    # Se não houver texto, não há nada para separar.
+    # --------------------------------------------------------
 
-    # Cria o dicionário que armazenará:
-    # número da questão -> resposta correta.
-    gabarito = {}
-
-    # ---------------------------------------------------------
-    # QUESTÕES 46 A 90
-    # ---------------------------------------------------------
-
-    # Procura linhas no formato:
-    #
-    # 46 C
-    # 47 E
-    # ...
-    # 90 C
-    #
-    # O intervalo é limitado entre 46 e 90.
-    padrao_46_90 = re.compile(
-        r'(?m)^\s*(4[6-9]|[5-8]\d|90)\s+([ABCDE])\s*$'
-    )
-
-    # Percorre todas as respostas encontradas.
-    for correspondencia in padrao_46_90.finditer(texto):
-
-        # Obtém o número da questão.
-        numero = int(
-            correspondencia.group(1)
+    if not texto:
+        return (
+            "",
+            ""
         )
 
-        # Obtém a alternativa correta.
-        resposta = correspondencia.group(2)
-
-        # Salva no dicionário.
-        gabarito[numero] = resposta
-
-    # ---------------------------------------------------------
-    # QUESTÕES 1 A 45
-    # ---------------------------------------------------------
-
-    # Localiza o bloco que contém:
+    # --------------------------------------------------------
+    # Marcadores de material que pode ter sido absorvido
+    # pela alternativa E.
     #
-    # INGLÊS ESPANHOL
-    #
-    # Esse bloco aparece antes das questões 1 a 45.
-    padrao_inicio = re.search(
-        r'INGLÊS\s+ESPANHOL',
-        texto,
-        re.IGNORECASE
-    )
+    # "Fonte:" também é considerado material de apoio.
+    # --------------------------------------------------------
 
-    # Verifica se o bloco foi encontrado.
-    if not padrao_inicio:
-        raise ValueError(
-            'Não foi possível localizar o bloco de Inglês/Espanhol.'
-        )
-
-    # Pega somente o texto depois de:
-    # INGLÊS ESPANHOL
-    texto_linguagens = texto[
-        padrao_inicio.end():
+    marcadores = [
+        "Leia o Texto",
+        "Leia os Textos",
+        "Leia o texto",
+        "Leia os textos",
+        "Fonte:",
     ]
 
-    # ---------------------------------------------------------
-    # QUESTÕES 1 A 5
-    # ---------------------------------------------------------
+    posicoes = []
 
-    # As primeiras cinco questões possuem:
-    #
-    # 1 C C
-    # 2 A D
-    # 3 A D
-    # 4 A D
-    # 5 E A
-    #
-    # A primeira letra é Inglês.
-    # A segunda letra é Espanhol.
-    padrao_1_5 = re.compile(
-        r'(?m)^\s*([1-5])\s+([ABCDE])\s+([ABCDE])\s*$'
+    # --------------------------------------------------------
+    # Procura os marcadores.
+    # --------------------------------------------------------
+
+    for marcador in marcadores:
+
+        posicao = texto.find(
+            marcador
+        )
+
+        if posicao != -1:
+
+            posicoes.append(
+                posicao
+            )
+
+    # --------------------------------------------------------
+    # Se não encontrou nenhum marcador,
+    # mantém tudo como alternativa.
+    # --------------------------------------------------------
+
+    if not posicoes:
+
+        return (
+            texto.strip(),
+            ""
+        )
+
+    # --------------------------------------------------------
+    # Usa o primeiro marcador encontrado.
+    # --------------------------------------------------------
+
+    corte = min(
+        posicoes
     )
 
-    # Procura as questões 1 a 5.
-    for correspondencia in padrao_1_5.finditer(
-        texto_linguagens
-    ):
+    # --------------------------------------------------------
+    # Parte que realmente pertence à alternativa.
+    # --------------------------------------------------------
 
-        # Número da questão.
-        numero = int(
-            correspondencia.group(1)
-        )
-
-        # Resposta da versão em Inglês.
-        resposta_ingles = correspondencia.group(2)
-
-        # Guarda a resposta em Inglês.
-        gabarito[numero] = resposta_ingles
-
-    # ---------------------------------------------------------
-    # QUESTÕES 6 A 45
-    # ---------------------------------------------------------
-
-    # Procura linhas no formato:
-    #
-    # 6 E
-    # 7 C
-    # ...
-    # 45 B
-    #
-    # O intervalo vai de 6 até 45.
-    padrao_6_45 = re.compile(
-        r'(?m)^\s*(?:[6-9]|[1-3]\d|4[0-5])\s+([ABCDE])\s*$'
+    texto_alternativa = (
+        texto[
+            :corte
+        ]
+        .strip()
     )
 
-    # Percorre as questões encontradas.
-    for correspondencia in padrao_6_45.finditer(
-        texto_linguagens
+    # --------------------------------------------------------
+    # Parte considerada material de apoio.
+    # --------------------------------------------------------
+
+    texto_apoio = (
+        texto[
+            corte:
+        ]
+        .strip()
+    )
+
+    return (
+        texto_alternativa,
+        texto_apoio
+    )
+
+
+# ============================================================
+# 8. SEPARAR QUESTÕES GENERICAMENTE
+# ============================================================
+
+def separar_questoes_generico(texto):
+    """
+    Separa questões de qualquer prova.
+
+    Pode trabalhar com:
+
+        10 questões
+        20 questões
+        40 questões
+        45 questões
+        50 questões
+        90 questões
+        etc.
+
+    Também corrige o problema encontrado no EXATO em que
+    o início de um novo texto de apoio era colocado dentro
+    da alternativa E.
+    """
+
+    # --------------------------------------------------------
+    # Divide o texto em linhas.
+    # --------------------------------------------------------
+
+    linhas = texto.splitlines()
+
+    # --------------------------------------------------------
+    # Localiza as questões.
+    # --------------------------------------------------------
+
+    marcadores = encontrar_marcadores_questoes(
+        texto
+    )
+
+    # --------------------------------------------------------
+    # Remove blocos duplicados.
+    # --------------------------------------------------------
+
+    marcadores = selecionar_bloco_principal(
+        marcadores
+    )
+
+    questoes = []
+
+    # --------------------------------------------------------
+    # Se nenhuma questão foi encontrada.
+    # --------------------------------------------------------
+
+    if not marcadores:
+        return questoes
+
+    # ========================================================
+    # PERCORRE AS QUESTÕES
+    # ========================================================
+
+    for indice, marcador in enumerate(
+        marcadores
     ):
 
-        # Recupera a linha completa.
-        linha = correspondencia.group(0).strip()
-
-        # Separa os valores da linha.
-        partes = linha.split()
-
-        # Garante que existem número e resposta.
-        if len(partes) != 2:
-            continue
-
-        # Obtém o número.
-        numero = int(partes[0])
-
-        # Obtém a resposta.
-        resposta = partes[1]
-
-        # Garante que estamos realmente entre 6 e 45.
-        if 6 <= numero <= 45:
-
-            # Salva no dicionário.
-            gabarito[numero] = resposta
-
-    # ---------------------------------------------------------
-    # VALIDAÇÃO
-    # ---------------------------------------------------------
-
-    # Cria uma lista com as questões que estão faltando.
-    faltantes = [
-        numero
-        for numero in range(1, 91)
-        if numero not in gabarito
-    ]
-
-    # Se existir alguma questão faltando,
-    # interrompe o processamento.
-    if faltantes:
-
-        raise ValueError(
-            f'Gabarito incompleto. '
-            f'Foram encontradas {len(gabarito)} respostas. '
-            f'Faltantes: {faltantes}'
-        )
-
-    # Retorna o gabarito completo.
-    return gabarito
-
-def validar_questoes_com_gabarito(questoes, gabarito):
-    """
-    Confere se as questões extraídas do PDF
-    possuem alternativas e respostas válidas.
-
-    Nenhuma informação é salva no banco nesta etapa.
-    """
-
-    # Cria uma lista para armazenar problemas encontrados.
-    problemas = []
-
-    # Verifica a quantidade de questões.
-    if len(questoes) != 90:
-        problemas.append(
-            f'Foram encontradas {len(questoes)} questões. '
-            f'O esperado para esta prova é 90.'
-        )
-
-    # Percorre todas as questões extraídas.
-    for questao in questoes:
-
-        # Obtém o número da questão.
-        numero = questao['numero']
-
-        # Obtém as alternativas.
-        alternativas = questao['alternativas']
-
-        # Cria uma lista somente com as letras.
-        letras = [
-            alternativa['letra']
-            for alternativa in alternativas
+        numero = marcador[
+            "numero"
         ]
 
-        # Verifica se existem exatamente 5 alternativas.
-        if len(alternativas) != 5:
+        linha_inicio = marcador[
+            "linha"
+        ]
 
-            problemas.append(
-                f'Questão {numero}: '
-                f'encontradas {len(alternativas)} alternativas.'
+        # ----------------------------------------------------
+        # Define o final da questão.
+        # ----------------------------------------------------
+
+        if indice + 1 < len(
+            marcadores
+        ):
+
+            linha_fim = (
+                marcadores[
+                    indice + 1
+                ]["linha"]
             )
-
-        # Verifica se as letras são A, B, C, D e E.
-        if letras != ['A', 'B', 'C', 'D', 'E']:
-
-            problemas.append(
-                f'Questão {numero}: '
-                f'alternativas encontradas: {letras}.'
-            )
-
-        # Verifica se existe gabarito para a questão.
-        if numero not in gabarito:
-
-            problemas.append(
-                f'Questão {numero}: '
-                f'gabarito não encontrado.'
-            )
-
-        # Se existe gabarito, verifica a letra.
-        elif gabarito[numero] not in letras:
-
-            problemas.append(
-                f'Questão {numero}: '
-                f'gabarito {gabarito[numero]} '
-                f'não corresponde às alternativas.'
-            )
-
-    # Verifica se alguma questão possui conteúdo vazio.
-    for questao in questoes:
-
-        # Número da questão.
-        numero = questao['numero']
-
-        # Conteúdo extraído.
-        conteudo = questao['conteudo'].strip()
-
-        # Verifica se o conteúdo está vazio.
-        if not conteudo:
-
-            problemas.append(
-                f'Questão {numero}: '
-                f'conteúdo vazio.'
-            )
-
-    # Retorna todos os problemas encontrados.
-    return problemas
-
-def preparar_questoes_para_importacao(questoes, gabarito):
-    """
-    Prepara as questões extraídas para futura gravação no banco.
-
-    Nesta etapa nenhum dado é salvo.
-    A função apenas separa o enunciado,
-    as alternativas e a resposta correta.
-    """
-
-    # Lista que armazenará as questões preparadas.
-    resultado = []
-
-    # Percorre todas as questões extraídas.
-    for questao in questoes:
-
-        # Obtém o número da questão.
-        numero = questao['numero']
-
-        # Obtém as alternativas encontradas.
-        alternativas = questao['alternativas']
-
-        # Verifica se existem alternativas.
-        if not alternativas:
-            continue
-
-        # O enunciado começa no início do conteúdo.
-        conteudo = questao['conteudo']
-
-        # A primeira alternativa marca o início
-        # da parte que não pertence ao enunciado.
-        primeira_alternativa = alternativas[0]
-
-        # Procura a posição do marcador da primeira alternativa.
-        marcador = re.search(
-            r'(?m)^[ \t]*A(?:[ \t]*[\.\)])?(?=[ \t]+|\n|$)',
-            conteudo
-        )
-
-        # Se encontrou o marcador A,
-        # separa tudo antes dele como enunciado.
-        if marcador:
-
-            # Extrai somente o enunciado.
-            enunciado = conteudo[
-                :marcador.start()
-            ].strip()
 
         else:
 
-            # Caso excepcional:
-            # usa o conteúdo completo.
-            enunciado = conteudo.strip()
-
-        # Cria a estrutura da questão.
-        questao_preparada = {
-            'numero': numero,
-            'enunciado': enunciado,
-            'alternativas': alternativas,
-            'correta': gabarito[numero],
-        }
-
-        # Adiciona à lista final.
-        resultado.append(
-            questao_preparada
-        )
-
-    # Ordena as questões pelo número.
-    resultado.sort(
-        key=lambda questao: questao['numero']
-    )
-
-    # Retorna os dados preparados.
-    return resultado
-
-from django.db import transaction
-
-from .models import Alternativa, Disciplina, Questao
-
-
-def importar_questoes_no_banco(prova, questoes_preparadas):
-    """
-    Salva as questões preparadas no banco de dados.
-
-    A operação é feita dentro de uma transação:
-    se qualquer questão apresentar erro,
-    nenhuma alteração parcial será mantida.
-    """
-
-    # Inicia uma transação segura.
-    with transaction.atomic():
-
-        # Remove questões que já pertencem a esta prova.
-        #
-        # Isso evita duplicação caso a mesma prova
-        # seja processada novamente.
-        Questao.objects.filter(
-            prova=prova
-        ).delete()
-
-        # Cria ou recupera a disciplina de Linguagens.
-        disciplina_linguagens, _ = Disciplina.objects.get_or_create(
-            nome='Linguagens, Códigos e suas Tecnologias'
-        )
-
-        # Cria ou recupera a disciplina de Ciências Humanas.
-        disciplina_humanas, _ = Disciplina.objects.get_or_create(
-            nome='Ciências Humanas e suas Tecnologias'
-        )
-
-        # Percorre todas as questões preparadas.
-        for dados in questoes_preparadas:
-
-            # Obtém o número da questão.
-            numero = dados['numero']
-
-            # Questões 1 a 45 pertencem a Linguagens.
-            if numero <= 45:
-
-                disciplina = disciplina_linguagens
-
-            # Questões 46 a 90 pertencem a Ciências Humanas.
-            else:
-
-                disciplina = disciplina_humanas
-
-            # Cria a questão no banco.
-            questao = Questao.objects.create(
-                prova=prova,
-                disciplina=disciplina,
-                numero=numero,
-                enunciado=dados['enunciado'],
-                ativa=True
+            linha_fim = len(
+                linhas
             )
 
-            # Percorre as cinco alternativas.
-            for alternativa in dados['alternativas']:
+        # ----------------------------------------------------
+        # Extrai o conteúdo.
+        # ----------------------------------------------------
 
-                # Obtém a letra da alternativa.
-                letra = alternativa['letra']
+        bloco = linhas[
+            linha_inicio + 1:
+            linha_fim
+        ]
 
-                # Verifica se esta é a resposta correta.
-                correta = (
-                    letra == dados['correta']
-                )
+        conteudo = "\n".join(
+            bloco
+        ).strip()
 
-                # Cria a alternativa no banco.
-                Alternativa.objects.create(
-                    questao=questao,
-                    letra=letra,
-                    texto=alternativa['texto'],
-                    correta=correta
-                )
+        # ----------------------------------------------------
+        # Limpa o conteúdo.
+        # ----------------------------------------------------
 
-        # Atualiza o status da prova.
-        prova.status_importacao = 'processada'
-
-        # Limpa uma mensagem de erro anterior.
-        prova.mensagem_importacao = ''
-
-        # Registra a data do processamento.
-        from django.utils import timezone
-
-        prova.data_processamento = timezone.now()
-
-        # Salva as alterações da prova.
-        prova.save(
-            update_fields=[
-                'status_importacao',
-                'mensagem_importacao',
-                'data_processamento'
-            ]
+        conteudo = limpar_conteudo_questao(
+            conteudo
         )
 
-    # Retorna a quantidade importada.
-    return len(questoes_preparadas)
+        # ----------------------------------------------------
+        # Extrai as alternativas.
+        # ----------------------------------------------------
+
+        alternativas = (
+            extrair_alternativas_generico(
+                conteudo
+            )
+        )
+
+        # ----------------------------------------------------
+        # Guarda temporariamente texto de apoio.
+        # ----------------------------------------------------
+
+        texto_apoio = ""
+
+        # ----------------------------------------------------
+        # Procura a alternativa E.
+        # ----------------------------------------------------
+
+        for alternativa in alternativas:
+
+            if alternativa["letra"] != "E":
+                continue
+
+            texto_e = alternativa[
+                "texto"
+            ]
+
+            # ------------------------------------------------
+            # Separa eventual texto de apoio.
+            # ------------------------------------------------
+
+            (
+                texto_alternativa,
+                texto_apoio,
+            ) = separar_material_apos_alternativa(
+                texto_e
+            )
+
+            # Atualiza a alternativa E.
+            alternativa[
+                "texto"
+            ] = texto_alternativa
+
+            break
+
+        # ----------------------------------------------------
+        # Cria a questão.
+        # ----------------------------------------------------
+
+        questao = {
+            "numero": numero,
+            "texto": conteudo,
+            "alternativas": alternativas,
+            "_texto_apoio": texto_apoio,
+        }
+
+        questoes.append(
+            questao
+        )
+
+    # ========================================================
+    # TRANSFERIR TEXTOS DE APOIO
+    # ========================================================
+
+    for indice, questao in enumerate(
+        questoes
+    ):
+
+        # Pega o texto temporário.
+        texto_apoio = questao.pop(
+            "_texto_apoio",
+            ""
+        )
+
+        # Se não existe texto de apoio,
+        # não há nada para fazer.
+        if not texto_apoio:
+            continue
+
+        # ----------------------------------------------------
+        # Procura a próxima questão.
+        # ----------------------------------------------------
+
+        if indice + 1 < len(
+            questoes
+        ):
+
+            proxima_questao = questoes[
+                indice + 1
+            ]
+
+            texto_original = (
+                proxima_questao[
+                    "texto"
+                ]
+            )
+
+            # Coloca o texto de apoio no início
+            # da próxima questão.
+            proxima_questao[
+                "texto"
+            ] = (
+                texto_apoio
+                + "\n\n"
+                + texto_original
+            )
+
+    # --------------------------------------------------------
+    # Retorna as questões.
+    # --------------------------------------------------------
+
+    return questoes
+
+
+# ============================================================
+# 9. COMPATIBILIDADE COM O ENEM
+# ============================================================
+
+def separar_questoes_enem(texto):
+    """
+    Mantém compatibilidade com o código antigo.
+
+    O ENEM passa a utilizar o parser genérico.
+    """
+
+    return separar_questoes_generico(
+        texto
+    )
+
+
+# ============================================================
+# 10. EXTRAIR GABARITO GENERICAMENTE
+# ============================================================
+
+def extrair_gabarito_generico(texto):
+    """
+    Tenta localizar respostas no formato:
+
+        1 A
+        2 B
+        3 C
+
+    ou:
+
+        01 - A
+        02 - B
+        03 - C
+    """
+
+    if not texto:
+        return {}
+
+    gabarito = {}
+
+    linhas = texto.splitlines()
+
+    # Percorre todas as linhas.
+    for linha in linhas:
+
+        linha_limpa = linha.strip()
+
+        # Procura número + letra.
+        resultado = re.match(
+            r"^0*(\d{1,3})\s*[\-\.\:\)]?\s*([A-E])\b",
+            linha_limpa,
+            re.IGNORECASE
+        )
+
+        if resultado:
+
+            numero = int(
+                resultado.group(1)
+            )
+
+            letra = (
+                resultado
+                .group(2)
+                .upper()
+            )
+
+            gabarito[
+                numero
+            ] = letra
+
+    return gabarito
+
+
+# ============================================================
+# 11. COMPATIBILIDADE COM O GABARITO DO ENEM
+# ============================================================
+
+def extrair_gabarito_enem(texto):
+    """
+    Mantém compatibilidade com o código anterior.
+
+    Agora utiliza o extrator genérico.
+    """
+
+    return extrair_gabarito_generico(
+        texto
+    )
+
+
+# ============================================================
+# 12. VALIDAR QUESTÕES E GABARITO
+# ============================================================
+
+def validar_questoes_com_gabarito(
+    questoes,
+    gabarito
+):
+    """
+    Verifica:
+
+    - quantidade de alternativas;
+    - existência do gabarito.
+    """
+
+    erros = []
+
+    # Percorre todas as questões.
+    for questao in questoes:
+
+        numero = questao[
+            "numero"
+        ]
+
+        alternativas = questao[
+            "alternativas"
+        ]
+
+        # ----------------------------------------------------
+        # Verifica se possui 5 alternativas.
+        # ----------------------------------------------------
+
+        if len(
+            alternativas
+        ) != 5:
+
+            erros.append(
+                (
+                    f"Questão {numero}: "
+                    f"{len(alternativas)} "
+                    "alternativas encontradas."
+                )
+            )
+
+        # ----------------------------------------------------
+        # Verifica se existe resposta no gabarito.
+        # ----------------------------------------------------
+
+        if numero not in gabarito:
+
+            erros.append(
+                (
+                    f"Questão {numero}: "
+                    "gabarito não encontrado."
+                )
+            )
+
+    return erros
+
+
+# ============================================================
+# 13. PREPARAR QUESTÕES
+# ============================================================
+
+def preparar_questoes(
+    questoes,
+    gabarito=None
+):
+    """
+    Prepara as questões para utilização pelo sistema.
+    """
+
+    if gabarito is None:
+        gabarito = {}
+
+    resultado = []
+
+    # Percorre todas as questões.
+    for questao in questoes:
+
+        numero = questao[
+            "numero"
+        ]
+
+        alternativas = []
+
+        # Percorre as alternativas.
+        for alternativa in questao[
+            "alternativas"
+        ]:
+
+            letra = alternativa[
+                "letra"
+            ]
+
+            texto_alternativa = (
+                alternativa[
+                    "texto"
+                ]
+            )
+
+            # Verifica se é a resposta correta.
+            correta = (
+                gabarito.get(
+                    numero
+                ) == letra
+            )
+
+            alternativas.append(
+                {
+                    "letra": letra,
+                    "texto": texto_alternativa,
+                    "correta": correta,
+                }
+            )
+
+        resultado.append(
+            {
+                "numero": numero,
+                "texto": questao[
+                    "texto"
+                ],
+                "alternativas": alternativas,
+            }
+        )
+
+    return resultado
+
+
+# ============================================================
+# 14. IMPORTAR QUESTÕES NO BANCO
+# ============================================================
+
+def importar_questoes_no_banco(
+    prova,
+    questoes,
+    gabarito=None
+):
+    """
+    Importa as questões e alternativas para o banco.
+
+    Esta função procura os campos existentes nos modelos
+    antes de criar os registros, evitando depender de uma
+    quantidade fixa de campos.
+    """
+
+    # Importa os modelos somente quando a função for utilizada.
+    from .models import (
+        Questao,
+        Alternativa,
+    )
+
+    if gabarito is None:
+        gabarito = {}
+
+    quantidade_importada = 0
+
+    # ========================================================
+    # PERCORRE AS QUESTÕES
+    # ========================================================
+
+    for questao_data in questoes:
+
+        numero = questao_data[
+            "numero"
+        ]
+
+        enunciado = questao_data[
+            "texto"
+        ]
+
+        # ----------------------------------------------------
+        # Cria os dados básicos da questão.
+        # ----------------------------------------------------
+
+        dados_questao = {
+            "prova": prova,
+            "numero": numero,
+            "enunciado": enunciado,
+        }
+
+        # ----------------------------------------------------
+        # Verifica se o modelo possui o campo disciplina.
+        # ----------------------------------------------------
+
+        campos_questao = {
+            campo.name
+            for campo in Questao._meta.fields
+        }
+
+        if (
+            "disciplina"
+            in campos_questao
+        ):
+
+            # Não força uma disciplina específica.
+            #
+            # A prova pode ser EXATO, ENEM,
+            # vestibular, concurso etc.
+
+            dados_questao[
+                "disciplina"
+            ] = ""
+
+        # ----------------------------------------------------
+        # Cria a questão.
+        # ----------------------------------------------------
+
+        questao = Questao.objects.create(
+            **dados_questao
+        )
+
+        # ====================================================
+        # CRIA AS ALTERNATIVAS
+        # ====================================================
+
+        for alternativa_data in questao_data[
+            "alternativas"
+        ]:
+
+            letra = alternativa_data[
+                "letra"
+            ]
+
+            texto_alternativa = (
+                alternativa_data[
+                    "texto"
+                ]
+            )
+
+            correta = (
+                gabarito.get(
+                    numero
+                ) == letra
+            )
+
+            # ------------------------------------------------
+            # Cria a alternativa.
+            # ------------------------------------------------
+
+            Alternativa.objects.create(
+                questao=questao,
+                letra=letra,
+                texto=texto_alternativa,
+                correta=correta,
+            )
+
+        quantidade_importada += 1
+
+    return quantidade_importada
+
+
+# ============================================================
+# COMPATIBILIDADE COM O VIEWS.PY
+# ============================================================
+
+def preparar_questoes_para_importacao(
+    questoes,
+    gabarito=None
+):
+    """
+    Mantém compatibilidade com o views.py.
+
+    O sistema antigo utiliza o nome:
+
+        preparar_questoes_para_importacao()
+
+    Internamente, utilizamos:
+
+        preparar_questoes()
+
+    Assim não precisamos alterar o views.py.
+    """
+
+    # --------------------------------------------------------
+    # Se nenhum gabarito foi informado,
+    # utiliza um dicionário vazio.
+    # --------------------------------------------------------
+
+    if gabarito is None:
+        gabarito = {}
+
+    # --------------------------------------------------------
+    # Reaproveita a função principal de preparação.
+    # --------------------------------------------------------
+
+    return preparar_questoes(
+        questoes,
+        gabarito
+    )

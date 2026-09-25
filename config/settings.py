@@ -83,6 +83,8 @@ if not DEBUG:
         if origin.strip()
     ]
 
+# View utilizada quando o Django rejeitar uma requisição por CSRF.
+CSRF_FAILURE_VIEW = 'config.csrf.csrf_failure'
 
 # ==========================================
 # APLICAÇÕES

@@ -1,10 +1,18 @@
+# =========================================================
+# IMPORTAÇÕES
+# =========================================================
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+# Decorator que permite acesso somente aos desenvolvedores.
+from usuarios.decorators import desenvolvedor_required
+
 from .models import Prova
 from .forms import ProvaForm
 
+# Funções responsáveis pelo processamento automático dos PDFs.
 from .importador import (
     extrair_texto_pdf,
     extrair_gabarito_enem,
@@ -15,7 +23,11 @@ from .importador import (
 )
 
 
-@login_required
+# =========================================================
+# SEÇÃO 1 — LISTA DE PROVAS
+# =========================================================
+
+@desenvolvedor_required
 def lista(request):
     """
     Mostra todas as provas cadastradas na plataforma.
@@ -34,7 +46,11 @@ def lista(request):
     )
 
 
-@login_required
+# =========================================================
+# SEÇÃO 2 — CRIAR PROVA
+# =========================================================
+
+@desenvolvedor_required
 def criar(request):
     """
     Cria uma nova prova através da plataforma.
@@ -82,7 +98,11 @@ def criar(request):
     )
 
 
-@login_required
+# =========================================================
+# SEÇÃO 3 — DETALHES DA PROVA
+# =========================================================
+
+@desenvolvedor_required
 def detalhe(request, prova_id):
     """
     Mostra os detalhes de uma prova e suas questões.
@@ -112,7 +132,11 @@ def detalhe(request, prova_id):
     )
 
 
-@login_required
+# =========================================================
+# SEÇÃO 4 — PROCESSAR PROVA
+# =========================================================
+
+@desenvolvedor_required
 def processar(request, prova_id):
     """
     Processa automaticamente uma prova.
@@ -147,7 +171,7 @@ def processar(request, prova_id):
     )
 
     # ---------------------------------------------------------
-    # PROTEÇÃO CONTRA REPROCESSAMENTO
+    # SEÇÃO 4.1 — PROTEÇÃO CONTRA REPROCESSAMENTO
     # ---------------------------------------------------------
 
     # Se a prova já foi utilizada em algum simulado,
@@ -169,7 +193,7 @@ def processar(request, prova_id):
         )
 
     # ---------------------------------------------------------
-    # VERIFICAÇÃO DO PDF DA PROVA
+    # SEÇÃO 4.2 — VERIFICAÇÃO DO PDF DA PROVA
     # ---------------------------------------------------------
 
     # Verifica se o PDF da prova foi enviado.
@@ -186,7 +210,7 @@ def processar(request, prova_id):
         )
 
     # ---------------------------------------------------------
-    # VERIFICAÇÃO DO GABARITO
+    # SEÇÃO 4.3 — VERIFICAÇÃO DO GABARITO
     # ---------------------------------------------------------
 
     # Verifica se o PDF do gabarito foi enviado.
@@ -205,7 +229,7 @@ def processar(request, prova_id):
     try:
 
         # -----------------------------------------------------
-        # MARCA A PROVA COMO PROCESSANDO
+        # SEÇÃO 4.4 — MARCA A PROVA COMO PROCESSANDO
         # -----------------------------------------------------
 
         prova.status_importacao = 'processando'
@@ -222,7 +246,7 @@ def processar(request, prova_id):
         )
 
         # -----------------------------------------------------
-        # EXTRAI O TEXTO DO PDF DA PROVA
+        # SEÇÃO 4.5 — EXTRAI O TEXTO DO PDF DA PROVA
         # -----------------------------------------------------
 
         texto_prova = extrair_texto_pdf(
@@ -230,7 +254,7 @@ def processar(request, prova_id):
         )
 
         # -----------------------------------------------------
-        # SEPARA AS QUESTÕES
+        # SEÇÃO 4.6 — SEPARA AS QUESTÕES
         # -----------------------------------------------------
 
         questoes = separar_questoes_enem(
@@ -238,7 +262,7 @@ def processar(request, prova_id):
         )
 
         # -----------------------------------------------------
-        # EXTRAI O TEXTO DO GABARITO
+        # SEÇÃO 4.7 — EXTRAI O TEXTO DO GABARITO
         # -----------------------------------------------------
 
         texto_gabarito = extrair_texto_pdf(
@@ -246,7 +270,7 @@ def processar(request, prova_id):
         )
 
         # -----------------------------------------------------
-        # EXTRAI AS RESPOSTAS DO GABARITO
+        # SEÇÃO 4.8 — EXTRAI AS RESPOSTAS DO GABARITO
         # -----------------------------------------------------
 
         gabarito = extrair_gabarito_enem(
@@ -254,7 +278,7 @@ def processar(request, prova_id):
         )
 
         # -----------------------------------------------------
-        # VALIDA AS QUESTÕES
+        # SEÇÃO 4.9 — VALIDA AS QUESTÕES
         # -----------------------------------------------------
 
         problemas = validar_questoes_com_gabarito(
@@ -296,7 +320,7 @@ def processar(request, prova_id):
             )
 
         # -----------------------------------------------------
-        # PREPARA AS QUESTÕES
+        # SEÇÃO 4.10 — PREPARA AS QUESTÕES
         # -----------------------------------------------------
 
         questoes_preparadas = (
@@ -307,7 +331,7 @@ def processar(request, prova_id):
         )
 
         # -----------------------------------------------------
-        # SALVA AS QUESTÕES NO BANCO
+        # SEÇÃO 4.11 — SALVA AS QUESTÕES NO BANCO
         # -----------------------------------------------------
 
         quantidade = importar_questoes_no_banco(
@@ -316,7 +340,7 @@ def processar(request, prova_id):
         )
 
         # -----------------------------------------------------
-        # SUCESSO
+        # SEÇÃO 4.12 — SUCESSO
         # -----------------------------------------------------
 
         messages.success(
@@ -328,7 +352,7 @@ def processar(request, prova_id):
     except Exception as erro:
 
         # -----------------------------------------------------
-        # TRATAMENTO DE ERRO
+        # SEÇÃO 4.13 — TRATAMENTO DE ERRO
         # -----------------------------------------------------
 
         # Marca a prova como erro.

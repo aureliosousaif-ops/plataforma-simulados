@@ -1,3 +1,7 @@
+# =========================================================
+# IMPORTAÇÕES
+# =========================================================
+
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
@@ -5,18 +9,27 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import Perfil
 
 
+# =========================================================
+# SEÇÃO 1 — FORMULÁRIO DE CADASTRO
+# =========================================================
+
 class CadastroForm(UserCreationForm):
     """
-    Formulário de cadastro dos alunos.
-
-    Todo cadastro público começa automaticamente
-    como aluno.
+    Formulário utilizado para cadastrar novos alunos.
     """
+
+    # ---------------------------------------------------------
+    # E-MAIL
+    # ---------------------------------------------------------
 
     email = forms.EmailField(
         required=True,
         label='E-mail'
     )
+
+    # ---------------------------------------------------------
+    # IDADE
+    # ---------------------------------------------------------
 
     idade = forms.IntegerField(
         required=False,
@@ -25,11 +38,19 @@ class CadastroForm(UserCreationForm):
         label='Idade'
     )
 
+    # ---------------------------------------------------------
+    # ESCOLARIDADE
+    # ---------------------------------------------------------
+
     escolaridade = forms.ChoiceField(
         choices=Perfil.ESCOLARIDADES,
         required=False,
         label='Escolaridade'
     )
+
+    # ---------------------------------------------------------
+    # OBJETIVO
+    # ---------------------------------------------------------
 
     objetivo = forms.ChoiceField(
         choices=Perfil.OBJETIVOS,
@@ -37,36 +58,44 @@ class CadastroForm(UserCreationForm):
         label='Objetivo de estudo'
     )
 
-    # Campo da senha.
-    #
-    # Não exige número, símbolo, letra maiúscula
-    # nem quantidade mínima de caracteres.
+    # ---------------------------------------------------------
+    # SENHA
+    # ---------------------------------------------------------
+
     password1 = forms.CharField(
         label='Senha',
         widget=forms.PasswordInput(
             attrs={
                 'class': 'form-control',
-                'placeholder': 'Digite sua senha',
+                'placeholder': 'Digite sua senha'
             }
         ),
         help_text=(
-            'Dica: evite usar informações fáceis de adivinhar.'
+            'Escolha uma senha que você consiga lembrar.'
         )
     )
 
-    # Confirmação da senha.
+    # ---------------------------------------------------------
+    # CONFIRMAÇÃO DA SENHA
+    # ---------------------------------------------------------
+
     password2 = forms.CharField(
         label='Confirme a senha',
         widget=forms.PasswordInput(
             attrs={
                 'class': 'form-control',
-                'placeholder': 'Digite a senha novamente',
+                'placeholder': 'Digite a senha novamente'
             }
         ),
         help_text='Digite a mesma senha novamente.'
     )
 
+    # =========================================================
+    # CONFIGURAÇÃO DO FORMULÁRIO
+    # =========================================================
+
     class Meta:
+
         model = User
 
         fields = [
@@ -83,40 +112,38 @@ class CadastroForm(UserCreationForm):
             'username': 'Nome de usuário'
         }
 
+    # =========================================================
+    # VALIDAÇÃO DA SENHA
+    # =========================================================
+
     def validate_password(self, password, user=None):
         """
-        Desativa os validadores de senha do Django.
-
-        Assim, não serão exibidos erros como:
-
-        - A senha é muito comum.
-        - A senha é muito parecida com o nome de usuário.
-        - A senha é muito curta.
-        - A senha precisa conter determinados caracteres.
+        Mantém a senha sem os validadores extras
+        configurados pelo Django.
         """
 
-        # Não executa os validadores padrão do Django.
         return
+
+    # =========================================================
+    # CONFIRMAÇÃO DA SENHA
+    # =========================================================
 
     def clean_password2(self):
         """
-        Verifica somente se as duas senhas são iguais.
+        Verifica se as duas senhas são iguais.
         """
 
-        password1 = self.cleaned_data.get(
-            'password1'
-        )
+        password1 = self.cleaned_data.get('password1')
+        password2 = self.cleaned_data.get('password2')
 
-        password2 = self.cleaned_data.get(
-            'password2'
-        )
-
+        # Verifica se os dois campos foram preenchidos.
         if not password1 or not password2:
 
             raise forms.ValidationError(
                 'Digite a senha nos dois campos.'
             )
 
+        # Compara as duas senhas.
         if password1 != password2:
 
             raise forms.ValidationError(
@@ -124,6 +151,10 @@ class CadastroForm(UserCreationForm):
             )
 
         return password2
+
+    # =========================================================
+    # SALVAMENTO
+    # =========================================================
 
     def save(self, commit=True):
         """

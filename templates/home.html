@@ -1,1879 +1,419 @@
+{% extends 'base.html' %}
 {% load static %}
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-
-<head>
-
-    <!-- =====================================================
-         CONFIGURAÇÕES DA PÁGINA
-         ===================================================== -->
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Examix | Estude. Pratique. Evolua.</title>
-
-
-    <!-- =====================================================
-         BOOTSTRAP
-         ===================================================== -->
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
-
-
-    <!-- =====================================================
-         CSS DA HOME
-         Tudo fica nesta própria página
-         ===================================================== -->
-
-    <style>
-
-        /* =================================================
-           VARIÁVEIS
-           ================================================= */
-
-        :root {
-
-            --blue: #3155e7;
-            --blue-dark: #2645c5;
-            --indigo: #4f46e5;
-
-            --dark: #101828;
-            --text: #344054;
-            --muted: #667085;
-
-            --background: #f8faff;
-            --white: #ffffff;
-
-            --border: #eaecf0;
-
-        }
-
-
-        /* =================================================
-           CONFIGURAÇÕES GERAIS
-           ================================================= */
-
-        * {
-            box-sizing: border-box;
-        }
-
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-
-        body {
-
-            margin: 0;
-
-            background: var(--background);
-
-            color: var(--text);
-
-            font-family:
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                Roboto,
-                Helvetica,
-                Arial,
-                sans-serif;
-
-        }
-
-
-        a {
-            text-decoration: none;
-        }
-
-
-        /* =================================================
-           NAVBAR
-           ================================================= */
-
-        .examix-navbar {
-
-            background: rgba(255, 255, 255, 0.96);
-
-            border-bottom: 1px solid var(--border);
-
-            box-shadow:
-                0 4px 20px rgba(16, 24, 40, 0.05);
-
-        }
-
-
-        .examix-brand {
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 10px;
-
-            color: var(--dark);
-
-            font-size: 1.35rem;
-
-            font-weight: 800;
-
-        }
-
-
-        .examix-brand:hover {
-            color: var(--dark);
-        }
-
-
-        .examix-brand-logo {
-
-            width: 42px;
-            height: 42px;
-
-            object-fit: contain;
-
-            border-radius: 11px;
-
-        }
-
-
-        .examix-brand-name {
-            font-weight: 800;
-        }
-
-
-        .examix-nav-link {
-
-            color: var(--text) !important;
-
-            font-weight: 600;
-
-            margin-left: 5px;
-
-            transition: 0.2s ease;
-
-        }
-
-
-        .examix-nav-link:hover {
-
-            color: var(--blue) !important;
-
-        }
-
-
-        .examix-navbar-button {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            padding: 10px 18px;
-
-            border-radius: 11px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    var(--blue),
-                    var(--indigo)
-                );
-
-            color: white !important;
-
-            font-weight: 700;
-
-            transition: 0.2s ease;
-
-        }
-
-
-        .examix-navbar-button:hover {
-
-            color: white !important;
-
-            transform: translateY(-2px);
-
-            box-shadow:
-                0 8px 20px rgba(49, 85, 231, 0.25);
-
-        }
-
-
-        /* =================================================
-           HERO
-           ================================================= */
-
-        .examix-hero {
-
-            position: relative;
-
-            overflow: hidden;
-
-            padding: 90px 0 80px;
-
-            background:
-
-                radial-gradient(
-                    circle at 85% 20%,
-                    rgba(79, 70, 229, 0.14),
-                    transparent 32%
-                ),
-
-                radial-gradient(
-                    circle at 10% 80%,
-                    rgba(49, 85, 231, 0.08),
-                    transparent 30%
-                ),
-
-                linear-gradient(
-                    180deg,
-                    #f8faff 0%,
-                    #ffffff 100%
-                );
-
-        }
-
-
-        .examix-hero-badge {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            gap: 7px;
-
-            padding: 8px 14px;
-
-            margin-bottom: 20px;
-
-            border: 1px solid #dbe4ff;
-
-            border-radius: 50px;
-
-            background: #eef2ff;
-
-            color: var(--blue);
-
-            font-size: 0.8rem;
-
-            font-weight: 800;
-
-            letter-spacing: 0.8px;
-
-        }
-
-
-        .examix-hero h1 {
-
-            max-width: 700px;
-
-            margin: 0 0 22px;
-
-            color: var(--dark);
-
-            font-size: clamp(
-                2.8rem,
-                6vw,
-                5rem
-            );
-
-            font-weight: 900;
-
-            line-height: 1;
-
-            letter-spacing: -3px;
-
-        }
-
-
-        .examix-hero h1 span {
-
-            display: block;
-
-            color: var(--blue);
-
-        }
-
-
-        .examix-hero-description {
-
-            max-width: 650px;
-
-            margin-bottom: 30px;
-
-            color: var(--muted);
-
-            font-size: 1.1rem;
-
-            line-height: 1.8;
-
-        }
-
-
-        /* =================================================
-           BOTÕES HERO
-           ================================================= */
-
-        .examix-hero-buttons {
-
-            display: flex;
-
-            flex-wrap: wrap;
-
-            gap: 12px;
-
-        }
-
-
-        .examix-primary-button {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            padding: 13px 22px;
-
-            border-radius: 11px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    var(--blue),
-                    var(--indigo)
-                );
-
-            color: white;
-
-            font-weight: 700;
-
-            box-shadow:
-                0 12px 25px
-                rgba(49, 85, 231, 0.20);
-
-            transition: 0.2s ease;
-
-        }
-
-
-        .examix-primary-button:hover {
-
-            color: white;
-
-            transform: translateY(-2px);
-
-            box-shadow:
-                0 16px 30px
-                rgba(49, 85, 231, 0.28);
-
-        }
-
-
-        .examix-secondary-button {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            padding: 13px 22px;
-
-            border: 1px solid #d0d5dd;
-
-            border-radius: 11px;
-
-            background: white;
-
-            color: var(--text);
-
-            font-weight: 700;
-
-            transition: 0.2s ease;
-
-        }
-
-
-        .examix-secondary-button:hover {
-
-            color: var(--blue);
-
-            border-color: #b9c5ff;
-
-            transform: translateY(-2px);
-
-        }
-
-
-        /* =================================================
-           CARD DO HERO
-           ================================================= */
-
-        .examix-dashboard {
-
-            padding: 32px;
-
-            border: 1px solid var(--border);
-
-            border-radius: 25px;
-
-            background: white;
-
-            box-shadow:
-                0 25px 60px
-                rgba(16, 24, 40, 0.10);
-
-        }
-
-
-        .examix-dashboard-icon {
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            width: 65px;
-            height: 65px;
-
-            margin-bottom: 22px;
-
-            border-radius: 18px;
-
-            background: #eef2ff;
-
-            font-size: 1.8rem;
-
-        }
-
-
-        .examix-dashboard h2 {
-
-            margin-bottom: 10px;
-
-            color: var(--dark);
-
-            font-size: 1.5rem;
-
-            font-weight: 800;
-
-        }
-
-
-        .examix-dashboard > p {
-
-            margin-bottom: 25px;
-
-            color: var(--muted);
-
-            line-height: 1.7;
-
-        }
-
-
-        .examix-dashboard-item {
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 14px;
-
-            padding: 15px 0;
-
-            border-top: 1px solid var(--border);
-
-        }
-
-
-        .examix-dashboard-item-icon {
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            width: 43px;
-            height: 43px;
-
-            flex-shrink: 0;
-
-            border-radius: 12px;
-
-            background: #f2f4f7;
-
-            font-size: 1.2rem;
-
-        }
-
-
-        .examix-dashboard-item strong {
-
-            display: block;
-
-            color: var(--dark);
-
-        }
-
-
-        .examix-dashboard-item small {
-
-            color: var(--muted);
-
-        }
-
-
-        /* =================================================
-           ÁREA DE LOGIN
-           ================================================= */
-
-        .examix-login-section {
-
-            padding: 35px 0 80px;
-
-        }
-
-
-        .examix-login-card {
-
-            padding: 30px;
-
-            border: 1px solid #dbe4ff;
-
-            border-radius: 22px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #eef2ff,
-                    #f8faff
-                );
-
-        }
-
-
-        .examix-login-icon {
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            width: 58px;
-            height: 58px;
-
-            border-radius: 16px;
-
-            background: var(--blue);
-
-            color: white;
-
-            font-size: 1.5rem;
-
-        }
-
-
-        .examix-login-card h2 {
-
-            margin: 0 0 8px;
-
-            color: var(--dark);
-
-            font-size: 1.45rem;
-
-            font-weight: 800;
-
-        }
-
-
-        .examix-login-card p {
-
-            margin: 0;
-
-            color: var(--muted);
-
-            line-height: 1.7;
-
-        }
-
-
-        .examix-login-buttons {
-
-            display: flex;
-
-            flex-wrap: wrap;
-
-            gap: 10px;
-
-        }
-
-
-        .examix-login-button {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            padding: 11px 18px;
-
-            border-radius: 10px;
-
-            background: var(--blue);
-
-            color: white;
-
-            font-weight: 700;
-
-            transition: 0.2s ease;
-
-        }
-
-
-        .examix-login-button:hover {
-
-            background: var(--blue-dark);
-
-            color: white;
-
-            transform: translateY(-2px);
-
-        }
-
-
-        .examix-register-button {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            padding: 11px 18px;
-
-            border: 1px solid #d0d5dd;
-
-            border-radius: 10px;
-
-            background: white;
-
-            color: var(--text);
-
-            font-weight: 700;
-
-        }
-
-
-        .examix-register-button:hover {
-
-            color: var(--blue);
-
-        }
-
-
-        /* =================================================
-           SEÇÃO DE RECURSOS
-           ================================================= */
-
-        .examix-features {
-
-            padding: 90px 0;
-
-            background: #f8faff;
-
-        }
-
-
-        .examix-section-heading {
-
-            max-width: 700px;
-
-            margin: 0 auto 50px;
-
-            text-align: center;
-
-        }
-
-
-        .examix-section-heading span {
-
-            color: var(--blue);
-
-            font-size: 0.8rem;
-
-            font-weight: 800;
-
-            letter-spacing: 1.5px;
-
-        }
-
-
-        .examix-section-heading h2 {
-
-            margin: 10px 0;
-
-            color: var(--dark);
-
-            font-size: 2.4rem;
-
-            font-weight: 900;
-
-        }
-
-
-        .examix-section-heading p {
-
-            margin: 0;
-
-            color: var(--muted);
-
-            font-size: 1rem;
-
-        }
-
-
-        /* =================================================
-           CARDS DE RECURSOS
-           ================================================= */
-
-        .examix-feature-card {
-
-            height: 100%;
-
-            padding: 30px;
-
-            border: 1px solid var(--border);
-
-            border-radius: 20px;
-
-            background: white;
-
-            transition:
-                transform 0.2s ease,
-                box-shadow 0.2s ease;
-
-        }
-
-
-        .examix-feature-card:hover {
-
-            transform: translateY(-5px);
-
-            box-shadow:
-                0 18px 35px
-                rgba(16, 24, 40, 0.08);
-
-        }
-
-
-        .examix-feature-icon {
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            width: 55px;
-            height: 55px;
-
-            margin-bottom: 20px;
-
-            border-radius: 15px;
-
-            background: #eef2ff;
-
-            font-size: 1.5rem;
-
-        }
-
-
-        .examix-feature-card h3 {
-
-            margin-bottom: 10px;
-
-            color: var(--dark);
-
-            font-size: 1.25rem;
-
-            font-weight: 800;
-
-        }
-
-
-        .examix-feature-card p {
-
-            margin: 0;
-
-            color: var(--muted);
-
-            line-height: 1.7;
-
-        }
-
-
-        /* =================================================
-           COMO FUNCIONA
-           ================================================= */
-
-        .examix-how {
-
-            padding: 90px 0;
-
-            background: white;
-
-        }
-
-
-        .examix-how h2 {
-
-            margin: 10px 0 18px;
-
-            color: var(--dark);
-
-            font-size: 2.5rem;
-
-            font-weight: 900;
-
-        }
-
-
-        .examix-how-description {
-
-            max-width: 550px;
-
-            color: var(--muted);
-
-            font-size: 1.05rem;
-
-            line-height: 1.8;
-
-        }
-
-
-        .examix-step {
-
-            display: flex;
-
-            gap: 18px;
-
-            padding: 22px 0;
-
-            border-bottom: 1px solid var(--border);
-
-        }
-
-
-        .examix-step:last-child {
-            border-bottom: none;
-        }
-
-
-        .examix-step-number {
-
-            flex-shrink: 0;
-
-            color: var(--blue);
-
-            font-size: 1.1rem;
-
-            font-weight: 900;
-
-        }
-
-
-        .examix-step h3 {
-
-            margin: 0 0 5px;
-
-            color: var(--dark);
-
-            font-size: 1.1rem;
-
-            font-weight: 800;
-
-        }
-
-
-        .examix-step p {
-
-            margin: 0;
-
-            color: var(--muted);
-
-        }
-
-
-        /* =================================================
-           SEÇÃO FINAL
-           ================================================= */
-
-        .examix-final {
-
-            padding: 20px 0 90px;
-
-            background: white;
-
-        }
-
-
-        .examix-final-card {
-
-            padding: 70px 30px;
-
-            border-radius: 30px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    #172554,
-                    #3155e7
-                );
-
-            text-align: center;
-
-            box-shadow:
-                0 25px 60px
-                rgba(49, 85, 231, 0.20);
-
-        }
-
-
-        .examix-final-card span {
-
-            color: #c7d2fe;
-
-            font-size: 0.8rem;
-
-            font-weight: 800;
-
-            letter-spacing: 1.5px;
-
-        }
-
-
-        .examix-final-card h2 {
-
-            max-width: 700px;
-
-            margin: 12px auto;
-
-            color: white;
-
-            font-size: clamp(
-                2rem,
-                5vw,
-                3.2rem
-            );
-
-            font-weight: 900;
-
-        }
-
-
-        .examix-final-card p {
-
-            max-width: 650px;
-
-            margin: 0 auto 25px;
-
-            color: #dbe4ff;
-
-            font-size: 1.05rem;
-
-        }
-
-
-        .examix-final-button {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            padding: 13px 25px;
-
-            border-radius: 11px;
-
-            background: white;
-
-            color: var(--blue);
-
-            font-weight: 800;
-
-            transition: 0.2s ease;
-
-        }
-
-
-        .examix-final-button:hover {
-
-            color: var(--blue-dark);
-
-            transform: translateY(-2px);
-
-        }
-
-
-        /* =================================================
-           RODAPÉ
-           ================================================= */
-
-        .examix-footer {
-
-            padding: 35px 20px;
-
-            background: #0f172a;
-
-            color: #cbd5e1;
-
-            text-align: center;
-
-        }
-
-
-        .examix-footer-title {
-
-            margin-bottom: 5px;
-
-            color: white;
-
-            font-size: 1.2rem;
-
-            font-weight: 800;
-
-        }
-
-
-        .examix-footer-text {
-
-            color: #94a3b8;
-
-            font-size: 0.9rem;
-
-        }
-
-
-        /* =================================================
-           RESPONSIVIDADE
-           ================================================= */
-
-        @media (max-width: 991px) {
-
-            .examix-hero {
-
-                padding: 65px 0;
-
-            }
-
-            .examix-dashboard {
-
-                margin-top: 30px;
-
-            }
-
-        }
-
-
-        @media (max-width: 768px) {
-
-            .examix-hero {
-
-                padding: 50px 0;
-
-            }
-
-
-            .examix-hero h1 {
-
-                font-size: 3rem;
-
-                letter-spacing: -2px;
-
-            }
-
-
-            .examix-hero-description {
-
-                font-size: 1rem;
-
-            }
-
-
-            .examix-section-heading h2 {
-
-                font-size: 2rem;
-
-            }
-
-
-            .examix-how h2 {
-
-                font-size: 2rem;
-
-            }
-
-
-            .examix-login-card {
-
-                padding: 24px;
-
-            }
-
-
-            .examix-final-card {
-
-                padding: 50px 22px;
-
-            }
-
-        }
-
-
-        @media (max-width: 576px) {
-
-            .examix-brand-logo {
-
-                width: 38px;
-                height: 38px;
-
-            }
-
-
-            .examix-brand {
-
-                font-size: 1.15rem;
-
-            }
-
-
-            .examix-hero h1 {
-
-                font-size: 2.5rem;
-
-            }
-
-
-            .examix-hero-buttons {
-
-                flex-direction: column;
-
-            }
-
-
-            .examix-primary-button,
-            .examix-secondary-button {
-
-                width: 100%;
-
-            }
-
-
-            .examix-login-buttons {
-
-                flex-direction: column;
-
-            }
-
-
-            .examix-login-button,
-            .examix-register-button {
-
-                width: 100%;
-
-            }
-
-
-            .examix-feature-card {
-
-                padding: 24px;
-
-            }
-
-        }
-
-    </style>
-
-</head>
-
-
-<body>
-
-
-    <!-- =====================================================
-         NAVBAR
-         ===================================================== -->
-
-    <nav class="navbar navbar-expand-lg examix-navbar sticky-top">
-
-        <div class="container">
-
-            <!-- Logo -->
-            <a
-                class="examix-brand"
-                href="{% url 'home' %}"
-            >
-
-                <img
-                    src="{% static 'images/logosistema.png' %}"
-                    alt="Logo Examix"
-                    class="examix-brand-logo"
+{% block title %}
+    Examix | Plataforma de Simulados
+{% endblock %}
+
+{% block extra_css %}
+<!-- ============================================================
+     01. CSS EXCLUSIVO DO HOME
+     ============================================================ -->
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================
+     02. HERO PRINCIPAL
+     ============================================================ -->
+<section class="examix-home-hero">
+
+    <div class="examix-home-hero-content">
+
+        <span class="examix-home-badge">
+            Plataforma de estudos
+        </span>
+
+        <h1 class="examix-home-title">
+            Prepare-se melhor.
+            <br>
+            <span>Estude com o Examix.</span>
+        </h1>
+
+        <p class="examix-home-description">
+            Faça simulados, acompanhe seu desempenho
+            e descubra como está sua evolução nos estudos.
+        </p>
+
+        <div class="examix-home-actions">
+
+            {% if user.is_authenticated %}
+
+                <!-- Usuário logado -->
+                <a
+                    href="{% url 'simulados:lista' %}"
+                    class="examix-home-primary"
                 >
-
-                <span class="examix-brand-name">
-                    Examix
-                </span>
-
-            </a>
-
-
-            <!-- Botão mobile -->
-            <button
-                class="navbar-toggler"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#menuPrincipal"
-            >
-
-                <span class="navbar-toggler-icon"></span>
-
-            </button>
-
-
-            <!-- Menu -->
-            <div
-                class="collapse navbar-collapse"
-                id="menuPrincipal"
-            >
-
-                <ul class="navbar-nav me-auto">
-
-                    <li class="nav-item">
-
-                        <a
-                            class="nav-link examix-nav-link"
-                            href="{% url 'home' %}"
-                        >
-                            Início
-                        </a>
-
-                    </li>
-
-
-                    <!-- Simulados -->
-                    <li class="nav-item">
-
-                        <a
-                            class="nav-link examix-nav-link"
-                            href="{% url 'simulados:lista' %}"
-                        >
-                            Simulados
-                        </a>
-
-                    </li>
-
-                </ul>
-
-
-                <!-- Área direita -->
-                <ul class="navbar-nav">
-
-                    <li class="nav-item">
-
-                        <a
-                            class="nav-link examix-nav-link"
-                            href="{% url 'usuarios:login' %}"
-                        >
-                            Entrar
-                        </a>
-
-                    </li>
-
-
-                    <li class="nav-item ms-lg-2">
-
-                        <a
-                            class="examix-navbar-button"
-                            href="{% url 'usuarios:cadastro' %}"
-                        >
-                            Criar conta
-                        </a>
-
-                    </li>
-
-                </ul>
-
-            </div>
-
-        </div>
-
-    </nav>
-
-
-    <!-- =====================================================
-         HERO
-         ===================================================== -->
-
-    <section class="examix-hero">
-
-        <div class="container">
-
-            <div class="row align-items-center g-5">
-
-
-                <!-- Texto -->
-                <div class="col-lg-7">
-
-                    <div class="examix-hero-badge">
-                        🎓 PLATAFORMA DE ESTUDOS
-                    </div>
-
-
-                    <h1>
-
-                        Estude.
-                        <span>
-                            Pratique.
-                        </span>
-                        Evolua.
-
-                    </h1>
-
-
-                    <p class="examix-hero-description">
-
-                        O Examix é uma plataforma para você
-                        praticar seus conhecimentos através de
-                        simulados, acompanhar seus resultados
-                        e entender sua evolução ao longo dos estudos.
-
-                    </p>
-
-
-                    <div class="examix-hero-buttons">
-
-                        <a
-                            href="{% url 'simulados:lista' %}"
-                            class="examix-primary-button"
-                        >
-                            🚀 Ver simulados
-                        </a>
-
-
-                        <a
-                            href="{% url 'usuarios:login' %}"
-                            class="examix-secondary-button"
-                        >
-                            🔐 Entrar
-                        </a>
-
-                    </div>
-
-                </div>
-
-
-                <!-- Card -->
-                <div class="col-lg-5">
-
-                    <div class="examix-dashboard">
-
-                        <div class="examix-dashboard-icon">
-                            🧠
-                        </div>
-
-
-                        <h2>
-                            Prepare-se melhor
-                        </h2>
-
-
-                        <p>
-                            Pratique questões, acompanhe seu
-                            desempenho e descubra onde pode melhorar.
-                        </p>
-
-
-                        <div class="examix-dashboard-item">
-
-                            <div class="examix-dashboard-item-icon">
-                                📝
-                            </div>
-
-                            <div>
-
-                                <strong>
-                                    Simulados
-                                </strong>
-
-                                <small>
-                                    Pratique seus conhecimentos
-                                </small>
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="examix-dashboard-item">
-
-                            <div class="examix-dashboard-item-icon">
-                                ⏱️
-                            </div>
-
-                            <div>
-
-                                <strong>
-                                    Controle de tempo
-                                </strong>
-
-                                <small>
-                                    Acompanhe seu ritmo
-                                </small>
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="examix-dashboard-item">
-
-                            <div class="examix-dashboard-item-icon">
-                                📊
-                            </div>
-
-                            <div>
-
-                                <strong>
-                                    Evolução
-                                </strong>
-
-                                <small>
-                                    Analise seus resultados
-                                </small>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- =====================================================
-         CHAMADA PARA LOGIN
-         ===================================================== -->
-
-    <section class="examix-login-section">
-
-        <div class="container">
-
-            <div class="examix-login-card">
-
-                <div class="row align-items-center g-4">
-
-
-                    <div class="col-md-2 text-center">
-
-                        <div class="examix-login-icon mx-auto">
-                            🔐
-                        </div>
-
-                    </div>
-
-
-                    <div class="col-md-7">
-
-                        <h2>
-                            Tenha uma experiência completa no Examix
-                        </h2>
-
-                        <p>
-
-                            Você pode conhecer a plataforma sem criar
-                            uma conta. Para fazer simulados e acompanhar
-                            sua evolução, entre ou crie sua conta gratuitamente.
-
-                        </p>
-
-                    </div>
-
-
-                    <div class="col-md-3">
-
-                        <div class="examix-login-buttons">
-
-                            <a
-                                href="{% url 'usuarios:login' %}"
-                                class="examix-login-button"
-                            >
-                                🔐 Entrar
-                            </a>
-
-
-                            <a
-                                href="{% url 'usuarios:cadastro' %}"
-                                class="examix-register-button"
-                            >
-                                Criar conta
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- =====================================================
-         RECURSOS
-         ===================================================== -->
-
-    <section class="examix-features">
-
-        <div class="container">
-
-
-            <div class="examix-section-heading">
-
-                <span>
-                    POR QUE USAR O EXAMIX?
-                </span>
-
-                <h2>
-                    Tudo para melhorar seus estudos
-                </h2>
-
-                <p>
-                    Uma forma simples de praticar e acompanhar
-                    seu desenvolvimento.
-                </p>
-
-            </div>
-
-
-            <div class="row g-4">
-
-
-                <!-- Simulados -->
-                <div class="col-md-4">
-
-                    <div class="examix-feature-card">
-
-                        <div class="examix-feature-icon">
-                            📝
-                        </div>
-
-                        <h3>
-                            Simulados
-                        </h3>
-
-                        <p>
-                            Pratique com provas e questões
-                            organizadas para seus estudos.
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <!-- Tempo -->
-                <div class="col-md-4">
-
-                    <div class="examix-feature-card">
-
-                        <div class="examix-feature-icon">
-                            ⏱️
-                        </div>
-
-                        <h3>
-                            Controle de tempo
-                        </h3>
-
-                        <p>
-                            Acompanhe quanto tempo você utiliza
-                            durante seus simulados.
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <!-- Desempenho -->
-                <div class="col-md-4">
-
-                    <div class="examix-feature-card">
-
-                        <div class="examix-feature-icon">
-                            📊
-                        </div>
-
-                        <h3>
-                            Seu desempenho
-                        </h3>
-
-                        <p>
-                            Consulte seus resultados e identifique
-                            pontos que podem ser melhorados.
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- =====================================================
-         COMO FUNCIONA
-         ===================================================== -->
-
-    <section class="examix-how">
-
-        <div class="container">
-
-            <div class="row g-5 align-items-center">
-
-
-                <div class="col-lg-6">
-
-                    <span class="examix-section-heading d-block text-start mb-0">
-
-                        <span>
-                            COMO FUNCIONA
-                        </span>
-
-                    </span>
-
-
-                    <h2>
-                        Uma maneira simples de estudar
-                    </h2>
-
-
-                    <p class="examix-how-description">
-
-                        O Examix foi pensado para transformar a prática
-                        de questões em uma experiência mais organizada,
-                        permitindo acompanhar seu desenvolvimento.
-
-                    </p>
-
-                </div>
-
-
-                <div class="col-lg-6">
-
-
-                    <div class="examix-step">
-
-                        <div class="examix-step-number">
-                            01
-                        </div>
-
-                        <div>
-
-                            <h3>
-                                Escolha um simulado
-                            </h3>
-
-                            <p>
-                                Acesse uma das provas disponíveis
-                                na plataforma.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="examix-step">
-
-                        <div class="examix-step-number">
-                            02
-                        </div>
-
-                        <div>
-
-                            <h3>
-                                Responda às questões
-                            </h3>
-
-                            <p>
-                                Resolva as questões e acompanhe
-                                seu tempo durante a prova.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="examix-step">
-
-                        <div class="examix-step-number">
-                            03
-                        </div>
-
-                        <div>
-
-                            <h3>
-                                Veja seu resultado
-                            </h3>
-
-                            <p>
-                                Confira seus acertos, erros e
-                                questões não respondidas.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="examix-step">
-
-                        <div class="examix-step-number">
-                            04
-                        </div>
-
-                        <div>
-
-                            <h3>
-                                Acompanhe sua evolução
-                            </h3>
-
-                            <p>
-                                Utilize seu histórico para entender
-                                seu desenvolvimento ao longo do tempo.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- =====================================================
-         CHAMADA FINAL
-         ===================================================== -->
-
-    <section class="examix-final">
-
-        <div class="container">
-
-            <div class="examix-final-card">
-
-                <span>
-                    COMEÇE AGORA
-                </span>
-
-
-                <h2>
-                    Pronto para começar seus estudos?
-                </h2>
-
-
-                <p>
-
-                    Entre no Examix, escolha um simulado
-                    e comece a praticar.
-
-                </p>
-
+                    🚀 Fazer um simulado
+                </a>
 
                 <a
+                    href="{% url 'simulados:historico' %}"
+                    class="examix-home-secondary"
+                >
+                    📊 Meus simulados
+                </a>
+
+            {% else %}
+
+                <!-- Visitante -->
+                <a
                     href="{% url 'usuarios:login' %}"
-                    class="examix-final-button"
+                    class="examix-home-primary"
                 >
                     🚀 Começar agora
                 </a>
 
-            </div>
+                <a
+                    href="{% url 'usuarios:cadastro' %}"
+                    class="examix-home-secondary"
+                >
+                    Criar conta
+                </a>
+
+            {% endif %}
 
         </div>
 
-    </section>
+    </div>
+
+</section>
 
 
-    <!-- =====================================================
-         RODAPÉ
-         ===================================================== -->
+<!-- ============================================================
+     03. PAINEL DE RECURSOS
+     ============================================================ -->
+<section class="examix-home-dashboard">
 
-    <footer class="examix-footer">
+    <div class="examix-dashboard-item">
 
-        <div class="container">
+        <div class="examix-dashboard-icon">
+            📝
+        </div>
 
-            <div class="examix-footer-title">
-                Examix
-            </div>
+        <div>
+            <strong>Simulados</strong>
 
-            <div class="examix-footer-text">
-                Estude. Pratique. Evolua.
-            </div>
+            <p>
+                Resolva provas e questões
+                diretamente pela plataforma.
+            </p>
+        </div>
 
-            <div class="examix-footer-text mt-2">
-                © {% now "Y" %} Examix
-            </div>
+    </div>
+
+
+    <div class="examix-dashboard-item">
+
+        <div class="examix-dashboard-icon">
+            📊
+        </div>
+
+        <div>
+            <strong>Desempenho</strong>
+
+            <p>
+                Acompanhe seus resultados
+                e sua evolução.
+            </p>
+        </div>
+
+    </div>
+
+
+    <div class="examix-dashboard-item">
+
+        <div class="examix-dashboard-icon">
+            ⏱️
+        </div>
+
+        <div>
+            <strong>Tempo</strong>
+
+            <p>
+                Acompanhe o tempo utilizado
+                durante seus simulados.
+            </p>
+        </div>
+
+    </div>
+
+</section>
+
+
+{% if not user.is_authenticated %}
+
+<!-- ============================================================
+     04. CTA PARA LOGIN
+     Aparece somente para visitantes.
+     ============================================================ -->
+<section class="examix-login-section">
+
+    <div class="examix-login-card">
+
+        <div class="examix-login-icon">
+            🔐
+        </div>
+
+        <h2>
+            Já possui uma conta?
+        </h2>
+
+        <p>
+            Entre na sua conta para acessar seus simulados
+            e acompanhar seu desempenho.
+        </p>
+
+        <div class="examix-login-buttons">
+
+            <a
+                href="{% url 'usuarios:login' %}"
+                class="examix-login-button"
+            >
+                Entrar
+            </a>
+
+            <a
+                href="{% url 'usuarios:cadastro' %}"
+                class="examix-register-button"
+            >
+                Criar conta
+            </a>
 
         </div>
 
-    </footer>
+    </div>
+
+</section>
+
+{% endif %}
 
 
-    <!-- =====================================================
-         BOOTSTRAP JAVASCRIPT
-         ===================================================== -->
+<!-- ============================================================
+     05. RECURSOS DO EXAMIX
+     ============================================================ -->
+<section class="examix-feature-section">
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-    ></script>
+    <div class="examix-feature-header">
+
+        <span class="examix-home-badge">
+            Recursos
+        </span>
+
+        <h2>
+            Tudo para melhorar seus estudos
+        </h2>
+
+        <p>
+            Uma plataforma pensada para ajudar você
+            a estudar e acompanhar seu progresso.
+        </p>
+
+    </div>
 
 
-</body>
+    <div class="examix-feature-grid">
 
-</html>
+        <div class="examix-feature-card">
+
+            <div class="examix-feature-icon">
+                📚
+            </div>
+
+            <h3>
+                Diversos simulados
+            </h3>
+
+            <p>
+                Acesse provas e simulados
+                disponíveis na plataforma.
+            </p>
+
+        </div>
+
+
+        <div class="examix-feature-card">
+
+            <div class="examix-feature-icon">
+                📈
+            </div>
+
+            <h3>
+                Acompanhe seu desempenho
+            </h3>
+
+            <p>
+                Veja seus resultados e acompanhe
+                sua evolução ao longo do tempo.
+            </p>
+
+        </div>
+
+
+        <div class="examix-feature-card">
+
+            <div class="examix-feature-icon">
+                ⏱️
+            </div>
+
+            <h3>
+                Controle de tempo
+            </h3>
+
+            <p>
+                Saiba quanto tempo você utiliza
+                durante seus simulados.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ============================================================
+     06. COMO FUNCIONA
+     ============================================================ -->
+<section class="examix-how-section">
+
+    <div class="examix-how-header">
+
+        <span class="examix-home-badge">
+            Como funciona
+        </span>
+
+        <h2>
+            Comece a estudar em poucos passos
+        </h2>
+
+    </div>
+
+
+    <div class="examix-how-steps">
+
+        <div class="examix-step">
+
+            <div class="examix-step-number">
+                01
+            </div>
+
+            <h3>
+                Crie sua conta
+            </h3>
+
+            <p>
+                Cadastre-se gratuitamente
+                na plataforma.
+            </p>
+
+        </div>
+
+
+        <div class="examix-step">
+
+            <div class="examix-step-number">
+                02
+            </div>
+
+            <h3>
+                Escolha um simulado
+            </h3>
+
+            <p>
+                Escolha uma das provas
+                disponíveis.
+            </p>
+
+        </div>
+
+
+        <div class="examix-step">
+
+            <div class="examix-step-number">
+                03
+            </div>
+
+            <h3>
+                Acompanhe seu resultado
+            </h3>
+
+            <p>
+                Veja seus acertos,
+                erros e desempenho.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ============================================================
+     07. CTA FINAL
+     ============================================================ -->
+<section class="examix-final-section">
+
+    <div class="examix-final-card">
+
+        {% if user.is_authenticated %}
+
+            <div class="examix-final-content">
+
+                <span class="examix-home-badge">
+                    Continue estudando
+                </span>
+
+                <h2>
+                    Pronto para o próximo simulado?
+                </h2>
+
+                <p>
+                    Continue praticando e acompanhe
+                    sua evolução no Examix.
+                </p>
+
+                <a
+                    href="{% url 'simulados:lista' %}"
+                    class="examix-final-button"
+                >
+                    🚀 Fazer simulado
+                </a>
+
+            </div>
+
+        {% else %}
+
+            <div class="examix-final-content">
+
+                <span class="examix-home-badge">
+                    Comece agora
+                </span>
+
+                <h2>
+                    Prepare-se para seus próximos desafios.
+                </h2>
+
+                <p>
+                    Crie sua conta e comece a estudar
+                    com o Examix.
+                </p>
+
+                <a
+                    href="{% url 'usuarios:cadastro' %}"
+                    class="examix-final-button"
+                >
+                    Criar minha conta
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endblock %}

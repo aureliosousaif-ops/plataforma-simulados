@@ -1,0 +1,180 @@
+/* =========================================================
+   CENTRALIZAÇÃO DO CONTEÚDO DA HOME
+   ========================================================= */
+
+.examix-home-hero {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 80px 30px 60px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.examix-home-badge {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.examix-home-title {
+    max-width: 850px;
+    margin: 20px auto;
+    text-align: center;
+}
+
+.examix-home-description {
+    max-width: 720px;
+    margin: 0 auto 30px;
+    text-align: center;
+}
+
+.examix-home-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+/* =========================================================
+   DASHBOARD / RESUMO
+   ========================================================= */
+
+.examix-home-dashboard {
+    width: 100%;
+    max-width: 1000px;
+    margin: 40px auto 0;
+}
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.examix-feature-section,
+.examix-how-section,
+.examix-final-section {
+    width: 100%;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.examix-feature-card {
+    height: 100%;
+    text-align: center;
+}
+
+/* =========================================================
+   COMO FUNCIONA
+   ========================================================= */
+
+.examix-how-section {
+    text-align: center;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.examix-how-title {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.examix-step {
+    text-align: center;
+}
+
+/* =========================================================
+   LOGIN / CTA
+   ========================================================= */
+
+.examix-login-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.examix-login-card {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.examix-login-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+/* =========================================================
+   SEÇÃO FINAL
+   ========================================================= */
+
+.examix-final-section {
+    display: flex;
+    justify-content: center;
+}
+
+.examix-final-card {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.examix-final-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.examix-final-button {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+    .examix-home-hero {
+        padding: 50px 20px 40px;
+    }
+
+    .examix-home-title {
+        font-size: 2.2rem;
+    }
+
+    .examix-home-description {
+        font-size: 1rem;
+    }
+
+    .examix-home-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .examix-home-actions a {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .examix-home-dashboard {
+        margin-top: 30px;
+    }
+
+    .examix-feature-section,
+    .examix-how-section,
+    .examix-final-section {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+}

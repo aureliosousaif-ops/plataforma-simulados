@@ -1,7 +1,7 @@
 # ============================================================
 # IMPORTADOR DE PROVAS EM PDF
 # ============================================================
-#
+
 # Este arquivo é responsável por:
 #
 # 1. Extrair texto dos PDFs
@@ -9,10 +9,11 @@
 # 3. Separar questões duplicadas
 # 4. Encontrar alternativas A, B, C, D e E
 # 5. Corrigir textos de apoio que entram na alternativa E
-# 6. Extrair gabaritos
-# 7. Validar as questões
-# 8. Preparar os dados para importação
-# 9. Importar questões para o banco de dados
+# 6. Limpar códigos e rodapés dos PDFs
+# 7. Extrair gabaritos
+# 8. Validar as questões
+# 9. Preparar os dados para importação
+# 10. Importar questões para o banco
 #
 # O parser é genérico e não depende de uma quantidade
 # específica de questões.
@@ -20,8 +21,6 @@
 # Pode trabalhar com:
 #
 # 10, 20, 40, 45, 50, 90 etc.
-#
-# ============================================================
 
 
 # ============================================================
@@ -206,10 +205,6 @@ def encontrar_marcadores_questoes(texto):
                 "QUESTÃƒO",
                 "QUESTAO"
             )
-            .replace(
-                "QUESTÃƒO",
-                "QUESTAO"
-            )
         )
 
         # ----------------------------------------------------
@@ -225,7 +220,8 @@ def encontrar_marcadores_questoes(texto):
         )
 
         # ----------------------------------------------------
-        # Alguns PDFs podem possuir texto adicional na linha.
+        # Alguns PDFs podem possuir texto adicional
+        # na linha.
         # ----------------------------------------------------
 
         if resultado is None:
@@ -261,62 +257,200 @@ def encontrar_marcadores_questoes(texto):
 
 def selecionar_bloco_principal(marcadores):
     """
-    Alguns PDFs possuem o mesmo bloco de questões repetido.
+    Seleciona as questões principais encontradas no PDF.
 
-    Exemplo:
+    Alguns PDFs possuem blocos repetidos.
 
-        1
-        2
-        3
-        ...
-        40
+    No ENEM identificado neste projeto, a estrutura é:
 
-        1
-        2
-        3
-        ...
-        40
+        BLOCO 0 → questões 1 a 5 em português
+        BLOCO 1 → questões 1 a 5 em espanhol
+                    + questões 6 a 90 em português
 
-    Nesse caso, selecionamos somente o primeiro bloco.
+    Portanto, o resultado correto é:
+
+        BLOCO 0 → 1 a 5
+        BLOCO 1 → 6 a 90
+
+    Para outros PDFs, a maior sequência contínua
+    será utilizada.
     """
+
+    # --------------------------------------------------------
+    # 1. Verifica se existem marcadores.
+    # --------------------------------------------------------
 
     if not marcadores:
         return []
 
     # --------------------------------------------------------
-    # Procura uma segunda ocorrência da questão 1.
+    # 2. Divide os marcadores em blocos contínuos.
     # --------------------------------------------------------
 
-    primeira_ocorrencia_1 = None
+    blocos = []
 
-    for indice, marcador in enumerate(
-        marcadores
-    ):
+    bloco_atual = [
+        marcadores[0]
+    ]
 
-        if marcador["numero"] != 1:
-            continue
+    for marcador in marcadores[1:]:
 
-        # Primeira questão 1 encontrada.
-        if primeira_ocorrencia_1 is None:
+        numero_anterior = (
+            bloco_atual[-1]["numero"]
+        )
 
-            primeira_ocorrencia_1 = indice
+        numero_atual = (
+            marcador["numero"]
+        )
 
-            continue
+        # Se a numeração continuar normalmente,
+        # mantém no mesmo bloco.
+        if numero_atual == (
+            numero_anterior + 1
+        ):
 
-        # Segunda questão 1 encontrada.
-        # O bloco anterior é considerado o principal.
-        return marcadores[
-            primeira_ocorrencia_1:
-            indice
+            bloco_atual.append(
+                marcador
+            )
+
+        else:
+
+            # A numeração reiniciou.
+            blocos.append(
+                bloco_atual
+            )
+
+            bloco_atual = [
+                marcador
+            ]
+
+    # Adiciona o último bloco.
+    if bloco_atual:
+
+        blocos.append(
+            bloco_atual
+        )
+
+    # --------------------------------------------------------
+    # 3. Estrutura especial encontrada no ENEM.
+    # --------------------------------------------------------
+
+    if len(blocos) >= 2:
+
+        primeiro_bloco = (
+            blocos[0]
+        )
+
+        segundo_bloco = (
+            blocos[1]
+        )
+
+        numeros_primeiro = [
+            marcador["numero"]
+            for marcador in primeiro_bloco
         ]
 
-    # Se não houver repetição,
-    # mantém todos os marcadores.
-    return marcadores
+        numeros_segundo = [
+            marcador["numero"]
+            for marcador in segundo_bloco
+        ]
+
+        # Primeiro bloco exatamente 1 a 5.
+        primeiro_eh_1_a_5 = (
+            numeros_primeiro
+            == [1, 2, 3, 4, 5]
+        )
+
+        # Segundo bloco começa em 1
+        # e possui questões a partir da 6.
+        segundo_tem_6 = (
+            numeros_segundo
+            and numeros_segundo[0] == 1
+            and 6 in numeros_segundo
+        )
+
+        if (
+            primeiro_eh_1_a_5
+            and segundo_tem_6
+        ):
+
+            # Mantém 1 a 5 do primeiro bloco.
+            questoes_1_a_5 = (
+                primeiro_bloco
+            )
+
+            # Mantém somente 6 em diante
+            # do segundo bloco.
+            questoes_6_a_90 = [
+                marcador
+                for marcador in segundo_bloco
+                if marcador["numero"] >= 6
+            ]
+
+            return (
+                questoes_1_a_5
+                + questoes_6_a_90
+            )
+
+    # --------------------------------------------------------
+    # 4. Regra genérica para outros PDFs.
+    # --------------------------------------------------------
+
+    maior_bloco = max(
+        blocos,
+        key=len
+    )
+
+    return maior_bloco
 
 
 # ============================================================
-# 6. EXTRAIR ALTERNATIVAS
+# 6. LIMPAR RODAPÉS E CÓDIGOS DAS ALTERNATIVAS
+# ============================================================
+
+def limpar_texto_alternativa(texto):
+    """
+    Remove códigos e rodapés que o PDF pode anexar
+    ao final do texto de uma alternativa.
+
+    Exemplo:
+
+        texto da alternativa.
+        *010175AZ5* ENEM20E4 ...
+    """
+
+    if not texto:
+        return ""
+
+    # --------------------------------------------------------
+    # Remove tudo a partir do código interno do PDF.
+    #
+    # Exemplos:
+    #
+    # *010175AZ5*
+    # *010175AZ10*
+    # *010175AZ31*
+    # --------------------------------------------------------
+
+    texto = re.sub(
+    r"\s*\*\d+[A-Z0-9]+\*[\s\S]*$",
+    "",
+    texto,
+    flags=re.IGNORECASE
+)
+
+    # Normaliza espaços.
+    texto = re.sub(
+        r"[ \t]+",
+        " ",
+        texto
+    )
+
+    # Remove espaços externos.
+    return texto.strip()
+
+# ============================================================
+# 7. EXTRAIR ALTERNATIVAS
 # ============================================================
 
 def extrair_alternativas_generico(texto):
@@ -325,150 +459,192 @@ def extrair_alternativas_generico(texto):
 
     Aceita formatos como:
 
-        (A) texto
-        (B) texto
-        (C) texto
-        (D) texto
-        (E) texto
+        A
+        texto da alternativa
+
+        B
+        texto da alternativa
 
     Também aceita:
 
+        A texto da alternativa
+        B texto da alternativa
+
         A) texto
-        B) texto
-
-        A. texto
         B. texto
+        (C) texto
 
-    O método procura uma sequência completa:
-
-        A B C D E
-
-    e utiliza a última sequência encontrada.
+    O parser procura a sequência A-B-C-D-E e ignora
+    marcadores falsos encontrados dentro do texto.
     """
 
     if not texto:
         return []
 
+    # ========================================================
+    # 1. SEPARAR O TEXTO EM LINHAS
+    # ========================================================
+
     linhas = texto.splitlines()
 
     encontrados = []
 
-    # --------------------------------------------------------
-    # Localiza possíveis alternativas.
-    # --------------------------------------------------------
+    # ========================================================
+    # 2. LOCALIZAR OS MARCADORES
+    # ========================================================
 
-    for indice, linha in enumerate(
-        linhas
-    ):
+    for indice, linha in enumerate(linhas):
 
         linha_limpa = linha.strip()
 
         if not linha_limpa:
             continue
 
+        # ----------------------------------------------------
+        # MARCADOR SOZINHO
+        #
+        # A
+        # B
+        # C
+        # D
+        # E
+        #
+        # Também aceita:
+        # A)
+        # B.
+        # C:
+        # D-
+        # ----------------------------------------------------
+
         resultado = re.match(
-            r"^\(?([A-E])\)?[\.\:\-]?\s+(.*)$",
-            linha_limpa,
-            re.IGNORECASE
+            r"^\(?([A-E])\)?[\.\:\-]?$",
+            linha_limpa
         )
 
         if resultado:
 
-            letra = (
-                resultado
-                .group(1)
-                .upper()
-            )
-
-            conteudo = (
-                resultado
-                .group(2)
-                .strip()
-            )
-
             encontrados.append(
                 {
-                    "letra": letra,
+                    "letra": resultado.group(1).upper(),
                     "linha": indice,
-                    "texto": conteudo,
                 }
             )
 
-    # --------------------------------------------------------
-    # Se não encontrou alternativas.
-    # --------------------------------------------------------
-
-    if not encontrados:
-        return []
-
-    # --------------------------------------------------------
-    # Procura uma sequência A B C D E.
-    # --------------------------------------------------------
-
-    sequencias = []
-
-    for indice in range(
-        len(encontrados)
-    ):
-
-        bloco = encontrados[
-            indice:
-            indice + 5
-        ]
-
-        if len(bloco) < 5:
             continue
 
-        letras = [
-            item["letra"]
-            for item in bloco
-        ]
+        # ----------------------------------------------------
+        # MARCADOR JUNTO DO TEXTO
+        #
+        # Exemplos:
+        #
+        # B identificar contextos...
+        # C tirar proveito...
+        #
+        # Também aceita:
+        #
+        # A) texto...
+        # B. texto...
+        # C: texto...
+        # ----------------------------------------------------
 
-        if letras == [
-            "A",
-            "B",
-            "C",
-            "D",
-            "E",
-        ]:
+        resultado = re.match(
+            r"^\(?([A-E])\)?(?:[\.\:\-])?\s+(.+)$",
+            linha_limpa
+        )
 
-            sequencias.append(
-                bloco
+        if resultado:
+
+            encontrados.append(
+                {
+                    "letra": resultado.group(1).upper(),
+                    "linha": indice,
+                }
             )
 
-    # --------------------------------------------------------
-    # Se nenhuma sequência completa foi encontrada.
-    # --------------------------------------------------------
+    # ========================================================
+    # 3. PROCURAR A PRIMEIRA SEQUÊNCIA A-B-C-D-E
+    # ========================================================
 
-    if not sequencias:
+    sequencia = None
+
+    for indice, marcador in enumerate(encontrados):
+
+        # ----------------------------------------------------
+        # A sequência sempre precisa começar com A.
+        # ----------------------------------------------------
+
+        if marcador["letra"] != "A":
+            continue
+
+        candidatos = [marcador]
+
+        proxima_letra = "B"
+
+        # ----------------------------------------------------
+        # Procura B, C, D e E na ordem.
+        #
+        # Se aparecer um marcador falso no meio,
+        # ele será ignorado.
+        # ----------------------------------------------------
+
+        for proximo in encontrados[indice + 1:]:
+
+            if proximo["letra"] != proxima_letra:
+                continue
+
+            candidatos.append(proximo)
+
+            if proxima_letra == "B":
+
+                proxima_letra = "C"
+
+            elif proxima_letra == "C":
+
+                proxima_letra = "D"
+
+            elif proxima_letra == "D":
+
+                proxima_letra = "E"
+
+            elif proxima_letra == "E":
+
+                break
+
+        # ----------------------------------------------------
+        # Se encontrou A-B-C-D-E, terminou a busca.
+        # ----------------------------------------------------
+
+        if len(candidatos) == 5:
+
+            sequencia = candidatos
+
+            break
+
+    # ========================================================
+    # 4. SE NÃO ENCONTROU A-B-C-D-E
+    # ========================================================
+
+    if sequencia is None:
+
         return []
-
-    # --------------------------------------------------------
-    # Utiliza a última sequência encontrada.
-    # --------------------------------------------------------
-
-    sequencia = sequencias[
-        -1
-    ]
 
     alternativas = []
 
-    # --------------------------------------------------------
-    # Monta cada alternativa.
-    # --------------------------------------------------------
+    # ========================================================
+    # 5. EXTRAIR CADA ALTERNATIVA
+    # ========================================================
 
-    for indice, alternativa in enumerate(
-        sequencia
-    ):
+    for indice, alternativa in enumerate(sequencia):
 
-        inicio = alternativa[
-            "linha"
-        ]
+        letra = alternativa["letra"]
 
-        # Define o fim da alternativa.
-        if indice + 1 < len(
-            sequencia
-        ):
+        inicio = alternativa["linha"]
+
+        # ----------------------------------------------------
+        # O final da alternativa é o início da próxima.
+        # ----------------------------------------------------
+
+        if indice < 4:
 
             fim = sequencia[
                 indice + 1
@@ -476,19 +652,22 @@ def extrair_alternativas_generico(texto):
 
         else:
 
-            fim = len(
-                linhas
-            )
+            fim = len(linhas)
 
-        # Pega todas as linhas da alternativa.
+        # ----------------------------------------------------
+        # Pega as linhas da alternativa.
+        # ----------------------------------------------------
+
         partes = linhas[
-            inicio:
-            fim
+            inicio:fim
         ]
+
+        # ----------------------------------------------------
+        # Remove o marcador A/B/C/D/E da primeira linha.
+        # ----------------------------------------------------
 
         if partes:
 
-            # Remove o marcador A), B), C), etc.
             partes[0] = re.sub(
                 r"^\(?[A-E]\)?[\.\:\-]?\s*",
                 "",
@@ -496,65 +675,84 @@ def extrair_alternativas_generico(texto):
                 flags=re.IGNORECASE
             )
 
-        # Junta as linhas.
+        # ----------------------------------------------------
+        # Junta novamente o texto.
+        # ----------------------------------------------------
+
         texto_alternativa = "\n".join(
             partes
         ).strip()
 
-        # Limpa o texto.
+        # ----------------------------------------------------
+        # Limpeza do conteúdo.
+        # ----------------------------------------------------
+
         texto_alternativa = (
             limpar_conteudo_questao(
                 texto_alternativa
             )
         )
 
+        # ----------------------------------------------------
+        # Remove códigos e rodapés do PDF.
+        # ----------------------------------------------------
+
+        texto_alternativa = (
+            limpar_texto_alternativa(
+                texto_alternativa
+            )
+        )
+
+        # ----------------------------------------------------
+        # Salva a alternativa.
+        # ----------------------------------------------------
+
         alternativas.append(
             {
-                "letra": alternativa[
-                    "letra"
-                ],
+                "letra": letra,
                 "texto": texto_alternativa,
             }
         )
 
+    # ========================================================
+    # 6. GARANTIR A SEQUÊNCIA A-B-C-D-E
+    # ========================================================
+
+    letras_encontradas = [
+        alternativa["letra"]
+        for alternativa in alternativas
+    ]
+
+    if letras_encontradas != [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+    ]:
+
+        return []
+
+    # ========================================================
+    # 7. RETORNAR ALTERNATIVAS
+    # ========================================================
+
     return alternativas
-
-
 # ============================================================
-# 7. SEPARAR TEXTO DE APOIO DA ALTERNATIVA E
+# 8. SEPARAR TEXTO DE APOIO DA ALTERNATIVA E
 # ============================================================
 
 def separar_material_apos_alternativa(texto):
     """
-    Separa o texto de apoio que foi absorvido pela alternativa E.
-
-    Exemplos:
-
-        (E) resposta da questão.
-        Leia o Texto II para responder às questões 03 e 04.
-
-    ou:
-
-        (E) resposta da questão.
-        Fonte: SILVA, Luiza Helena...
+    Separa o texto de apoio que foi absorvido
+    pela alternativa E.
     """
-
-    # --------------------------------------------------------
-    # Se não houver texto, não há nada para separar.
-    # --------------------------------------------------------
 
     if not texto:
         return (
             "",
             ""
         )
-
-    # --------------------------------------------------------
-    # Marcadores de material que pode ter sido absorvido
-    # pela alternativa E.
-    #
-    # "Fonte:" também é considerado material de apoio.
-    # --------------------------------------------------------
 
     marcadores = [
         "Leia o Texto",
@@ -565,10 +763,6 @@ def separar_material_apos_alternativa(texto):
     ]
 
     posicoes = []
-
-    # --------------------------------------------------------
-    # Procura os marcadores.
-    # --------------------------------------------------------
 
     for marcador in marcadores:
 
@@ -582,11 +776,6 @@ def separar_material_apos_alternativa(texto):
                 posicao
             )
 
-    # --------------------------------------------------------
-    # Se não encontrou nenhum marcador,
-    # mantém tudo como alternativa.
-    # --------------------------------------------------------
-
     if not posicoes:
 
         return (
@@ -594,44 +783,29 @@ def separar_material_apos_alternativa(texto):
             ""
         )
 
-    # --------------------------------------------------------
-    # Usa o primeiro marcador encontrado.
-    # --------------------------------------------------------
-
     corte = min(
         posicoes
     )
 
-    # --------------------------------------------------------
-    # Parte que realmente pertence à alternativa.
-    # --------------------------------------------------------
-
     texto_alternativa = (
         texto[
             :corte
-        ]
-        .strip()
+        ].strip()
     )
-
-    # --------------------------------------------------------
-    # Parte considerada material de apoio.
-    # --------------------------------------------------------
 
     texto_apoio = (
         texto[
             corte:
-        ]
-        .strip()
+        ].strip()
     )
 
     return (
         texto_alternativa,
         texto_apoio
     )
-
-
-# ============================================================
-# 8. SEPARAR QUESTÕES GENERICAMENTE
+    
+    # ============================================================
+# 9. SEPARAR QUESTÕES GENERICAMENTE
 # ============================================================
 
 def separar_questoes_generico(texto):
@@ -648,9 +822,9 @@ def separar_questoes_generico(texto):
         90 questões
         etc.
 
-    Também corrige o problema encontrado no EXATO em que
-    o início de um novo texto de apoio era colocado dentro
-    da alternativa E.
+    Também corrige o problema encontrado no EXATO
+    em que o início de um novo texto de apoio era
+    colocado dentro da alternativa E.
     """
 
     # --------------------------------------------------------
@@ -668,7 +842,7 @@ def separar_questoes_generico(texto):
     )
 
     # --------------------------------------------------------
-    # Remove blocos duplicados.
+    # Seleciona o bloco principal.
     # --------------------------------------------------------
 
     marcadores = selecionar_bloco_principal(
@@ -784,7 +958,9 @@ def separar_questoes_generico(texto):
             # Atualiza a alternativa E.
             alternativa[
                 "texto"
-            ] = texto_alternativa
+            ] = limpar_texto_alternativa(
+                texto_alternativa
+            )
 
             break
 
@@ -856,9 +1032,19 @@ def separar_questoes_generico(texto):
 
     return questoes
 
+    # ========================================================
+    # LIMPEZA FINAL DAS ALTERNATIVAS
+    # ========================================================
+
+    for questao in questoes:
+        for alternativa in questao["alternativas"]:
+            alternativa["texto"] = limpar_texto_alternativa(
+                alternativa["texto"]
+            )
+
 
 # ============================================================
-# 9. COMPATIBILIDADE COM O ENEM
+# 10. COMPATIBILIDADE COM O ENEM
 # ============================================================
 
 def separar_questoes_enem(texto):
@@ -874,7 +1060,7 @@ def separar_questoes_enem(texto):
 
 
 # ============================================================
-# 10. EXTRAIR GABARITO GENERICAMENTE
+# 11. EXTRAIR GABARITO GENERICAMENTE
 # ============================================================
 
 def extrair_gabarito_generico(texto):
@@ -902,7 +1088,9 @@ def extrair_gabarito_generico(texto):
     # Percorre todas as linhas.
     for linha in linhas:
 
-        linha_limpa = linha.strip()
+        linha_limpa = (
+            linha.strip()
+        )
 
         # Procura número + letra.
         resultado = re.match(
@@ -931,7 +1119,7 @@ def extrair_gabarito_generico(texto):
 
 
 # ============================================================
-# 11. COMPATIBILIDADE COM O GABARITO DO ENEM
+# 12. COMPATIBILIDADE COM O GABARITO DO ENEM
 # ============================================================
 
 def extrair_gabarito_enem(texto):
@@ -947,7 +1135,7 @@ def extrair_gabarito_enem(texto):
 
 
 # ============================================================
-# 12. VALIDAR QUESTÕES E GABARITO
+# 13. VALIDAR QUESTÕES E GABARITO
 # ============================================================
 
 def validar_questoes_com_gabarito(
@@ -1007,7 +1195,7 @@ def validar_questoes_com_gabarito(
 
 
 # ============================================================
-# 13. PREPARAR QUESTÕES
+# 14. PREPARAR QUESTÕES
 # ============================================================
 
 def preparar_questoes(
@@ -1047,6 +1235,13 @@ def preparar_questoes(
                 ]
             )
 
+            # Limpeza final de segurança.
+            texto_alternativa = (
+                limpar_texto_alternativa(
+                    texto_alternativa
+                )
+            )
+
             # Verifica se é a resposta correta.
             correta = (
                 gabarito.get(
@@ -1076,7 +1271,7 @@ def preparar_questoes(
 
 
 # ============================================================
-# 14. IMPORTAR QUESTÕES NO BANCO
+# 15. IMPORTAR QUESTÕES NO BANCO
 # ============================================================
 
 def importar_questoes_no_banco(
@@ -1128,7 +1323,7 @@ def importar_questoes_no_banco(
         }
 
         # ----------------------------------------------------
-        # Verifica se o modelo possui o campo disciplina.
+        # Verifica se o modelo possui disciplina.
         # ----------------------------------------------------
 
         campos_questao = {
@@ -1143,8 +1338,13 @@ def importar_questoes_no_banco(
 
             # Não força uma disciplina específica.
             #
-            # A prova pode ser EXATO, ENEM,
-            # vestibular, concurso etc.
+            # A prova pode ser:
+            #
+            # ENEM
+            # EXATO
+            # vestibular
+            # concurso
+            # etc.
 
             dados_questao[
                 "disciplina"
@@ -1176,6 +1376,13 @@ def importar_questoes_no_banco(
                 ]
             )
 
+            # Limpeza final antes de salvar.
+            texto_alternativa = (
+                limpar_texto_alternativa(
+                    texto_alternativa
+                )
+            )
+
             correta = (
                 gabarito.get(
                     numero
@@ -1199,7 +1406,7 @@ def importar_questoes_no_banco(
 
 
 # ============================================================
-# COMPATIBILIDADE COM O VIEWS.PY
+# 16. COMPATIBILIDADE COM O VIEWS.PY
 # ============================================================
 
 def preparar_questoes_para_importacao(

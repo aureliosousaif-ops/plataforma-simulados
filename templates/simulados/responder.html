@@ -8,12 +8,13 @@
 
 <div class="container py-4">
 
-    <!-- ========================================== -->
-    <!-- CABEÇALHO DO SIMULADO -->
-    <!-- ========================================== -->
+    <!-- =========================================
+         CABEÇALHO DO SIMULADO
+         ========================================= -->
 
-    <div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="examix-responder-header d-flex justify-content-between align-items-start mb-4">
 
+        <!-- Informações da prova -->
         <div>
 
             <!-- Status -->
@@ -28,28 +29,19 @@
 
         </div>
 
-        <!-- ====================================== -->
-        <!-- CRONÔMETRO -->
-        <!-- ====================================== -->
 
-        <div
-            class="card border-0 shadow-sm"
-            style="min-width: 150px;"
-        >
+        <!-- =====================================
+             CRONÔMETRO
+             ===================================== -->
 
-            <div class="card-body text-center py-3">
+        <div class="examix-timer-card">
 
-                <div class="text-muted small mb-1">
-                    TEMPO
-                </div>
+            <small>
+                TEMPO
+            </small>
 
-                <div
-                    id="cronometro"
-                    class="fw-bold text-primary fs-4"
-                >
-                    00:00:00
-                </div>
-
+            <div id="cronometro">
+                00:00:00
             </div>
 
         </div>
@@ -57,86 +49,119 @@
     </div>
 
 
-    <!-- ========================================== -->
-    <!-- QUESTÃO -->
-    <!-- ========================================== -->
+    <!-- =========================================
+         CARD DA QUESTÃO
+         ========================================= -->
 
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card border-0 shadow-sm">
 
         <div class="card-body p-4">
 
-            <!-- Número da questão -->
+
+            <!-- =====================================
+                 NÚMERO DA QUESTÃO
+                 ===================================== -->
+
             <div class="mb-4">
 
                 <span class="badge bg-primary-subtle text-primary px-3 py-2">
-                    Questão {{ numero_atual }}
+
+                    Questão {{ resposta.questao.numero }}
+
                 </span>
 
             </div>
 
-            <!-- Texto da questão -->
-            <div class="fs-5 mb-4">
 
-                {{ resposta.questao.texto|linebreaks }}
+            <!-- =====================================
+                 ENUNCIADO
+                 ===================================== -->
+
+            <div class="examix-question-text mb-4">
+
+                {% if resposta.questao.enunciado %}
+
+                    <!--
+                        O campo correto do modelo Questao
+                        é "enunciado".
+                    -->
+                    {{ resposta.questao.enunciado|linebreaks }}
+
+                {% else %}
+
+                    <!-- Aviso caso o enunciado esteja vazio -->
+                    <div class="alert alert-warning">
+
+                        O enunciado desta questão não foi encontrado.
+
+                    </div>
+
+                {% endif %}
 
             </div>
 
 
-            <!-- ================================== -->
-            <!-- ALTERNATIVAS -->
-            <!-- ================================== -->
+            <!-- =====================================
+                 FORMULÁRIO DE RESPOSTA
+                 ===================================== -->
 
-            <form
-                method="post"
-                id="form-resposta"
-            >
+            <form method="post">
 
+                <!-- Proteção CSRF do Django -->
                 {% csrf_token %}
 
-                <!-- Ação do formulário -->
-                <input
-                    type="hidden"
-                    name="acao"
-                    id="campo-acao"
-                    value="proxima"
-                >
 
-                <div class="d-flex flex-column gap-3">
+                <!-- =================================
+                     ALTERNATIVAS
+                     ================================= -->
+
+                <div class="examix-alternativas">
 
                     {% for alternativa in resposta.questao.alternativas.all %}
 
                         <label
-                            class="border rounded p-3 d-flex align-items-start gap-3"
-                            style="cursor: pointer;"
+                            class="examix-alternativa"
+                            for="alternativa_{{ alternativa.id }}"
                         >
 
-                            <!-- Radio -->
+                            <!-- Radio da alternativa -->
                             <input
                                 type="radio"
                                 name="alternativa"
+                                id="alternativa_{{ alternativa.id }}"
                                 value="{{ alternativa.id }}"
-                                class="form-check-input mt-1"
+
                                 {% if resposta.alternativa_id == alternativa.id %}
                                     checked
                                 {% endif %}
                             >
 
-                            <!-- Letra -->
+
+                            <!-- Letra da alternativa -->
                             <strong>
+
                                 {{ alternativa.letra }})
+
                             </strong>
 
-                            <!-- Texto -->
-                            <span>
+
+                            <!-- Texto da alternativa -->
+                            <span class="examix-alternativa-texto">
+
                                 {{ alternativa.texto|linebreaksbr }}
+
                             </span>
 
                         </label>
 
+
                     {% empty %}
 
+                        <!-- Caso não existam alternativas -->
                         <div class="alert alert-warning">
+
                             Nenhuma alternativa encontrada para esta questão.
+
                         </div>
 
                     {% endfor %}
@@ -144,39 +169,73 @@
                 </div>
 
 
-                <!-- ================================== -->
-                <!-- BOTÕES DE NAVEGAÇÃO -->
-                <!-- ================================== -->
+                <!-- =================================
+                     BOTÕES DE NAVEGAÇÃO
+                     ================================= -->
 
                 <div class="d-flex justify-content-between align-items-center mt-4">
 
-                    <!-- Anterior -->
-                    {% if numero_atual > 1 %}
+
+                    <!-- =================================
+                         BOTÃO ANTERIOR
+                         ================================= -->
+
+                    {% if resposta_anterior %}
 
                         <button
                             type="submit"
+                            name="acao"
+                            value="anterior"
                             class="btn btn-outline-secondary"
-                            onclick="document.getElementById('campo-acao').value='anterior';"
                         >
+
                             ← Anterior
+
                         </button>
 
                     {% else %}
 
-                        <div></div>
+                        <!-- Mantém o espaço do botão -->
+                        <span></span>
 
                     {% endif %}
 
 
-                    <!-- Próxima -->
-                    {% if numero_atual < total_questoes %}
+
+                    <!-- =================================
+                         BOTÃO PRÓXIMA / FINALIZAR
+                         ================================= -->
+
+                    {% if proxima_resposta %}
 
                         <button
                             type="submit"
+                            name="acao"
+                            value="proxima"
                             class="btn btn-primary"
-                            onclick="document.getElementById('campo-acao').value='proxima';"
                         >
+
                             Próxima →
+
+                        </button>
+
+                    {% else %}
+
+                        <button
+                            type="submit"
+                            name="acao"
+                            value="finalizar"
+                            class="btn btn-success"
+
+                            onclick="
+                                return confirm(
+                                    'Deseja finalizar o simulado?'
+                                );
+                            "
+                        >
+
+                            Finalizar simulado
+
                         </button>
 
                     {% endif %}
@@ -190,87 +249,42 @@
     </div>
 
 
-    <!-- ========================================== -->
-    <!-- FINALIZAR SIMULADO -->
-    <!-- ========================================== -->
+    <!-- =========================================
+         NAVEGAÇÃO RÁPIDA DAS QUESTÕES
+         ========================================= -->
 
-    <div class="d-flex justify-content-end mb-4">
-
-        <form
-            method="post"
-            action="{% url 'simulados:finalizar' simulado.id %}"
-            onsubmit="return confirmarFinalizacao();"
-        >
-
-            {% csrf_token %}
-
-            <button
-                type="submit"
-                class="btn btn-danger px-4"
-            >
-                Finalizar simulado
-            </button>
-
-        </form>
-
-    </div>
+    <div class="mt-4">
 
 
-    <!-- ========================================== -->
-    <!-- NAVEGAÇÃO DAS QUESTÕES -->
-    <!-- ========================================== -->
+        <!-- Título -->
+        <h6 class="fw-bold mb-3">
 
-    <div class="card border-0 shadow-sm">
+            Navegação das questões
 
-        <div class="card-body p-4">
-
-            <div class="d-flex justify-content-between align-items-center mb-3">
-
-                <div>
-
-                    <h5 class="fw-bold mb-1">
-                        Navegação
-                    </h5>
-
-                    <p class="text-muted mb-0">
-                        Selecione uma questão para acessá-la rapidamente.
-                    </p>
-
-                </div>
-
-                <span class="badge bg-light text-dark fs-6">
-
-                    {{ numero_atual }}/{{ total_questoes }}
-
-                </span>
-
-            </div>
+        </h6>
 
 
-            <!-- Grade de questões -->
+        <!-- Números -->
+        <div class="examix-question-navigation">
 
-            <div class="d-flex flex-wrap gap-2">
+            {% for item in respostas %}
 
-                {% for item in respostas %}
+                <a
+                    href="?questao={{ item.questao.numero }}"
+                    class="
+                        examix-question-number
 
-                    <a
-                        href="?questao={{ forloop.counter }}"
-                        class="btn
-                        {% if forloop.counter == numero_atual %}
-                            btn-primary
-                        {% elif item.respondida %}
-                            btn-success
-                        {% else %}
-                            btn-outline-secondary
+                        {% if item.questao.numero == resposta.questao.numero %}
+                            active
                         {% endif %}
-                        "
-                    >
-                        {{ forloop.counter }}
-                    </a>
+                    "
+                >
 
-                {% endfor %}
+                    {{ item.questao.numero }}
 
-            </div>
+                </a>
+
+            {% endfor %}
 
         </div>
 
@@ -279,24 +293,19 @@
 </div>
 
 
-<!-- ========================================== -->
-<!-- JAVASCRIPT -->
-<!-- ========================================== -->
+<!-- =============================================
+     JAVASCRIPT DO CRONÔMETRO
+     ============================================= -->
 
 <script>
 
     /*
-     * ==========================================
-     * CRONÔMETRO
-     * ==========================================
-     *
-     * O tempo é calculado usando o momento em
-     * que o simulado foi iniciado no banco.
+     * Recupera a data/hora em que o simulado
+     * foi iniciado.
      */
-
-    const inicioSimulado = new Date(
+    const inicio = new Date(
         "{{ simulado.iniciado_em|date:'c' }}"
-    );
+    ).getTime();
 
 
     /*
@@ -304,71 +313,75 @@
      */
     function atualizarCronometro() {
 
-        const agora = new Date();
+        /*
+         * Horário atual.
+         */
+        const agora = new Date().getTime();
+
 
         /*
          * Calcula a diferença em segundos.
          */
-        let segundos = Math.floor(
-            (agora - inicioSimulado) / 1000
-        );
-
-        /*
-         * Evita valores negativos.
-         */
-        segundos = Math.max(
+        const diferenca = Math.max(
             0,
-            segundos
+            Math.floor(
+                (agora - inicio) / 1000
+            )
         );
 
 
         /*
-         * Horas.
+         * Calcula as horas.
          */
         const horas = Math.floor(
-            segundos / 3600
+            diferenca / 3600
         );
 
 
         /*
-         * Minutos.
+         * Calcula os minutos.
          */
         const minutos = Math.floor(
-            (segundos % 3600) / 60
+            (diferenca % 3600) / 60
         );
 
 
         /*
-         * Segundos restantes.
+         * Calcula os segundos.
          */
-        const segundosRestantes = segundos % 60;
+        const segundos = diferenca % 60;
 
 
         /*
-         * Formata com dois dígitos.
+         * Monta o formato HH:MM:SS.
          */
-        const horasFormatadas =
-            String(horas).padStart(2, '0');
-
-        const minutosFormatados =
-            String(minutos).padStart(2, '0');
-
-        const segundosFormatados =
-            String(segundosRestantes).padStart(2, '0');
+        const formato =
+            String(horas).padStart(2, '0') +
+            ':' +
+            String(minutos).padStart(2, '0') +
+            ':' +
+            String(segundos).padStart(2, '0');
 
 
         /*
-         * Atualiza a tela.
+         * Atualiza o cronômetro na tela.
          */
-        document.getElementById(
+        const cronometro = document.getElementById(
             'cronometro'
-        ).textContent =
-            `${horasFormatadas}:${minutosFormatados}:${segundosFormatados}`;
+        );
+
+
+        if (cronometro) {
+
+            cronometro.textContent = formato;
+
+        }
+
     }
 
 
     /*
-     * Executa imediatamente.
+     * Atualiza imediatamente.
      */
     atualizarCronometro();
 
@@ -381,21 +394,6 @@
         1000
     );
 
-
-    /*
-     * ==========================================
-     * CONFIRMAÇÃO DA FINALIZAÇÃO
-     * ==========================================
-     */
-
-    function confirmarFinalizacao() {
-
-        return confirm(
-            'Tem certeza que deseja finalizar o simulado?'
-        );
-
-    }
-
 </script>
 
-{% endblock %}
+{% endblock %}  

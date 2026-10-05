@@ -1,3 +1,7 @@
+# =========================================================
+# IMPORTAÇÕES
+# =========================================================
+
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -7,6 +11,10 @@ from django.shortcuts import redirect, render
 from .forms import CadastroForm
 
 
+# =========================================================
+# SEÇÃO 1 — CADASTRO
+# =========================================================
+
 def cadastro(request):
     """
     Realiza o cadastro de novos alunos.
@@ -15,18 +23,13 @@ def cadastro(request):
     # Se o usuário já estiver logado,
     # não precisa acessar o cadastro novamente.
     if request.user.is_authenticated:
-
-        return redirect(
-            'home'
-        )
+        return redirect('home')
 
     # Verifica se o formulário foi enviado.
     if request.method == 'POST':
 
         # Cria o formulário com os dados enviados.
-        form = CadastroForm(
-            request.POST
-        )
+        form = CadastroForm(request.POST)
 
         # Verifica se os dados são válidos.
         if form.is_valid():
@@ -34,7 +37,7 @@ def cadastro(request):
             # Cria o usuário e o perfil.
             usuario = form.save()
 
-            # Faz login automaticamente.
+            # Faz login automaticamente após o cadastro.
             login(
                 request,
                 usuario
@@ -47,9 +50,7 @@ def cadastro(request):
             )
 
             # Vai para a página inicial.
-            return redirect(
-                'home'
-            )
+            return redirect('home')
 
     else:
 
@@ -66,18 +67,29 @@ def cadastro(request):
     )
 
 
+# =========================================================
+# SEÇÃO 2 — LOGIN
+# =========================================================
+
 class LoginUsuarioView(LoginView):
     """
-    Realiza o login dos usuários.
+    Realiza o login dos usuários da plataforma.
     """
 
-    # Template utilizado na tela de login.
+    # Template utilizado pelo login tradicional.
     template_name = 'usuarios/login.html'
 
-    # Se já estiver logado, não mostra
-    # novamente a tela de login.
+    # Se o usuário já estiver logado,
+    # não mostra novamente a tela de login.
     redirect_authenticated_user = True
 
+    # Depois do login, vai para a página inicial.
+    next_page = 'home'
+
+
+# =========================================================
+# SEÇÃO 3 — LOGOUT
+# =========================================================
 
 class LogoutUsuarioView(LogoutView):
     """
@@ -87,6 +99,10 @@ class LogoutUsuarioView(LogoutView):
     # Depois de sair, volta para a página inicial.
     next_page = 'home'
 
+
+# =========================================================
+# SEÇÃO 4 — PERFIL
+# =========================================================
 
 @login_required
 def perfil(request):

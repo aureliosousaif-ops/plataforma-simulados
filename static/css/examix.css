@@ -58,17 +58,10 @@ body {
     line-height: 1.5;
 }
 
-
-/* Links */
-
 a {
     color: inherit;
-
     text-decoration: none;
 }
-
-
-/* Imagens */
 
 img {
     max-width: 100%;
@@ -89,7 +82,7 @@ img {
 }
 
 
-/* Marca do Examix */
+/* Marca */
 
 .examix-brand {
     display: flex;
@@ -106,7 +99,7 @@ img {
 }
 
 
-/* Logo da navbar */
+/* Logo */
 
 .examix-brand-logo {
     width: 42px;
@@ -125,7 +118,7 @@ img {
 }
 
 
-/* Links da navbar */
+/* Links */
 
 .examix-nav-link {
     color: var(--examix-text) !important;
@@ -137,22 +130,16 @@ img {
         background 0.2s ease;
 }
 
-
-/* Hover */
-
 .examix-nav-link:hover {
     color: var(--examix-blue) !important;
 }
-
-
-/* Link ativo */
 
 .examix-nav-link.active {
     color: var(--examix-blue) !important;
 }
 
 
-/* Botão de criar conta */
+/* Botão navbar */
 
 .examix-navbar-button {
     display: inline-flex;
@@ -180,9 +167,6 @@ img {
         box-shadow 0.2s ease;
 }
 
-
-/* Hover botão */
-
 .examix-navbar-button:hover {
     transform: translateY(-1px);
 
@@ -208,397 +192,25 @@ img {
 
 
 /* =========================================================
-   5. HOME DO ESTUDANTE
+   5. ÁREA PRINCIPAL
    ========================================================= */
 
-/*
-   Home simplificada.
+main {
+    min-height: calc(100vh - 70px);
 
-   Mostra somente:
-   - Saudação
-   - Botão principal
-   - Resumo
-   - Último simulado
-
-   As demais funções ficam na navbar.
-*/
-
-.examix-home {
-    min-height: calc(100vh - 150px);
-
-    padding: 60px 0;
-
-    background: var(--examix-background);
+    width: 100%;
 }
 
 
 /* =========================================================
-   SAUDAÇÃO
-   ========================================================= */
-
-.examix-home-welcome {
-    max-width: 700px;
-
-    margin-bottom: 28px;
-}
-
-
-.examix-home-welcome h1 {
-    margin: 5px 0 8px;
-
-    color: var(--examix-dark);
-
-    font-size: 2.3rem;
-
-    font-weight: 800;
-
-    line-height: 1.2;
-}
-
-
-.examix-home-welcome p {
-    margin: 0;
-
-    color: var(--examix-muted);
-
-    font-size: 1.05rem;
-}
-
-
-/* =========================================================
-   BOTÃO PRINCIPAL
-   ========================================================= */
-
-.examix-home-action {
-    margin-bottom: 38px;
-}
-
-
-.examix-home-start {
-    display: inline-flex;
-
-    align-items: center;
-    justify-content: center;
-
-    min-height: 50px;
-
-    padding: 12px 24px;
-
-    border: none;
-
-    border-radius: 11px;
-
-    background:
-        linear-gradient(
-            135deg,
-            var(--examix-blue),
-            var(--examix-indigo)
-        );
-
-    color: white;
-
-    font-size: 0.95rem;
-
-    font-weight: 700;
-
-    text-decoration: none;
-
-    box-shadow:
-        0 8px 20px rgba(37, 99, 235, 0.16);
-
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-
-.examix-home-start:hover {
-    color: white;
-
-    transform: translateY(-2px);
-
-    box-shadow:
-        0 12px 25px rgba(37, 99, 235, 0.24);
-}
-
-
-/* =========================================================
-   RESUMO DO ESTUDANTE
-   ========================================================= */
-
-.examix-home-summary {
-    display: grid;
-
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr));
-
-    gap: 18px;
-
-    max-width: 700px;
-
-    margin-bottom: 25px;
-}
-
-
-/* Card */
-
-.examix-summary-card {
-    display: flex;
-
-    align-items: center;
-
-    gap: 15px;
-
-    min-height: 95px;
-
-    padding: 20px;
-
-    background: var(--examix-white);
-
-    border: 1px solid var(--examix-border);
-
-    border-radius: 16px;
-
-    box-shadow:
-        0 5px 18px rgba(15, 23, 42, 0.04);
-
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-
-/* Hover */
-
-.examix-summary-card:hover {
-    transform: translateY(-2px);
-
-    box-shadow:
-        0 8px 22px rgba(15, 23, 42, 0.07);
-}
-
-
-/* Ícone */
-
-.examix-summary-icon {
-    display: flex;
-
-    flex-shrink: 0;
-
-    width: 44px;
-    height: 44px;
-
-    align-items: center;
-    justify-content: center;
-
-    background: #eff6ff;
-
-    border-radius: 11px;
-
-    font-size: 1.2rem;
-}
-
-
-/* Número */
-
-.examix-summary-card strong {
-    display: block;
-
-    color: var(--examix-dark);
-
-    font-size: 1.45rem;
-
-    font-weight: 800;
-
-    line-height: 1.2;
-}
-
-
-/* Descrição */
-
-.examix-summary-card span {
-    display: block;
-
-    margin-top: 3px;
-
-    color: var(--examix-muted);
-
-    font-size: 0.85rem;
-}
-
-
-/* =========================================================
-   ÚLTIMO SIMULADO
-   ========================================================= */
-
-.examix-last-simulado {
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 25px;
-
-    max-width: 700px;
-
-    padding: 24px 25px;
-
-    background: var(--examix-white);
-
-    border: 1px solid var(--examix-border);
-
-    border-radius: 16px;
-
-    box-shadow:
-        0 5px 18px rgba(15, 23, 42, 0.04);
-}
-
-
-/* Título */
-
-.examix-last-simulado h2 {
-    margin: 5px 0 7px;
-
-    color: var(--examix-dark);
-
-    font-size: 1.25rem;
-
-    font-weight: 800;
-}
-
-
-/* Informações */
-
-.examix-last-simulado p {
-    margin: 0;
-
-    color: var(--examix-muted);
-
-    font-size: 0.95rem;
-}
-
-
-.examix-last-simulado p strong {
-    color: var(--examix-blue);
-
-    font-weight: 800;
-}
-
-
-/* =========================================================
-   BOTÃO VER RESULTADO
-   ========================================================= */
-
-.examix-result-button {
-    display: inline-flex;
-
-    flex-shrink: 0;
-
-    align-items: center;
-    justify-content: center;
-
-    min-height: 42px;
-
-    padding: 9px 17px;
-
-    border: 1px solid #dbeafe;
-
-    border-radius: 9px;
-
-    background: #eff6ff;
-
-    color: var(--examix-blue);
-
-    font-size: 0.9rem;
-
-    font-weight: 700;
-
-    text-decoration: none;
-
-    transition:
-        background 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
-}
-
-
-.examix-result-button:hover {
-    background: #dbeafe;
-
-    border-color: #bfdbfe;
-
-    color: var(--examix-blue);
-
-    transform: translateY(-1px);
-}
-
-
-/* =========================================================
-   6. CARDS DE ESTATÍSTICAS
-   ========================================================= */
-
-.examix-stats {
-    display: grid;
-
-    grid-template-columns:
-        repeat(3, minmax(0, 1fr));
-
-    gap: 20px;
-
-    max-width: 1200px;
-
-    margin: 30px auto 0;
-}
-
-
-/* Card */
-
-.examix-stat-card {
-    padding: 24px;
-
-    background: var(--examix-white);
-
-    border: 1px solid var(--examix-border);
-
-    border-radius: 18px;
-
-    box-shadow:
-        0 5px 18px rgba(15, 23, 42, 0.04);
-}
-
-
-/* Número */
-
-.examix-stat-number {
-    display: block;
-
-    margin-bottom: 5px;
-
-    color: var(--examix-blue);
-
-    font-size: 2rem;
-
-    font-weight: 800;
-}
-
-
-/* Texto */
-
-.examix-stat-label {
-    color: var(--examix-muted);
-
-    font-size: 0.95rem;
-}
-
-
-/* =========================================================
-   7. PÁGINAS DE AUTENTICAÇÃO
+   6. PÁGINAS DE AUTENTICAÇÃO
    LOGIN / CADASTRO
    ========================================================= */
 
 .examix-auth {
-    min-height: calc(100vh - 72px);
+    width: 100%;
+
+    min-height: calc(100vh - 70px);
 
     display: flex;
 
@@ -632,7 +244,7 @@ img {
 }
 
 
-/* Card do cadastro */
+/* Cadastro */
 
 .examix-register-card {
     max-width: 520px;
@@ -640,25 +252,22 @@ img {
 
 
 /* =========================================================
-   8. LOGO DO LOGIN/CADASTRO
+   7. LOGO DO LOGIN/CADASTRO
    ========================================================= */
 
 .examix-auth-logo {
     display: flex;
 
     justify-content: center;
-
     align-items: center;
 
     margin-bottom: 22px;
 }
 
-
 .examix-auth-logo img {
     display: block;
 
     width: 90px;
-
     height: 90px;
 
     object-fit: contain;
@@ -668,15 +277,14 @@ img {
 
 
 /* =========================================================
-   9. CABEÇALHO DO LOGIN/CADASTRO
+   8. CABEÇALHO DO LOGIN/CADASTRO
    ========================================================= */
 
 .examix-auth-header {
-    text-align: center;
-
     margin-bottom: 28px;
-}
 
+    text-align: center;
+}
 
 .examix-auth-header h1 {
     margin: 0 0 8px;
@@ -688,7 +296,6 @@ img {
     font-weight: 800;
 }
 
-
 .examix-auth-header p {
     margin: 0;
 
@@ -699,22 +306,16 @@ img {
 
 
 /* =========================================================
-   10. FORMULÁRIO
+   9. FORMULÁRIO
    ========================================================= */
 
 .examix-auth-form {
     width: 100%;
 }
 
-
-/* Grupo */
-
 .examix-form-group {
     margin-bottom: 17px;
 }
-
-
-/* Label */
 
 .examix-auth-form label {
     display: block;
@@ -727,9 +328,6 @@ img {
 
     font-weight: 600;
 }
-
-
-/* Inputs */
 
 .examix-auth-form input,
 .examix-auth-form select,
@@ -755,9 +353,6 @@ img {
         box-shadow 0.2s ease;
 }
 
-
-/* Foco */
-
 .examix-auth-form input:focus,
 .examix-auth-form select:focus,
 .examix-auth-form textarea:focus {
@@ -767,9 +362,6 @@ img {
         0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-
-/* Placeholder */
-
 .examix-auth-form input::placeholder,
 .examix-auth-form textarea::placeholder {
     color: #94a3b8;
@@ -777,7 +369,7 @@ img {
 
 
 /* =========================================================
-   11. TEXTO DE AJUDA
+   10. TEXTOS E ERROS
    ========================================================= */
 
 .examix-help-text {
@@ -792,32 +384,25 @@ img {
     line-height: 1.4;
 }
 
-
-/* =========================================================
-   12. ERROS
-   ========================================================= */
-
 .examix-form-error {
     margin-bottom: 18px;
 
     padding: 12px 14px;
 
+    border: 1px solid #fecaca;
+
     border-radius: 10px;
 
     background: #fef2f2;
-
-    border: 1px solid #fecaca;
 
     color: #b91c1c;
 
     font-size: 0.9rem;
 }
 
-
 .examix-form-error p:last-child {
     margin-bottom: 0;
 }
-
 
 .examix-field-error {
     display: flex;
@@ -835,17 +420,18 @@ img {
 
 
 /* =========================================================
-   13. BOTÃO ENTRAR / CADASTRO
+   11. BOTÃO ENTRAR
    ========================================================= */
 
-.examix-login-button {
+.examix-auth-form .examix-login-button {
     width: 100%;
 
     display: flex;
 
     align-items: center;
-
     justify-content: center;
+
+    min-height: 48px;
 
     padding: 13px 18px;
 
@@ -862,7 +448,7 @@ img {
             var(--examix-indigo)
         );
 
-    color: white;
+    color: #ffffff;
 
     font-size: 0.95rem;
 
@@ -870,14 +456,17 @@ img {
 
     cursor: pointer;
 
+    text-decoration: none;
+
     transition:
         transform 0.2s ease,
         box-shadow 0.2s ease;
 }
 
-
-.examix-login-button:hover {
+.examix-auth-form .examix-login-button:hover {
     transform: translateY(-1px);
+
+    color: #ffffff;
 
     box-shadow:
         0 8px 20px rgba(37, 99, 235, 0.25);
@@ -885,7 +474,70 @@ img {
 
 
 /* =========================================================
-   14. DIVISOR "OU"
+   12. BOTÃO GOOGLE
+   ========================================================= */
+
+.examix-google-button {
+    width: 100%;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    padding: 12px 18px;
+
+    border: 1px solid var(--examix-border);
+
+    border-radius: 11px;
+
+    background: #ffffff;
+
+    color: var(--examix-text);
+
+    font-size: 0.95rem;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.examix-google-button:hover {
+    background: #f8fafc;
+
+    border-color: #cbd5e1;
+
+    color: var(--examix-dark);
+
+    transform: translateY(-1px);
+}
+
+.examix-google-icon {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 24px;
+    height: 24px;
+
+    color: #4285f4;
+
+    font-size: 1.1rem;
+
+    font-weight: 800;
+}
+
+
+/* =========================================================
+   13. DIVISOR
    ========================================================= */
 
 .examix-divider {
@@ -898,7 +550,6 @@ img {
     margin: 24px 0;
 }
 
-
 .examix-divider::before,
 .examix-divider::after {
     content: "";
@@ -910,7 +561,6 @@ img {
     background: var(--examix-border);
 }
 
-
 .examix-divider span {
     color: var(--examix-muted);
 
@@ -921,73 +571,7 @@ img {
 
 
 /* =========================================================
-   15. BOTÃO GOOGLE
-   ========================================================= */
-
-.examix-google-button {
-    width: 100%;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    gap: 10px;
-
-    padding: 12px 18px;
-
-    border: 1px solid var(--examix-border);
-
-    border-radius: 11px;
-
-    background: white;
-
-    color: var(--examix-text);
-
-    font-size: 0.95rem;
-
-    font-weight: 600;
-
-    transition:
-        background 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
-}
-
-
-.examix-google-button:hover {
-    background: #f8fafc;
-
-    border-color: #cbd5e1;
-
-    color: var(--examix-dark);
-
-    transform: translateY(-1px);
-}
-
-
-.examix-google-icon {
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    width: 24px;
-
-    height: 24px;
-
-    color: #4285f4;
-
-    font-size: 1.1rem;
-
-    font-weight: 800;
-}
-
-
-/* =========================================================
-   16. RODAPÉ DO LOGIN/CADASTRO
+   14. RODAPÉ DO LOGIN/CADASTRO
    ========================================================= */
 
 .examix-auth-footer {
@@ -995,7 +579,6 @@ img {
 
     text-align: center;
 }
-
 
 .examix-auth-footer p {
     margin: 0;
@@ -1005,21 +588,23 @@ img {
     font-size: 0.9rem;
 }
 
-
 .examix-auth-footer a {
     color: var(--examix-blue);
 
     font-weight: 700;
+
+    text-decoration: none;
 }
 
-
 .examix-auth-footer a:hover {
+    color: var(--examix-indigo);
+
     text-decoration: underline;
 }
 
 
 /* =========================================================
-   17. FOOTER PRINCIPAL
+   15. FOOTER PRINCIPAL
    ========================================================= */
 
 .examix-footer {
@@ -1034,7 +619,6 @@ img {
     text-align: center;
 }
 
-
 .examix-footer p {
     margin: 0;
 
@@ -1043,7 +627,7 @@ img {
 
 
 /* =========================================================
-   18. BOTÕES E ELEMENTOS GERAIS
+   16. CARDS GERAIS
    ========================================================= */
 
 .examix-card {
@@ -1059,21 +643,7 @@ img {
 
 
 /* =========================================================
-   19. RESPONSIVIDADE GERAL
-   ========================================================= */
-
-@media (max-width: 992px) {
-
-    .examix-stats {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
-
-}
-
-
-/* =========================================================
-   20. PÁGINA DE SIMULADOS
+   17. PÁGINA DE SIMULADOS
    ========================================================= */
 
 .examix-page {
@@ -1084,28 +654,23 @@ img {
     background: var(--examix-background);
 }
 
-
-/* Cabeçalho */
-
 .examix-page-header {
     margin-bottom: 35px;
 }
-
 
 .examix-section-label {
     display: inline-block;
 
     margin-bottom: 8px;
 
+    color: var(--examix-blue);
+
     font-size: 0.78rem;
 
     font-weight: 800;
 
     letter-spacing: 1.5px;
-
-    color: var(--examix-blue);
 }
-
 
 .examix-page-header h1 {
     margin: 0;
@@ -1116,7 +681,6 @@ img {
 
     font-weight: 800;
 }
-
 
 .examix-page-header p {
     margin: 10px 0 0;
@@ -1163,7 +727,6 @@ img {
         border-color 0.2s ease;
 }
 
-
 .examix-simulado-card:hover {
     transform: translateY(-4px);
 
@@ -1181,11 +744,9 @@ img {
     display: flex;
 
     width: 52px;
-
     height: 52px;
 
     align-items: center;
-
     justify-content: center;
 
     margin-bottom: 20px;
@@ -1204,7 +765,6 @@ img {
     flex: 1;
 }
 
-
 .examix-simulado-content h2 {
     margin: 0 0 10px;
 
@@ -1214,7 +774,6 @@ img {
 
     font-weight: 800;
 }
-
 
 .examix-simulado-content p {
     margin: 0;
@@ -1236,7 +795,6 @@ img {
 
     margin-top: 20px;
 }
-
 
 .examix-simulado-info span {
     display: inline-flex;
@@ -1264,7 +822,7 @@ img {
 }
 
 
-/* Botão principal */
+/* Botão */
 
 .examix-primary-button {
     display: inline-flex;
@@ -1272,7 +830,6 @@ img {
     width: 100%;
 
     align-items: center;
-
     justify-content: center;
 
     min-height: 46px;
@@ -1299,7 +856,6 @@ img {
         box-shadow 0.2s ease;
 }
 
-
 .examix-primary-button:hover {
     color: white;
 
@@ -1324,13 +880,11 @@ img {
     text-align: center;
 }
 
-
 .examix-empty-icon {
     margin-bottom: 15px;
 
     font-size: 3rem;
 }
-
 
 .examix-empty-state h2 {
     margin-bottom: 10px;
@@ -1342,7 +896,6 @@ img {
     font-weight: 800;
 }
 
-
 .examix-empty-state p {
     margin: 0;
 
@@ -1351,7 +904,7 @@ img {
 
 
 /* =========================================================
-   21. TELA DE RESPONDER SIMULADO
+   18. TELA DE RESPONDER SIMULADO
    ========================================================= */
 
 .examix-responder {
@@ -1377,11 +930,9 @@ img {
     margin-bottom: 30px;
 }
 
-
 .examix-responder-title {
     min-width: 0;
 }
-
 
 .examix-responder-title h1 {
     margin: 5px 0 0;
@@ -1397,7 +948,7 @@ img {
 
 
 /* =========================================================
-   CRONÔMETRO
+   19. CRONÔMETRO
    ========================================================= */
 
 .examix-timer-box {
@@ -1419,7 +970,6 @@ img {
         0 6px 20px rgba(15, 23, 42, 0.05);
 }
 
-
 .examix-timer-label {
     display: block;
 
@@ -1436,7 +986,6 @@ img {
     letter-spacing: 0.8px;
 }
 
-
 .examix-timer-box strong {
     display: block;
 
@@ -1449,7 +998,7 @@ img {
 
 
 /* =========================================================
-   CARD DA QUESTÃO
+   20. CARD DA QUESTÃO
    ========================================================= */
 
 .examix-question-card {
@@ -1499,15 +1048,24 @@ img {
     font-size: 1.08rem;
 
     line-height: 1.8;
-}
 
+    overflow-wrap: break-word;
+
+    word-break: normal;
+}
 
 .examix-question-text p {
     margin-bottom: 15px;
 }
 
+.examix-question-text p:last-child {
+    margin-bottom: 0;
+}
 
-/* Alternativas */
+
+/* =========================================================
+   21. ALTERNATIVAS
+   ========================================================= */
 
 .examix-alternatives {
     display: flex;
@@ -1519,13 +1077,14 @@ img {
     margin-top: 30px;
 }
 
-
 .examix-alternative {
     display: flex;
 
     align-items: flex-start;
 
     gap: 14px;
+
+    width: 100%;
 
     padding: 16px;
 
@@ -1543,7 +1102,6 @@ img {
         transform 0.2s ease;
 }
 
-
 .examix-alternative:hover {
     background: #f8fafc;
 
@@ -1556,11 +1114,12 @@ img {
 /* Radio */
 
 .examix-alternative input {
-    position: absolute;
+    flex: 0 0 auto;
 
-    opacity: 0;
+    width: 17px;
+    height: 17px;
 
-    pointer-events: none;
+    margin-top: 4px;
 }
 
 
@@ -1572,11 +1131,9 @@ img {
     flex-shrink: 0;
 
     width: 34px;
-
     height: 34px;
 
     align-items: center;
-
     justify-content: center;
 
     background: #f1f5f9;
@@ -1592,22 +1149,42 @@ img {
 /* Texto */
 
 .examix-alternative-text {
+    flex: 1;
+
+    min-width: 0;
+
     padding-top: 5px;
 
     color: var(--examix-text);
 
     line-height: 1.55;
+
+    overflow-wrap: break-word;
+
+    word-break: normal;
 }
 
 
-/* Alternativa selecionada */
+/* Compatibilidade com template atual */
+
+.examix-alternativa-texto {
+    flex: 1;
+
+    min-width: 0;
+
+    overflow-wrap: break-word;
+
+    word-break: normal;
+}
+
+
+/* Selecionada */
 
 .examix-alternative:has(input:checked) {
     background: #eff6ff;
 
     border-color: var(--examix-blue);
 }
-
 
 .examix-alternative:has(input:checked)
 .examix-alternative-letter {
@@ -1618,7 +1195,43 @@ img {
 
 
 /* =========================================================
-   NAVEGAÇÃO
+   22. CRONÔMETRO — COMPATIBILIDADE
+   ========================================================= */
+
+.examix-timer-card {
+    min-width: 150px;
+
+    padding: 18px;
+
+    text-align: center;
+
+    background: #ffffff;
+
+    border-radius: 8px;
+
+    box-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.examix-timer-card small {
+    display: block;
+
+    color: #6c757d;
+
+    margin-bottom: 6px;
+}
+
+#cronometro {
+    color: #145cff;
+
+    font-size: 1.5rem;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   23. NAVEGAÇÃO DAS QUESTÕES
    ========================================================= */
 
 .examix-question-navigation {
@@ -1628,18 +1241,18 @@ img {
 
     justify-content: space-between;
 
-    gap: 15px;
+    flex-wrap: wrap;
+
+    gap: 8px;
 
     margin-top: 25px;
 }
-
 
 .examix-navigation-button {
     width: auto;
 
     min-width: 130px;
 }
-
 
 .examix-secondary-button,
 .examix-finish-button {
@@ -1665,7 +1278,7 @@ img {
 }
 
 
-/* Botão anterior */
+/* Anterior */
 
 .examix-secondary-button {
     background: white;
@@ -1675,7 +1288,6 @@ img {
     color: var(--examix-text);
 }
 
-
 .examix-secondary-button:hover {
     background: #f8fafc;
 
@@ -1683,7 +1295,7 @@ img {
 }
 
 
-/* Botão finalizar */
+/* Finalizar */
 
 .examix-finish-button {
     background: var(--examix-danger);
@@ -1692,7 +1304,6 @@ img {
 
     color: white;
 }
-
 
 .examix-finish-button:hover {
     color: white;
@@ -1705,7 +1316,7 @@ img {
 
 
 /* =========================================================
-   MAPA DE QUESTÕES
+   24. MAPA DE QUESTÕES
    ========================================================= */
 
 .examix-question-map {
@@ -1720,7 +1331,6 @@ img {
     border-radius: 18px;
 }
 
-
 .examix-question-map-header {
     display: flex;
 
@@ -1733,7 +1343,6 @@ img {
     margin-bottom: 20px;
 }
 
-
 .examix-question-map-header h2 {
     margin: 0;
 
@@ -1744,7 +1353,6 @@ img {
     font-weight: 800;
 }
 
-
 .examix-question-map-header p {
     margin: 5px 0 0;
 
@@ -1752,7 +1360,6 @@ img {
 
     font-size: 0.9rem;
 }
-
 
 .examix-question-map-header > span {
     flex-shrink: 0;
@@ -1771,9 +1378,7 @@ img {
 }
 
 
-/* =========================================================
-   BOTÕES DAS QUESTÕES
-   ========================================================= */
+/* Grid */
 
 .examix-question-grid {
     display: grid;
@@ -1784,7 +1389,6 @@ img {
     gap: 8px;
 }
 
-
 .examix-question-button {
     display: flex;
 
@@ -1793,7 +1397,6 @@ img {
     aspect-ratio: 1;
 
     align-items: center;
-
     justify-content: center;
 
     padding: 0;
@@ -1819,7 +1422,6 @@ img {
         transform 0.2s ease;
 }
 
-
 .examix-question-button:hover {
     background: #eff6ff;
 
@@ -1830,9 +1432,6 @@ img {
     transform: translateY(-1px);
 }
 
-
-/* Questão atual */
-
 .examix-question-button.active {
     background: var(--examix-blue);
 
@@ -1842,9 +1441,57 @@ img {
 }
 
 
+/* Compatibilidade com navegação antiga */
+
+.examix-question-number {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 8px;
+
+    border: 1px solid #d9dee8;
+
+    background: #ffffff;
+
+    color: #172033;
+
+    text-decoration: none;
+
+    font-weight: 600;
+}
+
+.examix-question-number:hover {
+    background: #eef4ff;
+
+    border-color: #9bbcff;
+}
+
+.examix-question-number.active {
+    background: #0d6efd;
+
+    border-color: #0d6efd;
+
+    color: #ffffff;
+}
+
+
 /* =========================================================
-   22. RESPONSIVIDADE DOS SIMULADOS
+   25. RESPONSIVIDADE
    ========================================================= */
+
+@media (max-width: 992px) {
+
+    .examix-stats {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
 
 @media (max-width: 768px) {
 
@@ -1852,53 +1499,48 @@ img {
         padding: 40px 0;
     }
 
-
     .examix-page-header h1 {
         font-size: 1.9rem;
     }
-
 
     .examix-simulado-grid {
         grid-template-columns: 1fr;
     }
 
-
     .examix-simulado-card {
         padding: 22px;
     }
-
 
     .examix-responder {
         padding: 30px 0 50px;
     }
 
-
     .examix-responder-header {
         align-items: stretch;
 
         flex-direction: column;
-    }
 
+        gap: 20px;
+    }
 
     .examix-responder-title h1 {
         font-size: 1.5rem;
     }
 
-
-    .examix-timer-box {
+    .examix-timer-box,
+    .examix-timer-card {
         width: 100%;
-    }
 
+        min-width: 0;
+    }
 
     .examix-question-card {
         padding: 22px;
     }
 
-
     .examix-question-navigation {
         flex-direction: column;
     }
-
 
     .examix-secondary-button,
     .examix-navigation-button,
@@ -1906,11 +1548,9 @@ img {
         width: 100%;
     }
 
-
     .examix-question-map {
         padding: 18px;
     }
-
 
     .examix-question-map-header {
         align-items: flex-start;
@@ -1918,22 +1558,28 @@ img {
         flex-direction: column;
     }
 
-
     .examix-question-grid {
         grid-template-columns:
             repeat(6, 1fr);
     }
 
+    .examix-question-text {
+        font-size: 1rem;
+    }
+
+    .examix-alternative {
+        padding: 14px;
+
+        gap: 10px;
+    }
 }
 
 
-/* =========================================================
-   23. CELULAR
-   ========================================================= */
-
 @media (max-width: 576px) {
 
-    /* Autenticação */
+    /* =====================================================
+       AUTENTICAÇÃO
+       ===================================================== */
 
     .examix-auth {
         min-height: auto;
@@ -1941,32 +1587,26 @@ img {
         padding: 25px 14px;
     }
 
-
     .examix-auth-card {
         padding: 24px 18px;
 
         border-radius: 18px;
     }
 
-
     .examix-auth-logo img {
         width: 78px;
-
         height: 78px;
 
         border-radius: 18px;
     }
 
-
     .examix-auth-header h1 {
         font-size: 1.6rem;
     }
 
-
     .examix-auth-header p {
         font-size: 0.9rem;
     }
-
 
     .examix-auth-form input,
     .examix-auth-form select,
@@ -1975,105 +1615,48 @@ img {
     }
 
 
-    /* Home */
-
-    .examix-home {
-        padding: 40px 15px;
-    }
-
-
-    .examix-home-welcome h1 {
-        font-size: 1.85rem;
-    }
-
-
-    .examix-home-welcome p {
-        font-size: 0.95rem;
-    }
-
-
-    .examix-home-start {
-        width: 100%;
-    }
-
-
-    .examix-home-summary {
-        grid-template-columns: 1fr;
-
-        gap: 14px;
-    }
-
-
-    .examix-summary-card {
-        min-height: 85px;
-
-        padding: 17px;
-    }
-
-
-    .examix-summary-card strong {
-        font-size: 1.3rem;
-    }
-
-
-    .examix-last-simulado {
-        align-items: stretch;
-
-        flex-direction: column;
-
-        gap: 18px;
-
-        padding: 20px;
-    }
-
-
-    .examix-result-button {
-        width: 100%;
-    }
-
-
-    /* Simulados */
+    /* =====================================================
+       SIMULADOS
+       ===================================================== */
 
     .examix-page {
         padding: 30px 0;
     }
 
-
     .examix-page-header {
         margin-bottom: 25px;
     }
 
-
     .examix-page-header h1 {
         font-size: 1.7rem;
     }
-
 
     .examix-simulado-content h2 {
         font-size: 1.2rem;
     }
 
 
-    /* Navbar */
+    /* =====================================================
+       NAVBAR
+       ===================================================== */
 
     .examix-brand-logo {
         width: 38px;
-
         height: 38px;
     }
-
 
     .examix-brand {
         font-size: 1.15rem;
     }
 
 
-    /* Questões */
+    /* =====================================================
+       QUESTÕES
+       ===================================================== */
 
     .examix-question-card {
         padding: 18px;
     }
-
 
     .examix-question-text {
         font-size: 1rem;
@@ -2081,30 +1664,21 @@ img {
         line-height: 1.7;
     }
 
-
     .examix-alternative {
         padding: 13px;
     }
 
-
     .examix-alternative-letter {
         width: 30px;
-
         height: 30px;
     }
-
 
     .examix-question-grid {
         grid-template-columns:
             repeat(5, 1fr);
     }
-
 }
 
-
-/* =========================================================
-   24. CELULARES MUITO PEQUENOS
-   ========================================================= */
 
 @media (max-width: 380px) {
 
@@ -2114,1255 +1688,11 @@ img {
         padding-right: 10px;
     }
 
-
     .examix-auth-card {
         padding: 20px 15px;
     }
 
-
-    .examix-home {
-        padding: 30px 12px;
-    }
-
-
-    .examix-home-welcome h1 {
-        font-size: 1.65rem;
-    }
-
-
-    .examix-hero {
-        padding: 28px 18px;
-    }
-
-
-    .examix-hero h1 {
-        font-size: 1.7rem;
-    }
-
-
     .examix-question-card {
         padding: 16px;
-    }
-
-}   
-
-/* =========================================================
-   AJUSTE DA HOME PARA PREENCHER A TELA
-   ========================================================= */
-
-main {
-    /* Faz o conteúdo principal crescer quando houver espaço */
-    min-height: calc(100vh - 70px);
-
-    /* Evita pequenos espaços laterais */
-    width: 100%;
-}
-
-
-.examix-home {
-    /* A Home cresce para ocupar o espaço disponível */
-    flex: 1;
-
-    /* Garante altura mínima da tela */
-    min-height: calc(100vh - 70px);
-
-    /* Fundo contínuo */
-    background: var(--examix-background);
-}
-
-/* =========================================================
-   EXAMIX
-   HOME PAGE
-   ========================================================= */
-
-
-/* =========================================================
-   HERO PRINCIPAL
-   ========================================================= */
-
-.examix-home-hero {
-
-    padding: 90px 0;
-
-    background:
-        radial-gradient(
-            circle at 80% 20%,
-            rgba(79, 70, 229, 0.12),
-            transparent 35%
-        ),
-        linear-gradient(
-            180deg,
-            #f8faff 0%,
-            #ffffff 100%
-        );
-}
-
-
-/* Badge */
-
-.examix-home-badge {
-
-    display: inline-block;
-
-    padding: 8px 14px;
-
-    margin-bottom: 20px;
-
-    border-radius: 50px;
-
-    background: #eef2ff;
-
-    color: #3155e7;
-
-    font-size: 0.8rem;
-
-    font-weight: 800;
-
-    letter-spacing: 1.5px;
-}
-
-
-/* Título */
-
-.examix-home-title {
-
-    max-width: 700px;
-
-    margin-bottom: 25px;
-
-    color: #101828;
-
-    font-size: clamp(
-        3rem,
-        7vw,
-        5.5rem
-    );
-
-    font-weight: 900;
-
-    line-height: 0.98;
-
-    letter-spacing: -3px;
-}
-
-
-.examix-home-title span {
-
-    display: block;
-
-    color: #3155e7;
-}
-
-
-/* Descrição */
-
-.examix-home-description {
-
-    max-width: 650px;
-
-    margin-bottom: 30px;
-
-    color: #667085;
-
-    font-size: 1.15rem;
-
-    line-height: 1.8;
-}
-
-
-/* =========================================================
-   BOTÕES DO HERO
-   ========================================================= */
-
-.examix-home-actions {
-
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 12px;
-}
-
-
-.examix-home-primary,
-.examix-home-secondary {
-
-    display: inline-flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    padding: 13px 22px;
-
-    border-radius: 12px;
-
-    text-decoration: none;
-
-    font-weight: 700;
-
-    transition: 0.2s ease;
-}
-
-
-.examix-home-primary {
-
-    background: #3155e7;
-
-    color: #ffffff;
-
-    box-shadow:
-        0 12px 25px
-        rgba(49, 85, 231, 0.20);
-}
-
-
-.examix-home-primary:hover {
-
-    transform: translateY(-2px);
-
-    background: #2645c5;
-
-    color: #ffffff;
-}
-
-
-.examix-home-secondary {
-
-    border: 1px solid #d0d5dd;
-
-    background: #ffffff;
-
-    color: #344054;
-}
-
-
-.examix-home-secondary:hover {
-
-    transform: translateY(-2px);
-
-    color: #3155e7;
-}
-
-
-/* =========================================================
-   CARD VISUAL DO HERO
-   ========================================================= */
-
-.examix-home-dashboard {
-
-    padding: 35px;
-
-    border: 1px solid #eaecf0;
-
-    border-radius: 28px;
-
-    background: #ffffff;
-
-    box-shadow:
-        0 25px 60px
-        rgba(16, 24, 40, 0.10);
-}
-
-
-.examix-dashboard-icon {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    width: 70px;
-
-    height: 70px;
-
-    margin-bottom: 25px;
-
-    border-radius: 20px;
-
-    background: #eef2ff;
-
-    font-size: 2rem;
-}
-
-
-.examix-home-dashboard h2 {
-
-    margin-bottom: 10px;
-
-    color: #101828;
-
-    font-weight: 800;
-}
-
-
-.examix-home-dashboard > p {
-
-    margin-bottom: 25px;
-
-    color: #667085;
-
-    line-height: 1.7;
-}
-
-
-/* =========================================================
-   INDICADORES
-   ========================================================= */
-
-.examix-dashboard-item {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 15px;
-
-    padding: 15px 0;
-
-    border-top: 1px solid #eaecf0;
-}
-
-
-.examix-dashboard-item > span {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    width: 45px;
-
-    height: 45px;
-
-    border-radius: 12px;
-
-    background: #f2f4f7;
-
-    font-size: 1.2rem;
-}
-
-
-.examix-dashboard-item strong {
-
-    display: block;
-
-    color: #101828;
-}
-
-
-.examix-dashboard-item small {
-
-    color: #667085;
-}
-
-
-/* =========================================================
-   CHAMADA PARA LOGIN
-   ========================================================= */
-
-.examix-login-section {
-
-    padding: 30px 0 70px;
-}
-
-
-.examix-login-card {
-
-    padding: 30px;
-
-    border: 1px solid #dbe2ff;
-
-    border-radius: 22px;
-
-    background:
-        linear-gradient(
-            135deg,
-            #eef2ff,
-            #f8faff
-        );
-}
-
-
-.examix-login-icon {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    width: 65px;
-
-    height: 65px;
-
-    border-radius: 18px;
-
-    background: #3155e7;
-
-    font-size: 1.8rem;
-}
-
-
-.examix-login-card h2 {
-
-    margin-bottom: 8px;
-
-    color: #101828;
-
-    font-size: 1.4rem;
-
-    font-weight: 800;
-}
-
-
-.examix-login-card p {
-
-    max-width: 700px;
-
-    margin: 0;
-
-    color: #667085;
-
-    line-height: 1.6;
-}
-
-
-/* Botões do login */
-
-.examix-login-buttons {
-
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 10px;
-}
-
-
-.examix-login-button,
-.examix-register-button {
-
-    display: inline-flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    padding: 11px 18px;
-
-    border-radius: 10px;
-
-    text-decoration: none;
-
-    font-weight: 700;
-}
-
-
-.examix-login-button {
-
-    background: #3155e7;
-
-    color: #ffffff;
-}
-
-
-.examix-login-button:hover {
-
-    background: #2645c5;
-
-    color: #ffffff;
-}
-
-
-.examix-register-button {
-
-    border: 1px solid #d0d5dd;
-
-    background: #ffffff;
-
-    color: #344054;
-}
-
-
-.examix-register-button:hover {
-
-    color: #3155e7;
-}
-
-
-/* =========================================================
-   SEÇÃO DE RECURSOS
-   ========================================================= */
-
-.examix-features-section {
-
-    padding: 80px 0;
-
-    background: #f8faff;
-}
-
-
-.examix-section-heading {
-
-    margin-bottom: 45px;
-}
-
-
-.examix-section-heading span,
-.examix-section-label {
-
-    color: #3155e7;
-
-    font-size: 0.8rem;
-
-    font-weight: 800;
-
-    letter-spacing: 1.5px;
-}
-
-
-.examix-section-heading h2 {
-
-    margin-top: 10px;
-
-    margin-bottom: 10px;
-
-    color: #101828;
-
-    font-size: 2.3rem;
-
-    font-weight: 850;
-}
-
-
-.examix-section-heading p {
-
-    color: #667085;
-}
-
-
-/* Cards */
-
-.examix-feature-card {
-
-    height: 100%;
-
-    padding: 30px;
-
-    border: 1px solid #eaecf0;
-
-    border-radius: 20px;
-
-    background: #ffffff;
-
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-
-.examix-feature-card:hover {
-
-    transform: translateY(-5px);
-
-    box-shadow:
-        0 15px 35px
-        rgba(16, 24, 40, 0.08);
-}
-
-
-.examix-feature-icon {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    width: 55px;
-
-    height: 55px;
-
-    margin-bottom: 20px;
-
-    border-radius: 15px;
-
-    background: #eef2ff;
-
-    font-size: 1.5rem;
-}
-
-
-.examix-feature-card h3 {
-
-    margin-bottom: 10px;
-
-    color: #101828;
-
-    font-weight: 800;
-}
-
-
-.examix-feature-card p {
-
-    margin: 0;
-
-    color: #667085;
-
-    line-height: 1.7;
-}
-
-
-/* =========================================================
-   COMO FUNCIONA
-   ========================================================= */
-
-.examix-how-section {
-
-    padding: 90px 0;
-
-    background: #ffffff;
-}
-
-
-.examix-how-title {
-
-    max-width: 500px;
-
-    margin-top: 12px;
-
-    margin-bottom: 20px;
-
-    color: #101828;
-
-    font-size: 2.6rem;
-
-    font-weight: 850;
-}
-
-
-.examix-how-description {
-
-    max-width: 500px;
-
-    color: #667085;
-
-    font-size: 1.05rem;
-
-    line-height: 1.8;
-}
-
-
-/* Passos */
-
-.examix-step {
-
-    display: flex;
-
-    gap: 20px;
-
-    padding: 22px 0;
-
-    border-bottom: 1px solid #eaecf0;
-}
-
-
-.examix-step:last-child {
-
-    border-bottom: 0;
-}
-
-
-.examix-step-number {
-
-    flex-shrink: 0;
-
-    color: #3155e7;
-
-    font-size: 1.1rem;
-
-    font-weight: 900;
-}
-
-
-.examix-step h3 {
-
-    margin-bottom: 5px;
-
-    color: #101828;
-
-    font-size: 1.1rem;
-
-    font-weight: 800;
-}
-
-
-.examix-step p {
-
-    margin: 0;
-
-    color: #667085;
-}
-
-
-/* =========================================================
-   CHAMADA FINAL
-   ========================================================= */
-
-.examix-final-section {
-
-    padding: 20px 0 90px;
-}
-
-
-.examix-final-card {
-
-    padding: 70px 30px;
-
-    border-radius: 30px;
-
-    text-align: center;
-
-    background:
-        linear-gradient(
-            135deg,
-            #172554,
-            #3155e7
-        );
-
-    box-shadow:
-        0 25px 60px
-        rgba(49, 85, 231, 0.20);
-}
-
-
-.examix-final-content {
-
-    max-width: 700px;
-
-    margin: auto;
-}
-
-
-.examix-final-content > span {
-
-    color: #c7d2fe;
-
-    font-size: 0.8rem;
-
-    font-weight: 800;
-
-    letter-spacing: 1.5px;
-}
-
-
-.examix-final-content h2 {
-
-    margin: 12px 0;
-
-    color: #ffffff;
-
-    font-size: clamp(
-        2rem,
-        5vw,
-        3.2rem
-    );
-
-    font-weight: 900;
-}
-
-
-.examix-final-content p {
-
-    margin-bottom: 25px;
-
-    color: #dbe4ff;
-
-    font-size: 1.05rem;
-}
-
-
-.examix-final-button {
-
-    display: inline-block;
-
-    padding: 13px 25px;
-
-    border-radius: 11px;
-
-    background: #ffffff;
-
-    color: #3155e7;
-
-    text-decoration: none;
-
-    font-weight: 800;
-
-    transition: 0.2s ease;
-}
-
-
-.examix-final-button:hover {
-
-    transform: translateY(-2px);
-
-    color: #2645c5;
-}
-
-
-/* =========================================================
-   RESPONSIVIDADE
-   ========================================================= */
-
-@media (max-width: 768px) {
-
-    .examix-home-hero {
-
-        padding: 55px 0;
-
-    }
-
-
-    .examix-home-title {
-
-        font-size: 3.2rem;
-
-        letter-spacing: -2px;
-
-    }
-
-
-    .examix-home-dashboard {
-
-        padding: 25px;
-
-    }
-
-
-    .examix-login-card {
-
-        padding: 25px;
-
-    }
-
-
-    .examix-how-section {
-
-        padding: 60px 0;
-
-    }
-
-
-    .examix-final-card {
-
-        padding: 50px 25px;
-
-    }
-
-}
-
-/* =========================================================
-   CORREÇÃO FINAL
-   LOGIN E CADASTRO
-   ========================================================= */
-
-/* Área principal de autenticação */
-.examix-auth {
-    width: 100%;
-    min-height: calc(100vh - 70px);
-
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-
-    padding: 50px 20px;
-}
-
-/* Card do login/cadastro */
-.examix-auth-card {
-    width: 100%;
-    max-width: 520px;
-
-    margin: 0 auto;
-    padding: 34px;
-
-    background: #ffffff;
-
-    border: 1px solid var(--examix-border);
-    border-radius: 22px;
-
-    box-shadow:
-        0 10px 30px rgba(15, 23, 42, 0.08);
-}
-
-/* Card específico do cadastro */
-.examix-register-card {
-    max-width: 520px;
-}
-
-/* Logo */
-.examix-auth-logo {
-    display: flex;
-
-    justify-content: center;
-    align-items: center;
-
-    margin-bottom: 22px;
-}
-
-.examix-auth-logo img {
-    display: block;
-
-    width: 90px;
-    height: 90px;
-
-    object-fit: contain;
-
-    border-radius: 22px;
-}
-
-/* Cabeçalho */
-.examix-auth-header {
-    margin-bottom: 28px;
-
-    text-align: center;
-}
-
-.examix-auth-header h1 {
-    margin: 0 0 8px;
-
-    color: var(--examix-dark);
-
-    font-size: 1.9rem;
-    font-weight: 800;
-}
-
-.examix-auth-header p {
-    margin: 0;
-
-    color: var(--examix-muted);
-
-    font-size: 0.95rem;
-}
-
-/* Formulário */
-.examix-auth-form {
-    width: 100%;
-}
-
-/* Grupo */
-.examix-form-group {
-    margin-bottom: 17px;
-}
-
-/* Labels */
-.examix-auth-form label {
-    display: block;
-
-    margin-bottom: 7px;
-
-    color: var(--examix-text);
-
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-/* Campos */
-.examix-auth-form input,
-.examix-auth-form select,
-.examix-auth-form textarea {
-    width: 100%;
-
-    padding: 12px 14px;
-
-    border: 1px solid var(--examix-border);
-    border-radius: 10px;
-
-    background: #ffffff;
-    color: var(--examix-text);
-
-    font-size: 0.95rem;
-
-    outline: none;
-
-    transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-/* Campo selecionado */
-.examix-auth-form input:focus,
-.examix-auth-form select:focus,
-.examix-auth-form textarea:focus {
-    border-color: var(--examix-blue);
-
-    box-shadow:
-        0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-
-/* Placeholder */
-.examix-auth-form input::placeholder,
-.examix-auth-form textarea::placeholder {
-    color: #94a3b8;
-}
-
-/* Texto de ajuda */
-.examix-help-text {
-    display: block;
-
-    margin-top: 6px;
-
-    color: var(--examix-muted);
-
-    font-size: 0.82rem;
-    line-height: 1.4;
-}
-
-/* Erros */
-.examix-form-error {
-    margin-bottom: 18px;
-
-    padding: 12px 14px;
-
-    border: 1px solid #fecaca;
-    border-radius: 10px;
-
-    background: #fef2f2;
-
-    color: #b91c1c;
-
-    font-size: 0.9rem;
-}
-
-.examix-form-error p:last-child {
-    margin-bottom: 0;
-}
-
-.examix-field-error {
-    display: flex;
-    flex-direction: column;
-
-    gap: 3px;
-
-    margin-top: 6px;
-
-    color: var(--examix-danger);
-
-    font-size: 0.85rem;
-}
-
-/* =========================================================
-   BOTÃO ENTRAR
-   ========================================================= */
-
-.examix-auth-form .examix-login-button {
-    width: 100%;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    min-height: 48px;
-
-    padding: 13px 18px;
-    margin-top: 8px;
-
-    border: none;
-    border-radius: 11px;
-
-    background:
-        linear-gradient(
-            135deg,
-            var(--examix-blue),
-            var(--examix-indigo)
-        );
-
-    color: #ffffff;
-
-    font-size: 0.95rem;
-    font-weight: 700;
-
-    cursor: pointer;
-
-    text-decoration: none;
-
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-.examix-auth-form .examix-login-button:hover {
-    transform: translateY(-1px);
-
-    color: #ffffff;
-
-    box-shadow:
-        0 8px 20px rgba(37, 99, 235, 0.25);
-}
-
-/* =========================================================
-   BOTÃO GOOGLE
-   ========================================================= */
-
-.examix-google-button {
-    width: 100%;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    gap: 10px;
-
-    padding: 12px 18px;
-
-    border: 1px solid var(--examix-border);
-    border-radius: 11px;
-
-    background: #ffffff;
-
-    color: var(--examix-text);
-
-    font-size: 0.95rem;
-    font-weight: 600;
-
-    cursor: pointer;
-
-    transition:
-        background 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
-}
-
-.examix-google-button:hover {
-    background: #f8fafc;
-
-    border-color: #cbd5e1;
-
-    color: var(--examix-dark);
-
-    transform: translateY(-1px);
-}
-
-.examix-google-icon {
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    width: 24px;
-    height: 24px;
-
-    color: #4285f4;
-
-    font-size: 1.1rem;
-    font-weight: 800;
-}
-
-/* =========================================================
-   DIVISOR
-   ========================================================= */
-
-.examix-divider {
-    display: flex;
-
-    align-items: center;
-
-    gap: 12px;
-
-    margin: 24px 0;
-}
-
-.examix-divider::before,
-.examix-divider::after {
-    content: "";
-
-    flex: 1;
-
-    height: 1px;
-
-    background: var(--examix-border);
-}
-
-.examix-divider span {
-    color: var(--examix-muted);
-
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-/* =========================================================
-   RODAPÉ DO LOGIN/CADASTRO
-   ========================================================= */
-
-.examix-auth-footer {
-    margin-top: 24px;
-
-    text-align: center;
-}
-
-.examix-auth-footer p {
-    margin: 0;
-
-    color: var(--examix-muted);
-
-    font-size: 0.9rem;
-}
-
-.examix-auth-footer a {
-    color: var(--examix-blue);
-
-    font-weight: 700;
-
-    text-decoration: none;
-}
-
-.examix-auth-footer a:hover {
-    color: var(--examix-indigo);
-
-    text-decoration: underline;
-}
-
-/* =========================================================
-   RESPONSIVIDADE
-   ========================================================= */
-
-@media (max-width: 576px) {
-
-    .examix-auth {
-        min-height: auto;
-
-        padding: 25px 14px;
-    }
-
-    .examix-auth-card {
-        padding: 24px 18px;
-
-        border-radius: 18px;
-    }
-
-    .examix-auth-logo img {
-        width: 78px;
-        height: 78px;
-
-        border-radius: 18px;
-    }
-
-    .examix-auth-header h1 {
-        font-size: 1.6rem;
-    }
-
-    .examix-auth-header p {
-        font-size: 0.9rem;
-    }
-
-    .examix-auth-form input,
-    .examix-auth-form select,
-    .examix-auth-form textarea {
-        padding: 11px 12px;
     }
 }

@@ -1,222 +1,236 @@
 {% extends 'base.html' %}
 
 {% load static %}
-{% load socialaccount %}
-
 
 {% block title %}
     Entrar | Examix
 {% endblock %}
 
-
 {% block content %}
-
-<!-- ========================================== -->
-<!-- PÁGINA DE LOGIN -->
-<!-- ========================================== -->
 
 <section class="examix-auth">
 
-    <div class="container">
+    <div class="examix-auth-card">
 
-        <div class="row justify-content-center">
+        <!-- ================================================= -->
+        <!-- LOGO -->
+        <!-- ================================================= -->
 
-            <div class="col-12 col-md-8 col-lg-5">
+        <div class="examix-auth-logo">
 
-                <!-- ================================== -->
-                <!-- CARD DE LOGIN -->
-                <!-- ================================== -->
+            <img
+                src="{% static 'images/logosistema.png' %}"
+                alt="Logo Examix"
+            >
 
-                <div class="examix-auth-card">
+        </div>
 
 
-                    <!-- ================================== -->
-                    <!-- LOGO -->
-                    <!-- ================================== -->
+        <!-- ================================================= -->
+        <!-- TÍTULO -->
+        <!-- ================================================= -->
 
-                    <div class="examix-auth-logo">
+        <h1>
+            Entrar
+        </h1>
 
-                        <img
-                            src="{% static 'images/logosistema.png' %}"
-                            alt="Logo Examix"
-                        >
 
-                    </div>
+        <!-- ================================================= -->
+        <!-- DESCRIÇÃO -->
+        <!-- ================================================= -->
 
+        <p class="examix-auth-description">
+            Entre na sua conta para continuar.
+        </p>
 
-                    <!-- ================================== -->
-                    <!-- TÍTULO -->
-                    <!-- ================================== -->
 
-                    <div class="examix-auth-header">
+        <!-- ================================================= -->
+        <!-- ERROS GERAIS -->
+        <!-- ================================================= -->
 
-                        <span class="examix-auth-badge">
-                            🎓 Área do estudante
-                        </span>
+        {% if form.non_field_errors %}
 
-                        <h1>
-                            Bem-vindo de volta!
-                        </h1>
+            <div class="alert alert-danger">
 
-                        <p>
-                            Entre na sua conta para continuar
-                            seus estudos.
-                        </p>
+                {% for error in form.non_field_errors %}
 
-                    </div>
+                    {{ error }}
 
-
-                    <!-- ================================== -->
-                    <!-- MENSAGENS DE ERRO -->
-                    <!-- ================================== -->
-
-                    {% if form.non_field_errors %}
-
-                        <div class="alert alert-danger">
-
-                            {% for error in form.non_field_errors %}
-
-                                {{ error }}
-
-                            {% endfor %}
-
-                        </div>
-
-                    {% endif %}
-
-
-                    <!-- ================================== -->
-                    <!-- FORMULÁRIO -->
-                    <!-- ================================== -->
-
-                    <form
-                        method="post"
-                        class="examix-auth-form"
-                    >
-
-                        {% csrf_token %}
-
-
-                        <!-- ================================== -->
-                        <!-- USUÁRIO -->
-                        <!-- ================================== -->
-
-                        <div class="examix-form-group">
-
-                            <label for="{{ form.username.id_for_label }}">
-                                Usuário
-                            </label>
-
-                            {{ form.username }}
-
-                            {% if form.username.errors %}
-
-                                <div class="examix-form-error">
-
-                                    {{ form.username.errors }}
-
-                                </div>
-
-                            {% endif %}
-
-                        </div>
-
-
-                        <!-- ================================== -->
-                        <!-- SENHA -->
-                        <!-- ================================== -->
-
-                        <div class="examix-form-group">
-
-                            <label for="{{ form.password.id_for_label }}">
-                                Senha
-                            </label>
-
-                            {{ form.password }}
-
-                            {% if form.password.errors %}
-
-                                <div class="examix-form-error">
-
-                                    {{ form.password.errors }}
-
-                                </div>
-
-                            {% endif %}
-
-                        </div>
-
-
-                        <!-- ================================== -->
-                        <!-- BOTÃO ENTRAR -->
-                        <!-- ================================== -->
-
-                        <button
-                            type="submit"
-                            class="btn btn-examix examix-login-button"
-                        >
-                            Entrar
-                        </button>
-
-                    </form>
-
-
-                    <!-- ================================== -->
-                    <!-- DIVISOR -->
-                    <!-- ================================== -->
-
-                    <div class="examix-divider">
-
-                        <span>
-                            ou
-                        </span>
-
-                    </div>
-
-
-                    <!-- ================================== -->
-                    <!-- LOGIN COM GOOGLE -->
-                    <!-- ================================== -->
-
-                    <a
-                        href="{% provider_login_url 'google' %}"
-                        class="examix-google-button"
-                    >
-
-                        <!-- Ícone Google -->
-                        <span class="examix-google-icon">
-                            G
-                        </span>
-
-                        <span>
-                            Continuar com Google
-                        </span>
-
-                    </a>
-
-
-                    <!-- ================================== -->
-                    <!-- CADASTRO -->
-                    <!-- ================================== -->
-
-                    <div class="examix-auth-footer">
-
-                        <span>
-                            Ainda não possui uma conta?
-                        </span>
-
-                        <a
-                            href="{% url 'usuarios:cadastro' %}"
-                        >
-                            Criar conta
-                        </a>
-
-                    </div>
-
-
-                </div>
+                {% endfor %}
 
             </div>
+
+        {% endif %}
+
+
+        <!-- ================================================= -->
+        <!-- FORMULÁRIO DE LOGIN -->
+        <!-- ================================================= -->
+
+        <form
+            method="post"
+            action="{% url 'usuarios:login' %}"
+        >
+
+            {% csrf_token %}
+
+
+            <!-- ============================================= -->
+            <!-- USUÁRIO -->
+            <!-- ============================================= -->
+
+            <div class="mb-3">
+
+                <label
+                    for="{{ form.username.id_for_label }}"
+                    class="form-label"
+                >
+                    Nome de usuário
+                </label>
+
+                <input
+                    type="text"
+                    name="{{ form.username.html_name }}"
+                    id="{{ form.username.id_for_label }}"
+                    class="form-control"
+                    placeholder="Digite seu usuário"
+                    autocomplete="username"
+                    value="{{ form.username.value|default:'' }}"
+                    required
+                >
+
+                {% if form.username.errors %}
+
+                    <div class="text-danger small mt-1">
+
+                        {% for error in form.username.errors %}
+
+                            {{ error }}
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- ============================================= -->
+            <!-- SENHA -->
+            <!-- ============================================= -->
+
+            <div class="mb-3">
+
+                <label
+                    for="{{ form.password.id_for_label }}"
+                    class="form-label"
+                >
+                    Senha
+                </label>
+
+                <input
+                    type="password"
+                    name="{{ form.password.html_name }}"
+                    id="{{ form.password.id_for_label }}"
+                    class="form-control"
+                    placeholder="Digite sua senha"
+                    autocomplete="current-password"
+                    required
+                >
+
+                {% if form.password.errors %}
+
+                    <div class="text-danger small mt-1">
+
+                        {% for error in form.password.errors %}
+
+                            {{ error }}
+
+                        {% endfor %}
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- ============================================= -->
+            <!-- BOTÃO ENTRAR -->
+            <!-- ============================================= -->
+
+            <button
+                type="submit"
+                class="btn btn-primary w-100"
+            >
+                Entrar
+            </button>
+
+        </form>
+
+
+        <!-- ================================================= -->
+        <!-- GOOGLE -->
+        <!-- ================================================= -->
+
+        <div class="text-center my-3">
+
+            <span class="text-muted">
+                ou
+            </span>
+
+        </div>
+
+
+        <a
+            href="{% url 'google_login' %}"
+            class="examix-google-button text-decoration-none"
+        >
+
+            <span class="examix-google-icon">
+                G
+            </span>
+
+            Continuar com Google
+
+        </a>
+
+
+        <!-- ================================================= -->
+        <!-- LINKS -->
+        <!-- ================================================= -->
+
+        <div class="text-center mt-4">
+
+            <!-- Recuperação de senha -->
+
+            <p class="mb-2">
+
+                <a
+                    href="{% url 'account_reset_password' %}"
+                    class="text-decoration-none"
+                >
+                    Esqueci minha senha
+                </a>
+
+            </p>
+
+
+            <!-- Cadastro -->
+
+            <p class="mb-0">
+
+                Ainda não possui uma conta?
+
+                <a
+                    href="{% url 'usuarios:cadastro' %}"
+                    class="text-decoration-none fw-bold"
+                >
+                    Criar conta
+                </a>
+
+            </p>
 
         </div>
 

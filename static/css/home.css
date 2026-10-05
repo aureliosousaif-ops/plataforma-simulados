@@ -1,180 +1,613 @@
-/* =========================================================
-   CENTRALIZAÇÃO DO CONTEÚDO DA HOME
-   ========================================================= */
+/* ============================================================
+   EXAMIX - HOME
+   ============================================================ */
 
-.examix-home-hero {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 80px 30px 60px;
 
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+/* ============================================================
+   1. VARIÁVEIS
+   ============================================================ */
+
+:root {
+    --home-primary: #3155e7;
+    --home-primary-dark: #2443c7;
+    --home-text: #172554;
+    --home-text-light: #64748b;
+    --home-background: #f8fafc;
+    --home-white: #ffffff;
+    --home-border: #e2e8f0;
+    --home-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
-.examix-home-badge {
-    margin-left: auto;
-    margin-right: auto;
-}
 
-.examix-home-title {
-    max-width: 850px;
-    margin: 20px auto;
-    text-align: center;
-}
+/* ============================================================
+   2. ÁREA PRINCIPAL
+   ============================================================ */
 
-.examix-home-description {
-    max-width: 720px;
-    margin: 0 auto 30px;
-    text-align: center;
-}
-
-.examix-home-actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    flex-wrap: wrap;
-}
-
-/* =========================================================
-   DASHBOARD / RESUMO
-   ========================================================= */
-
-.examix-home-dashboard {
+.home-hero {
     width: 100%;
-    max-width: 1000px;
-    margin: 40px auto 0;
+    padding: 90px 20px 70px;
+
+    background:
+        radial-gradient(
+            circle at top right,
+            rgba(49, 85, 231, 0.10),
+            transparent 35%
+        ),
+        linear-gradient(
+            180deg,
+            #ffffff 0%,
+            #f8fafc 100%
+        );
 }
 
-/* =========================================================
-   CARDS
-   ========================================================= */
 
-.examix-feature-section,
-.examix-how-section,
-.examix-final-section {
-    width: 100%;
-    max-width: 1100px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.examix-feature-card {
-    height: 100%;
-    text-align: center;
-}
-
-/* =========================================================
-   COMO FUNCIONA
-   ========================================================= */
-
-.examix-how-section {
-    text-align: center;
-    padding-left: 20px;
-    padding-right: 20px;
-}
-
-.examix-how-title {
-    text-align: center;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.examix-step {
-    text-align: center;
-}
-
-/* =========================================================
-   LOGIN / CTA
-   ========================================================= */
-
-.examix-login-section {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-}
-
-.examix-login-card {
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
-    text-align: center;
-}
-
-.examix-login-buttons {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    flex-wrap: wrap;
-}
-
-/* =========================================================
-   SEÇÃO FINAL
-   ========================================================= */
-
-.examix-final-section {
-    display: flex;
-    justify-content: center;
-}
-
-.examix-final-card {
-    width: 100%;
+.home-hero-content {
     max-width: 900px;
     margin: 0 auto;
+
     text-align: center;
 }
 
-.examix-final-content {
+
+/* ============================================================
+   3. BADGE
+   ============================================================ */
+
+.home-badge {
+    display: inline-block;
+
+    margin-bottom: 22px;
+    padding: 8px 16px;
+
+    border: 1px solid #dbe4ff;
+    border-radius: 999px;
+
+    background: #eef2ff;
+
+    color: var(--home-primary);
+
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+
+/* ============================================================
+   4. TÍTULO
+   ============================================================ */
+
+.home-hero h1 {
+    margin: 0;
+
+    color: var(--home-text);
+
+    font-size: clamp(
+        2.4rem,
+        6vw,
+        4.5rem
+    );
+
+    line-height: 1.08;
+
+    font-weight: 800;
+
+    letter-spacing: -0.04em;
+}
+
+
+.home-hero h1 span {
+    color: var(--home-primary);
+}
+
+
+/* ============================================================
+   5. DESCRIÇÃO
+   ============================================================ */
+
+.home-hero p {
+    max-width: 720px;
+
+    margin: 28px auto 0;
+
+    color: var(--home-text-light);
+
+    font-size: 1.1rem;
+
+    line-height: 1.7;
+}
+
+
+/* ============================================================
+   6. BOTÕES
+   ============================================================ */
+
+.home-actions {
     display: flex;
-    flex-direction: column;
+
+    justify-content: center;
     align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 14px;
+
+    margin-top: 32px;
+}
+
+
+.home-btn {
+    display: inline-flex;
+
+    justify-content: center;
+    align-items: center;
+
+    min-height: 48px;
+
+    padding: 0 24px;
+
+    border-radius: 12px;
+
+    text-decoration: none;
+
+    font-size: 0.98rem;
+    font-weight: 700;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.home-btn:hover {
+    transform: translateY(-2px);
+}
+
+
+.home-btn-primary {
+    background: var(--home-primary);
+
+    color: #ffffff;
+
+    box-shadow:
+        0 8px 20px rgba(
+            49,
+            85,
+            231,
+            0.22
+        );
+}
+
+
+.home-btn-primary:hover {
+    background: var(--home-primary-dark);
+
+    color: #ffffff;
+
+    box-shadow:
+        0 12px 25px rgba(
+            49,
+            85,
+            231,
+            0.28
+        );
+}
+
+
+.home-btn-secondary {
+    border: 1px solid var(--home-border);
+
+    background: #ffffff;
+
+    color: var(--home-text);
+}
+
+
+.home-btn-secondary:hover {
+    background: #f8fafc;
+
+    color: var(--home-text);
+}
+
+
+/* ============================================================
+   7. CARDS DE RECURSOS
+   ============================================================ */
+
+.home-features {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
+    gap: 20px;
+
+    max-width: 1100px;
+
+    margin: 0 auto;
+
+    padding: 25px 20px 80px;
+}
+
+
+.home-feature-card {
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 18px;
+
+    padding: 28px;
+
+    border: 1px solid var(--home-border);
+
+    border-radius: 18px;
+
+    background: var(--home-white);
+
+    box-shadow: var(--home-shadow);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.home-feature-card:hover {
+    transform: translateY(-4px);
+
+    box-shadow:
+        0 16px 35px
+        rgba(
+            15,
+            23,
+            42,
+            0.11
+        );
+}
+
+
+.home-feature-icon {
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    flex-shrink: 0;
+
+    width: 52px;
+    height: 52px;
+
+    border-radius: 14px;
+
+    background: #eef2ff;
+
+    font-size: 1.5rem;
+}
+
+
+.home-feature-card h2 {
+    margin: 0 0 8px;
+
+    color: var(--home-text);
+
+    font-size: 1.1rem;
+
+    font-weight: 750;
+}
+
+
+.home-feature-card p {
+    margin: 0;
+
+    color: var(--home-text-light);
+
+    font-size: 0.95rem;
+
+    line-height: 1.6;
+}
+
+
+/* ============================================================
+   8. DASHBOARD DO USUÁRIO
+   ============================================================ */
+
+.home-dashboard {
+    max-width: 1100px;
+
+    margin: 0 auto;
+
+    padding: 20px 20px 80px;
+}
+
+
+.home-section-title {
+    margin-bottom: 28px;
+}
+
+
+.home-section-title > span {
+    color: var(--home-primary);
+
+    font-size: 0.9rem;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.08em;
+}
+
+
+.home-section-title h2 {
+    margin: 8px 0;
+
+    color: var(--home-text);
+
+    font-size: 2rem;
+
+    font-weight: 800;
+}
+
+
+.home-section-title p {
+    margin: 0;
+
+    color: var(--home-text-light);
+}
+
+
+/* ============================================================
+   9. CARDS DO DASHBOARD
+   ============================================================ */
+
+.home-dashboard-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
+    gap: 20px;
+}
+
+
+.home-dashboard-card {
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 18px;
+
+    min-height: 180px;
+
+    padding: 26px;
+
+    border: 1px solid var(--home-border);
+
+    border-radius: 18px;
+
+    background: #ffffff;
+
+    text-decoration: none;
+
+    box-shadow: var(--home-shadow);
+
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.home-dashboard-card:hover {
+    transform: translateY(-4px);
+
+    border-color: #c7d2fe;
+
+    box-shadow:
+        0 16px 35px
+        rgba(
+            15,
+            23,
+            42,
+            0.11
+        );
+}
+
+
+.dashboard-card-icon {
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    flex-shrink: 0;
+
+    width: 50px;
+    height: 50px;
+
+    border-radius: 14px;
+
+    background: #eef2ff;
+
+    font-size: 1.4rem;
+}
+
+
+.home-dashboard-card h3 {
+    margin: 0 0 8px;
+
+    color: var(--home-text);
+
+    font-size: 1.15rem;
+
+    font-weight: 750;
+}
+
+
+.home-dashboard-card p {
+    margin: 0 0 18px;
+
+    color: var(--home-text-light);
+
+    font-size: 0.94rem;
+
+    line-height: 1.6;
+}
+
+
+.dashboard-link {
+    color: var(--home-primary);
+
+    font-size: 0.9rem;
+
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   10. CHAMADA FINAL
+   ============================================================ */
+
+.home-final {
+    margin-top: 20px;
+
+    padding: 80px 20px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #eef2ff,
+            #f8fafc
+        );
+
     text-align: center;
 }
 
-.examix-final-button {
-    margin-left: auto;
-    margin-right: auto;
+
+.home-final > div {
+    max-width: 700px;
+
+    margin: 0 auto;
 }
 
-/* =========================================================
-   RESPONSIVO
-   ========================================================= */
 
-@media (max-width: 768px) {
+.home-final h2 {
+    margin: 0;
 
-    .examix-home-hero {
-        padding: 50px 20px 40px;
+    color: var(--home-text);
+
+    font-size: clamp(
+        1.8rem,
+        4vw,
+        2.6rem
+    );
+
+    font-weight: 800;
+}
+
+
+.home-final p {
+    margin: 16px 0 28px;
+
+    color: var(--home-text-light);
+
+    font-size: 1rem;
+}
+
+
+/* ============================================================
+   11. RESPONSIVIDADE
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    .home-features {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
     }
 
-    .examix-home-title {
-        font-size: 2.2rem;
+
+    .home-dashboard-grid {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
     }
 
-    .examix-home-description {
+}
+
+
+@media (max-width: 650px) {
+
+    .home-hero {
+        padding: 65px 18px 55px;
+    }
+
+
+    .home-hero h1 {
+        font-size: 2.5rem;
+    }
+
+
+    .home-hero p {
         font-size: 1rem;
     }
 
-    .examix-home-actions {
-        width: 100%;
+
+    .home-actions {
         flex-direction: column;
-    }
 
-    .examix-home-actions a {
         width: 100%;
-        max-width: 320px;
     }
 
-    .examix-home-dashboard {
-        margin-top: 30px;
+
+    .home-btn {
+        width: 100%;
     }
 
-    .examix-feature-section,
-    .examix-how-section,
-    .examix-final-section {
-        padding-left: 15px;
-        padding-right: 15px;
+
+    .home-features {
+        grid-template-columns: 1fr;
+
+        padding:
+            15px
+            18px
+            60px;
     }
+
+
+    .home-dashboard {
+        padding:
+            10px
+            18px
+            60px;
+    }
+
+
+    .home-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+
+    .home-section-title h2 {
+        font-size: 1.7rem;
+    }
+
+
+    .home-final {
+        padding:
+            60px
+            18px;
+    }
+
 }

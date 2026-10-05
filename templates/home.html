@@ -1,419 +1,994 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}
-    Examix | Plataforma de Simulados
-{% endblock %}
+{% block title %}Início | Examix{% endblock %}
 
 {% block extra_css %}
-<!-- ============================================================
-     01. CSS EXCLUSIVO DO HOME
-     ============================================================ -->
-<link rel="stylesheet" href="{% static 'css/home.css' %}">
+
+<style>
+
+/* ============================================================
+   EXAMIX - HOME
+   CSS DIRETO NO TEMPLATE
+   ============================================================ */
+
+
+/* ============================================================
+   1. VARIÁVEIS
+   ============================================================ */
+
+.home-page {
+    --home-primary: #3155e7;
+    --home-primary-dark: #2443c7;
+    --home-text: #172554;
+    --home-text-light: #64748b;
+    --home-background: #f8fafc;
+    --home-white: #ffffff;
+    --home-border: #e2e8f0;
+    --home-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+
+    color: var(--home-text);
+}
+
+
+/* ============================================================
+   2. HERO PRINCIPAL
+   ============================================================ */
+
+.home-hero {
+    width: 100%;
+
+    padding: 90px 20px 80px;
+
+    background:
+        radial-gradient(
+            circle at 85% 10%,
+            rgba(49, 85, 231, 0.14),
+            transparent 35%
+        ),
+        linear-gradient(
+            180deg,
+            #ffffff 0%,
+            #f8fafc 100%
+        );
+}
+
+
+.home-hero-content {
+    width: 100%;
+    max-width: 950px;
+
+    margin: 0 auto;
+
+    text-align: center;
+}
+
+
+/* ============================================================
+   3. BADGE
+   ============================================================ */
+
+.home-badge {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 24px;
+
+    padding: 9px 18px;
+
+    border: 1px solid #dbe4ff;
+    border-radius: 999px;
+
+    background: #eef2ff;
+
+    color: var(--home-primary);
+
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   4. TÍTULO
+   ============================================================ */
+
+.home-hero h1 {
+    margin: 0;
+
+    color: var(--home-text);
+
+    font-size: clamp(
+        2.5rem,
+        6vw,
+        4.8rem
+    );
+
+    line-height: 1.05;
+
+    font-weight: 800;
+
+    letter-spacing: -0.045em;
+}
+
+
+.home-hero h1 span {
+    color: var(--home-primary);
+}
+
+
+/* ============================================================
+   5. DESCRIÇÃO
+   ============================================================ */
+
+.home-hero p {
+    max-width: 720px;
+
+    margin: 28px auto 0;
+
+    color: var(--home-text-light);
+
+    font-size: 1.12rem;
+
+    line-height: 1.7;
+}
+
+
+/* ============================================================
+   6. BOTÕES
+   ============================================================ */
+
+.home-actions {
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 14px;
+
+    margin-top: 34px;
+}
+
+
+.home-btn {
+    display: inline-flex;
+
+    justify-content: center;
+    align-items: center;
+
+    min-height: 50px;
+
+    padding: 0 26px;
+
+    border-radius: 12px;
+
+    text-decoration: none;
+
+    font-size: 0.98rem;
+
+    font-weight: 700;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.home-btn:hover {
+    transform: translateY(-3px);
+}
+
+
+.home-btn-primary {
+    background: var(--home-primary);
+
+    color: #ffffff;
+
+    box-shadow:
+        0 10px 24px
+        rgba(
+            49,
+            85,
+            231,
+            0.25
+        );
+}
+
+
+.home-btn-primary:hover {
+    background: var(--home-primary-dark);
+
+    color: #ffffff;
+
+    box-shadow:
+        0 14px 30px
+        rgba(
+            49,
+            85,
+            231,
+            0.30
+        );
+}
+
+
+.home-btn-secondary {
+    border: 1px solid var(--home-border);
+
+    background: #ffffff;
+
+    color: var(--home-text);
+
+    box-shadow:
+        0 5px 15px
+        rgba(
+            15,
+            23,
+            42,
+            0.05
+        );
+}
+
+
+.home-btn-secondary:hover {
+    background: #f8fafc;
+
+    color: var(--home-text);
+}
+
+
+/* ============================================================
+   7. CARDS DE RECURSOS
+   ============================================================ */
+
+.home-features {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
+    gap: 22px;
+
+    width: 100%;
+    max-width: 1100px;
+
+    margin: 0 auto;
+
+    padding: 35px 20px 80px;
+}
+
+
+.home-feature-card {
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 18px;
+
+    min-height: 150px;
+
+    padding: 28px;
+
+    border: 1px solid var(--home-border);
+
+    border-radius: 20px;
+
+    background: var(--home-white);
+
+    box-shadow: var(--home-shadow);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+
+.home-feature-card:hover {
+    transform: translateY(-5px);
+
+    border-color: #c7d2fe;
+
+    box-shadow:
+        0 18px 40px
+        rgba(
+            15,
+            23,
+            42,
+            0.12
+        );
+}
+
+
+/* ============================================================
+   8. ÍCONES
+   ============================================================ */
+
+.home-feature-icon,
+.dashboard-card-icon {
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    flex-shrink: 0;
+
+    width: 54px;
+    height: 54px;
+
+    border-radius: 15px;
+
+    background: #eef2ff;
+
+    font-size: 1.5rem;
+}
+
+
+/* ============================================================
+   9. TEXTOS DOS CARDS
+   ============================================================ */
+
+.home-feature-card h2 {
+    margin: 0 0 8px;
+
+    color: var(--home-text);
+
+    font-size: 1.15rem;
+
+    font-weight: 800;
+}
+
+
+.home-feature-card p {
+    margin: 0;
+
+    color: var(--home-text-light);
+
+    font-size: 0.95rem;
+
+    line-height: 1.6;
+}
+
+
+/* ============================================================
+   10. DASHBOARD
+   ============================================================ */
+
+.home-dashboard {
+    width: 100%;
+    max-width: 1100px;
+
+    margin: 0 auto;
+
+    padding: 30px 20px 90px;
+}
+
+
+.home-section-title {
+    margin-bottom: 30px;
+}
+
+
+.home-section-title > span {
+    color: var(--home-primary);
+
+    font-size: 0.85rem;
+
+    font-weight: 800;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.1em;
+}
+
+
+.home-section-title h2 {
+    margin: 8px 0;
+
+    color: var(--home-text);
+
+    font-size: 2.1rem;
+
+    line-height: 1.2;
+
+    font-weight: 800;
+}
+
+
+.home-section-title p {
+    margin: 0;
+
+    color: var(--home-text-light);
+
+    font-size: 1rem;
+}
+
+
+/* ============================================================
+   11. CARDS DO DASHBOARD
+   ============================================================ */
+
+.home-dashboard-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
+    gap: 22px;
+}
+
+
+.home-dashboard-card {
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 18px;
+
+    min-height: 190px;
+
+    padding: 28px;
+
+    border: 1px solid var(--home-border);
+
+    border-radius: 20px;
+
+    background: #ffffff;
+
+    text-decoration: none;
+
+    box-shadow: var(--home-shadow);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+
+.home-dashboard-card:hover {
+    transform: translateY(-5px);
+
+    border-color: #c7d2fe;
+
+    box-shadow:
+        0 18px 40px
+        rgba(
+            15,
+            23,
+            42,
+            0.12
+        );
+}
+
+
+.home-dashboard-card h3 {
+    margin: 0 0 9px;
+
+    color: var(--home-text);
+
+    font-size: 1.15rem;
+
+    font-weight: 800;
+}
+
+
+.home-dashboard-card p {
+    margin: 0 0 18px;
+
+    color: var(--home-text-light);
+
+    font-size: 0.94rem;
+
+    line-height: 1.6;
+}
+
+
+.dashboard-link {
+    color: var(--home-primary);
+
+    font-size: 0.9rem;
+
+    font-weight: 800;
+}
+
+
+/* ============================================================
+   12. CHAMADA FINAL
+   ============================================================ */
+
+.home-final {
+    width: 100%;
+
+    margin-top: 10px;
+
+    padding: 85px 20px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #eef2ff 0%,
+            #f8fafc 100%
+        );
+
+    text-align: center;
+}
+
+
+.home-final > div {
+    width: 100%;
+    max-width: 720px;
+
+    margin: 0 auto;
+}
+
+
+.home-final h2 {
+    margin: 0;
+
+    color: var(--home-text);
+
+    font-size: clamp(
+        1.9rem,
+        4vw,
+        2.7rem
+    );
+
+    line-height: 1.2;
+
+    font-weight: 800;
+}
+
+
+.home-final p {
+    margin: 16px 0 30px;
+
+    color: var(--home-text-light);
+
+    font-size: 1rem;
+
+    line-height: 1.6;
+}
+
+
+/* ============================================================
+   13. RESPONSIVIDADE
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+    .home-features {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+    }
+
+
+    .home-dashboard-grid {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+    }
+
+}
+
+
+@media (max-width: 650px) {
+
+    .home-hero {
+        padding:
+            65px
+            18px
+            60px;
+    }
+
+
+    .home-hero h1 {
+        font-size: 2.6rem;
+    }
+
+
+    .home-hero p {
+        font-size: 1rem;
+    }
+
+
+    .home-actions {
+        flex-direction: column;
+
+        width: 100%;
+    }
+
+
+    .home-btn {
+        width: 100%;
+    }
+
+
+    .home-features {
+        grid-template-columns: 1fr;
+
+        padding:
+            20px
+            18px
+            65px;
+    }
+
+
+    .home-feature-card {
+        padding: 23px;
+    }
+
+
+    .home-dashboard {
+        padding:
+            20px
+            18px
+            65px;
+    }
+
+
+    .home-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+
+    .home-dashboard-card {
+        min-height: auto;
+
+        padding: 23px;
+    }
+
+
+    .home-section-title h2 {
+        font-size: 1.75rem;
+    }
+
+
+    .home-final {
+        padding:
+            65px
+            18px;
+    }
+
+}
+
+</style>
+
 {% endblock %}
+
 
 {% block content %}
 
 <!-- ============================================================
-     02. HERO PRINCIPAL
+     PÁGINA PRINCIPAL
      ============================================================ -->
-<section class="examix-home-hero">
 
-    <div class="examix-home-hero-content">
+<div class="home-page">
 
-        <span class="examix-home-badge">
-            Plataforma de estudos
-        </span>
 
-        <h1 class="examix-home-title">
-            Prepare-se melhor.
-            <br>
-            <span>Estude com o Examix.</span>
-        </h1>
+    <!-- ========================================================
+         1. HERO PRINCIPAL
+         ======================================================== -->
 
-        <p class="examix-home-description">
-            Faça simulados, acompanhe seu desempenho
-            e descubra como está sua evolução nos estudos.
-        </p>
+    <section class="home-hero">
 
-        <div class="examix-home-actions">
+        <div class="home-hero-content">
+
+            <span class="home-badge">
+                Plataforma de estudos
+            </span>
+
+            <h1>
+                Prepare-se melhor.<br>
+                <span>Estude com o Examix.</span>
+            </h1>
+
+            <p>
+                Faça simulados, acompanhe seu desempenho
+                e descubra como está sua evolução nos estudos.
+            </p>
+
+            <div class="home-actions">
+
+                {% if user.is_authenticated %}
+
+                    <a
+                        href="{% url 'simulados:lista' %}"
+                        class="home-btn home-btn-primary"
+                    >
+                        🚀 Começar um simulado
+                    </a>
+
+                {% else %}
+
+                    <a
+                        href="{% url 'usuarios:login' %}"
+                        class="home-btn home-btn-primary"
+                    >
+                        🚀 Começar agora
+                    </a>
+
+                    <a
+                        href="{% url 'usuarios:cadastro' %}"
+                        class="home-btn home-btn-secondary"
+                    >
+                        Criar conta
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================
+         2. RECURSOS DA PLATAFORMA
+         ======================================================== -->
+
+    <section class="home-features">
+
+        <div class="home-feature-card">
+
+            <div class="home-feature-icon">
+                📝
+            </div>
+
+            <div>
+
+                <h2>
+                    Simulados
+                </h2>
+
+                <p>
+                    Resolva provas e questões diretamente pela plataforma.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="home-feature-card">
+
+            <div class="home-feature-icon">
+                📊
+            </div>
+
+            <div>
+
+                <h2>
+                    Desempenho
+                </h2>
+
+                <p>
+                    Acompanhe seus resultados e sua evolução nos estudos.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="home-feature-card">
+
+            <div class="home-feature-icon">
+                ⏱️
+            </div>
+
+            <div>
+
+                <h2>
+                    Tempo de prova
+                </h2>
+
+                <p>
+                    Acompanhe o tempo utilizado durante seus simulados.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ========================================================
+         3. ÁREA DO USUÁRIO LOGADO
+         ======================================================== -->
+
+    {% if user.is_authenticated %}
+
+    <section class="home-dashboard">
+
+        <div class="home-section-title">
+
+            <span>
+                Seu espaço
+            </span>
+
+            <h2>
+                Continue seus estudos
+            </h2>
+
+            <p>
+                Acesse rapidamente os recursos da sua conta.
+            </p>
+
+        </div>
+
+
+        <div class="home-dashboard-grid">
+
+
+            <!-- ==================================================
+                 SIMULADOS
+                 ================================================== -->
+
+            <a
+                href="{% url 'simulados:lista' %}"
+                class="home-dashboard-card"
+            >
+
+                <div class="dashboard-card-icon">
+                    🚀
+                </div>
+
+                <div>
+
+                    <h3>
+                        Simulados
+                    </h3>
+
+                    <p>
+                        Escolha uma prova e comece a responder.
+                    </p>
+
+                    <span class="dashboard-link">
+                        Ver simulados →
+                    </span>
+
+                </div>
+
+            </a>
+
+
+            <!-- ==================================================
+                 HISTÓRICO
+                 ================================================== -->
+
+            <a
+                href="{% url 'simulados:historico' %}"
+                class="home-dashboard-card"
+            >
+
+                <div class="dashboard-card-icon">
+                    📚
+                </div>
+
+                <div>
+
+                    <h3>
+                        Meus simulados
+                    </h3>
+
+                    <p>
+                        Consulte suas provas iniciadas e seus resultados.
+                    </p>
+
+                    <span class="dashboard-link">
+                        Ver histórico →
+                    </span>
+
+                </div>
+
+            </a>
+
+
+            <!-- ==================================================
+                 DESEMPENHO
+                 ================================================== -->
+
+            <a
+                href="{% url 'desempenho:dashboard' %}"
+                class="home-dashboard-card"
+            >
+
+                <div class="dashboard-card-icon">
+                    📈
+                </div>
+
+                <div>
+
+                    <h3>
+                        Meu desempenho
+                    </h3>
+
+                    <p>
+                        Veja seus resultados e acompanhe sua evolução.
+                    </p>
+
+                    <span class="dashboard-link">
+                        Ver desempenho →
+                    </span>
+
+                </div>
+
+            </a>
+
+
+        </div>
+
+    </section>
+
+    {% endif %}
+
+
+    <!-- ========================================================
+         4. CHAMADA FINAL
+         ======================================================== -->
+
+    <section class="home-final">
+
+        <div>
 
             {% if user.is_authenticated %}
 
-                <!-- Usuário logado -->
+                <h2>
+                    Continue avançando nos seus estudos.
+                </h2>
+
+                <p>
+                    Cada simulado é uma oportunidade para melhorar.
+                </p>
+
                 <a
                     href="{% url 'simulados:lista' %}"
-                    class="examix-home-primary"
+                    class="home-btn home-btn-primary"
                 >
                     🚀 Fazer um simulado
                 </a>
 
-                <a
-                    href="{% url 'simulados:historico' %}"
-                    class="examix-home-secondary"
-                >
-                    📊 Meus simulados
-                </a>
-
             {% else %}
 
-                <!-- Visitante -->
-                <a
-                    href="{% url 'usuarios:login' %}"
-                    class="examix-home-primary"
-                >
-                    🚀 Começar agora
-                </a>
+                <h2>
+                    Comece sua preparação com o Examix.
+                </h2>
+
+                <p>
+                    Crie sua conta e acompanhe sua evolução.
+                </p>
 
                 <a
                     href="{% url 'usuarios:cadastro' %}"
-                    class="examix-home-secondary"
+                    class="home-btn home-btn-primary"
                 >
-                    Criar conta
+                    Criar minha conta
                 </a>
 
             {% endif %}
 
         </div>
 
-    </div>
+    </section>
 
-</section>
 
-
-<!-- ============================================================
-     03. PAINEL DE RECURSOS
-     ============================================================ -->
-<section class="examix-home-dashboard">
-
-    <div class="examix-dashboard-item">
-
-        <div class="examix-dashboard-icon">
-            📝
-        </div>
-
-        <div>
-            <strong>Simulados</strong>
-
-            <p>
-                Resolva provas e questões
-                diretamente pela plataforma.
-            </p>
-        </div>
-
-    </div>
-
-
-    <div class="examix-dashboard-item">
-
-        <div class="examix-dashboard-icon">
-            📊
-        </div>
-
-        <div>
-            <strong>Desempenho</strong>
-
-            <p>
-                Acompanhe seus resultados
-                e sua evolução.
-            </p>
-        </div>
-
-    </div>
-
-
-    <div class="examix-dashboard-item">
-
-        <div class="examix-dashboard-icon">
-            ⏱️
-        </div>
-
-        <div>
-            <strong>Tempo</strong>
-
-            <p>
-                Acompanhe o tempo utilizado
-                durante seus simulados.
-            </p>
-        </div>
-
-    </div>
-
-</section>
-
-
-{% if not user.is_authenticated %}
-
-<!-- ============================================================
-     04. CTA PARA LOGIN
-     Aparece somente para visitantes.
-     ============================================================ -->
-<section class="examix-login-section">
-
-    <div class="examix-login-card">
-
-        <div class="examix-login-icon">
-            🔐
-        </div>
-
-        <h2>
-            Já possui uma conta?
-        </h2>
-
-        <p>
-            Entre na sua conta para acessar seus simulados
-            e acompanhar seu desempenho.
-        </p>
-
-        <div class="examix-login-buttons">
-
-            <a
-                href="{% url 'usuarios:login' %}"
-                class="examix-login-button"
-            >
-                Entrar
-            </a>
-
-            <a
-                href="{% url 'usuarios:cadastro' %}"
-                class="examix-register-button"
-            >
-                Criar conta
-            </a>
-
-        </div>
-
-    </div>
-
-</section>
-
-{% endif %}
-
-
-<!-- ============================================================
-     05. RECURSOS DO EXAMIX
-     ============================================================ -->
-<section class="examix-feature-section">
-
-    <div class="examix-feature-header">
-
-        <span class="examix-home-badge">
-            Recursos
-        </span>
-
-        <h2>
-            Tudo para melhorar seus estudos
-        </h2>
-
-        <p>
-            Uma plataforma pensada para ajudar você
-            a estudar e acompanhar seu progresso.
-        </p>
-
-    </div>
-
-
-    <div class="examix-feature-grid">
-
-        <div class="examix-feature-card">
-
-            <div class="examix-feature-icon">
-                📚
-            </div>
-
-            <h3>
-                Diversos simulados
-            </h3>
-
-            <p>
-                Acesse provas e simulados
-                disponíveis na plataforma.
-            </p>
-
-        </div>
-
-
-        <div class="examix-feature-card">
-
-            <div class="examix-feature-icon">
-                📈
-            </div>
-
-            <h3>
-                Acompanhe seu desempenho
-            </h3>
-
-            <p>
-                Veja seus resultados e acompanhe
-                sua evolução ao longo do tempo.
-            </p>
-
-        </div>
-
-
-        <div class="examix-feature-card">
-
-            <div class="examix-feature-icon">
-                ⏱️
-            </div>
-
-            <h3>
-                Controle de tempo
-            </h3>
-
-            <p>
-                Saiba quanto tempo você utiliza
-                durante seus simulados.
-            </p>
-
-        </div>
-
-    </div>
-
-</section>
-
-
-<!-- ============================================================
-     06. COMO FUNCIONA
-     ============================================================ -->
-<section class="examix-how-section">
-
-    <div class="examix-how-header">
-
-        <span class="examix-home-badge">
-            Como funciona
-        </span>
-
-        <h2>
-            Comece a estudar em poucos passos
-        </h2>
-
-    </div>
-
-
-    <div class="examix-how-steps">
-
-        <div class="examix-step">
-
-            <div class="examix-step-number">
-                01
-            </div>
-
-            <h3>
-                Crie sua conta
-            </h3>
-
-            <p>
-                Cadastre-se gratuitamente
-                na plataforma.
-            </p>
-
-        </div>
-
-
-        <div class="examix-step">
-
-            <div class="examix-step-number">
-                02
-            </div>
-
-            <h3>
-                Escolha um simulado
-            </h3>
-
-            <p>
-                Escolha uma das provas
-                disponíveis.
-            </p>
-
-        </div>
-
-
-        <div class="examix-step">
-
-            <div class="examix-step-number">
-                03
-            </div>
-
-            <h3>
-                Acompanhe seu resultado
-            </h3>
-
-            <p>
-                Veja seus acertos,
-                erros e desempenho.
-            </p>
-
-        </div>
-
-    </div>
-
-</section>
-
-
-<!-- ============================================================
-     07. CTA FINAL
-     ============================================================ -->
-<section class="examix-final-section">
-
-    <div class="examix-final-card">
-
-        {% if user.is_authenticated %}
-
-            <div class="examix-final-content">
-
-                <span class="examix-home-badge">
-                    Continue estudando
-                </span>
-
-                <h2>
-                    Pronto para o próximo simulado?
-                </h2>
-
-                <p>
-                    Continue praticando e acompanhe
-                    sua evolução no Examix.
-                </p>
-
-                <a
-                    href="{% url 'simulados:lista' %}"
-                    class="examix-final-button"
-                >
-                    🚀 Fazer simulado
-                </a>
-
-            </div>
-
-        {% else %}
-
-            <div class="examix-final-content">
-
-                <span class="examix-home-badge">
-                    Comece agora
-                </span>
-
-                <h2>
-                    Prepare-se para seus próximos desafios.
-                </h2>
-
-                <p>
-                    Crie sua conta e comece a estudar
-                    com o Examix.
-                </p>
-
-                <a
-                    href="{% url 'usuarios:cadastro' %}"
-                    class="examix-final-button"
-                >
-                    Criar minha conta
-                </a>
-
-            </div>
-
-        {% endif %}
-
-    </div>
-
-</section>
+</div>
 
 {% endblock %}

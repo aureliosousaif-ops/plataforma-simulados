@@ -9,7 +9,7 @@
 <div class="container py-4">
 
     <!-- =========================================
-         CABEÇALHO DO SIMULADO
+         01. CABEÇALHO DO SIMULADO
          ========================================= -->
 
     <div class="examix-responder-header d-flex justify-content-between align-items-start mb-4">
@@ -50,7 +50,7 @@
 
 
     <!-- =========================================
-         CARD DA QUESTÃO
+         02. CARD DA QUESTÃO
          ========================================= -->
 
     <div class="card border-0 shadow-sm">
@@ -59,7 +59,7 @@
 
 
             <!-- =====================================
-                 NÚMERO DA QUESTÃO
+                 03. NÚMERO DA QUESTÃO
                  ===================================== -->
 
             <div class="mb-4">
@@ -74,17 +74,14 @@
 
 
             <!-- =====================================
-                 ENUNCIADO
+                 04. ENUNCIADO
                  ===================================== -->
 
             <div class="examix-question-text mb-4">
 
                 {% if resposta.questao.enunciado %}
 
-                    <!--
-                        O campo correto do modelo Questao
-                        é "enunciado".
-                    -->
+                    <!-- Mostra somente o enunciado -->
                     {{ resposta.questao.enunciado|linebreaks }}
 
                 {% else %}
@@ -102,17 +99,17 @@
 
 
             <!-- =====================================
-                 FORMULÁRIO DE RESPOSTA
+                 05. FORMULÁRIO DE RESPOSTA
                  ===================================== -->
 
             <form method="post">
 
-                <!-- Proteção CSRF do Django -->
+                <!-- Proteção CSRF -->
                 {% csrf_token %}
 
 
                 <!-- =================================
-                     ALTERNATIVAS
+                     06. ALTERNATIVAS
                      ================================= -->
 
                 <div class="examix-alternativas">
@@ -137,7 +134,7 @@
                             >
 
 
-                            <!-- Letra da alternativa -->
+                            <!-- Letra -->
                             <strong>
 
                                 {{ alternativa.letra }})
@@ -145,7 +142,7 @@
                             </strong>
 
 
-                            <!-- Texto da alternativa -->
+                            <!-- Texto -->
                             <span class="examix-alternativa-texto">
 
                                 {{ alternativa.texto|linebreaksbr }}
@@ -153,7 +150,6 @@
                             </span>
 
                         </label>
-
 
                     {% empty %}
 
@@ -170,7 +166,7 @@
 
 
                 <!-- =================================
-                     BOTÕES DE NAVEGAÇÃO
+                     07. BOTÕES DE NAVEGAÇÃO
                      ================================= -->
 
                 <div class="d-flex justify-content-between align-items-center mt-4">
@@ -195,7 +191,7 @@
 
                     {% else %}
 
-                        <!-- Mantém o espaço do botão -->
+                        <!-- Mantém o espaço -->
                         <span></span>
 
                     {% endif %}
@@ -203,7 +199,7 @@
 
 
                     <!-- =================================
-                         BOTÃO PRÓXIMA / FINALIZAR
+                         08. PRÓXIMA QUESTÃO
                          ================================= -->
 
                     {% if proxima_resposta %}
@@ -215,11 +211,19 @@
                             class="btn btn-primary"
                         >
 
-                            Próxima →
+                            ✓ Confirmar resposta e ir para próxima →
 
                         </button>
 
+
                     {% else %}
+
+
+                        <!-- =================================
+                             09. FINALIZAR PROVA
+                             APARECE SOMENTE NA ÚLTIMA
+                             QUESTÃO
+                             ================================= -->
 
                         <button
                             type="submit"
@@ -229,12 +233,12 @@
 
                             onclick="
                                 return confirm(
-                                    'Deseja finalizar o simulado?'
+                                    'Deseja finalizar a prova?'
                                 );
                             "
                         >
 
-                            Finalizar simulado
+                            ✓ Confirmar e finalizar prova
 
                         </button>
 
@@ -250,11 +254,10 @@
 
 
     <!-- =========================================
-         NAVEGAÇÃO RÁPIDA DAS QUESTÕES
+         10. NAVEGAÇÃO RÁPIDA DAS QUESTÕES
          ========================================= -->
 
     <div class="mt-4">
-
 
         <!-- Título -->
         <h6 class="fw-bold mb-3">
@@ -264,7 +267,7 @@
         </h6>
 
 
-        <!-- Números -->
+        <!-- Números das questões -->
         <div class="examix-question-navigation">
 
             {% for item in respostas %}
@@ -294,7 +297,7 @@
 
 
 <!-- =============================================
-     JAVASCRIPT DO CRONÔMETRO
+     11. JAVASCRIPT DO CRONÔMETRO
      ============================================= -->
 
 <script>
@@ -320,7 +323,7 @@
 
 
         /*
-         * Calcula a diferença em segundos.
+         * Diferença em segundos.
          */
         const diferenca = Math.max(
             0,
@@ -353,7 +356,7 @@
 
 
         /*
-         * Monta o formato HH:MM:SS.
+         * Monta HH:MM:SS.
          */
         const formato =
             String(horas).padStart(2, '0') +
@@ -364,7 +367,7 @@
 
 
         /*
-         * Atualiza o cronômetro na tela.
+         * Atualiza o elemento.
          */
         const cronometro = document.getElementById(
             'cronometro'

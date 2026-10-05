@@ -35,24 +35,12 @@
     >
 
 
-    <!-- =====================================================
-         03. CSS PRINCIPAL DO EXAMIX
-         ===================================================== -->
+        <!-- 03. CSS PRINCIPAL -->
+        <link rel="stylesheet" href="{% static 'css/examix.css' %}">
 
-    <link
-        rel="stylesheet"
-        href="{% static 'css/examix.css' %}"
-    >
-
-
-    <!-- =====================================================
-         04. CSS ESPECÍFICO DA PÁGINA
-         ===================================================== -->
-
-    {% block extra_css %}
-    {% endblock %}
-
-</head>
+        <!-- 04. CSS ESPECÍFICO DA PÁGINA -->
+        {% block extra_css %}{% endblock %}
+        </head>
 
 
 <body>

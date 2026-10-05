@@ -1,3 +1,7 @@
+# ==========================================
+# IMPORTAÇÕES
+# ==========================================
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -6,6 +10,10 @@ from provas.models import Prova, Alternativa
 
 from .models import RespostaSimulado, Simulado
 
+
+# ==========================================
+# LISTA DE SIMULADOS
+# ==========================================
 
 def lista(request):
     """
@@ -31,6 +39,10 @@ def lista(request):
         }
     )
 
+
+# ==========================================
+# INICIAR SIMULADO
+# ==========================================
 
 def iniciar(request, prova_id):
     """
@@ -128,11 +140,19 @@ def iniciar(request, prova_id):
     )
 
 
+# ==========================================
+# RESPONDER SIMULADO
+# ==========================================
+
 @login_required
 def responder(request, simulado_id):
     """
     Exibe uma questão e salva a resposta do aluno.
     """
+
+    # ==========================================
+    # BUSCA O SIMULADO
+    # ==========================================
 
     # Busca somente o simulado pertencente ao
     # usuário atualmente logado.
@@ -142,6 +162,10 @@ def responder(request, simulado_id):
         usuario=request.user
     )
 
+    # ==========================================
+    # VERIFICA SE JÁ FOI FINALIZADO
+    # ==========================================
+
     # Se o simulado já foi finalizado,
     # mostra diretamente o resultado.
     if simulado.status == 'finalizado':
@@ -150,6 +174,10 @@ def responder(request, simulado_id):
             'simulados:resultado',
             simulado_id=simulado.id
         )
+
+    # ==========================================
+    # BUSCA AS RESPOSTAS
+    # ==========================================
 
     # Busca todas as respostas do simulado.
     respostas = list(
@@ -165,6 +193,10 @@ def responder(request, simulado_id):
             'questao__numero'
         )
     )
+
+    # ==========================================
+    # VERIFICA SE EXISTEM QUESTÕES
+    # ==========================================
 
     # Caso não existam questões,
     # volta para a lista de provas.
@@ -310,6 +342,7 @@ def responder(request, simulado_id):
 
         if acao == 'anterior':
 
+            # Só volta se não estiver na primeira questão.
             if numero > 1:
 
                 return redirect(
@@ -317,6 +350,8 @@ def responder(request, simulado_id):
                     f'?questao={numero - 1}'
                 )
 
+            # Se estiver na primeira,
+            # continua na primeira questão.
             return redirect(
                 f'/simulados/{simulado.id}/responder/'
                 f'?questao=1'
@@ -336,12 +371,44 @@ def responder(request, simulado_id):
         # PRÓXIMA QUESTÃO
         # ==========================================
 
-        if numero < len(respostas):
+        if acao == 'proxima':
 
+            # Só avança se existir uma próxima questão.
+            if numero < len(respostas):
+
+                return redirect(
+                    f'/simulados/{simulado.id}/responder/'
+                    f'?questao={numero + 1}'
+                )
+
+            # Se já estiver na última questão,
+            # permanece nela.
             return redirect(
                 f'/simulados/{simulado.id}/responder/'
-                f'?questao={numero + 1}'
+                f'?questao={numero}'
             )
+
+    # ==========================================
+    # NAVEGAÇÃO ENTRE QUESTÕES
+    # ==========================================
+
+    # Questão anterior.
+    resposta_anterior = None
+
+    if numero > 1:
+
+        resposta_anterior = respostas[
+            numero - 2
+        ]
+
+    # Próxima questão.
+    proxima_resposta = None
+
+    if numero < len(respostas):
+
+        proxima_resposta = respostas[
+            numero
+        ]
 
     # ==========================================
     # QUESTÕES NÃO RESPONDIDAS
@@ -362,16 +429,39 @@ def responder(request, simulado_id):
         request,
         'simulados/responder.html',
         {
+            # Simulado atual.
             'simulado': simulado,
+
+            # Questão atual.
             'resposta': resposta_atual,
+
+            # Todas as questões.
             'respostas': respostas,
+
+            # Número atual.
             'numero_atual': numero,
+
+            # Total de questões.
             'total_questoes': len(respostas),
+
+            # Tempo total do simulado.
             'tempo_decorrido': tempo_decorrido,
+
+            # Questões ainda não respondidas.
             'nao_respondidas': nao_respondidas,
+
+            # Questão anterior.
+            'resposta_anterior': resposta_anterior,
+
+            # Próxima questão.
+            'proxima_resposta': proxima_resposta,
         }
     )
 
+
+# ==========================================
+# FINALIZAR SIMULADO
+# ==========================================
 
 def finalizar_simulado(simulado):
     """
@@ -381,8 +471,10 @@ def finalizar_simulado(simulado):
     visualizadas, mas não foram respondidas.
     """
 
-    # Se já estiver finalizado,
-    # simplesmente mostra o resultado.
+    # ==========================================
+    # VERIFICA SE JÁ FOI FINALIZADO
+    # ==========================================
+
     if simulado.status == 'finalizado':
 
         return redirect(
@@ -526,6 +618,10 @@ def finalizar_simulado(simulado):
     )
 
 
+# ==========================================
+# FINALIZAR PELA URL
+# ==========================================
+
 @login_required
 def finalizar(request, simulado_id):
     """
@@ -553,6 +649,10 @@ def finalizar(request, simulado_id):
     )
 
 
+# ==========================================
+# RESULTADO
+# ==========================================
+
 @login_required
 def resultado(request, simulado_id):
     """
@@ -567,6 +667,10 @@ def resultado(request, simulado_id):
         usuario=request.user,
         status='finalizado'
     )
+
+    # ==========================================
+    # BUSCA AS RESPOSTAS
+    # ==========================================
 
     # Busca todas as respostas.
     respostas = list(
@@ -711,6 +815,10 @@ def resultado(request, simulado_id):
     )
 
 
+# ==========================================
+# HISTÓRICO
+# ==========================================
+
 @login_required
 def historico(request):
     """
@@ -762,8 +870,8 @@ def historico(request):
         # Tempo salvo no banco.
         tempo_total = simulado.tempo_total_segundos
 
-        # Para simulados em andamento, o tempo
-        # salvo pode ainda ser zero.
+        # Para simulados em andamento, calcula
+        # o tempo atual.
         if (
             simulado.status != 'finalizado'
             and simulado.iniciado_em

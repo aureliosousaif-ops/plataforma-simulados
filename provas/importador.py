@@ -804,7 +804,7 @@ def separar_material_apos_alternativa(texto):
         texto_apoio
     )
     
-    # ============================================================
+# ============================================================
 # 9. SEPARAR QUESTÕES GENERICAMENTE
 # ============================================================
 
@@ -812,37 +812,25 @@ def separar_questoes_generico(texto):
     """
     Separa questões de qualquer prova.
 
-    Pode trabalhar com:
-
-        10 questões
-        20 questões
-        40 questões
-        45 questões
-        50 questões
-        90 questões
-        etc.
-
-    Também corrige o problema encontrado no EXATO
-    em que o início de um novo texto de apoio era
-    colocado dentro da alternativa E.
+    O enunciado fica separado das alternativas.
+    As alternativas A, B, C, D e E não são mais
+    armazenadas dentro do campo enunciado.
     """
 
     # --------------------------------------------------------
-    # Divide o texto em linhas.
+    # 1. Divide o texto em linhas.
     # --------------------------------------------------------
 
     linhas = texto.splitlines()
 
     # --------------------------------------------------------
-    # Localiza as questões.
+    # 2. Localiza as questões.
     # --------------------------------------------------------
 
-    marcadores = encontrar_marcadores_questoes(
-        texto
-    )
+    marcadores = encontrar_marcadores_questoes(texto)
 
     # --------------------------------------------------------
-    # Seleciona o bloco principal.
+    # 3. Seleciona o bloco principal.
     # --------------------------------------------------------
 
     marcadores = selecionar_bloco_principal(
@@ -852,35 +840,27 @@ def separar_questoes_generico(texto):
     questoes = []
 
     # --------------------------------------------------------
-    # Se nenhuma questão foi encontrada.
+    # 4. Se nenhuma questão foi encontrada.
     # --------------------------------------------------------
 
     if not marcadores:
         return questoes
 
     # ========================================================
-    # PERCORRE AS QUESTÕES
+    # 5. PERCORRER AS QUESTÕES
     # ========================================================
 
-    for indice, marcador in enumerate(
-        marcadores
-    ):
+    for indice, marcador in enumerate(marcadores):
 
-        numero = marcador[
-            "numero"
-        ]
+        numero = marcador["numero"]
 
-        linha_inicio = marcador[
-            "linha"
-        ]
+        linha_inicio = marcador["linha"]
 
         # ----------------------------------------------------
         # Define o final da questão.
         # ----------------------------------------------------
 
-        if indice + 1 < len(
-            marcadores
-        ):
+        if indice + 1 < len(marcadores):
 
             linha_fim = (
                 marcadores[
@@ -890,12 +870,10 @@ def separar_questoes_generico(texto):
 
         else:
 
-            linha_fim = len(
-                linhas
-            )
+            linha_fim = len(linhas)
 
         # ----------------------------------------------------
-        # Extrai o conteúdo.
+        # Extrai o conteúdo bruto da questão.
         # ----------------------------------------------------
 
         bloco = linhas[
@@ -908,7 +886,7 @@ def separar_questoes_generico(texto):
         ).strip()
 
         # ----------------------------------------------------
-        # Limpa o conteúdo.
+        # Limpeza inicial.
         # ----------------------------------------------------
 
         conteudo = limpar_conteudo_questao(
@@ -924,6 +902,169 @@ def separar_questoes_generico(texto):
                 conteudo
             )
         )
+
+        # ----------------------------------------------------
+        # Inicializa o enunciado.
+        # ----------------------------------------------------
+
+        enunciado = conteudo
+
+        # ----------------------------------------------------
+        # Se encontrou 5 alternativas, precisamos remover
+        # A, B, C, D e E do enunciado.
+        #
+        # O parser procura novamente os marcadores para
+        # descobrir onde começa a primeira alternativa.
+        # ----------------------------------------------------
+
+        if len(alternativas) == 5:
+
+            linhas_conteudo = (
+                conteudo.splitlines()
+            )
+
+            marcadores_alternativas = []
+
+            # ------------------------------------------------
+            # Localiza possíveis marcadores.
+            # ------------------------------------------------
+
+            for indice_linha, linha in enumerate(
+                linhas_conteudo
+            ):
+
+                linha_limpa = linha.strip()
+
+                if not linha_limpa:
+                    continue
+
+                # --------------------------------------------
+                # Marcador sozinho:
+                #
+                # A
+                # B
+                # C
+                # D
+                # E
+                # --------------------------------------------
+
+                resultado = re.match(
+                    r"^\(?([A-E])\)?[\.\:\-]?$",
+                    linha_limpa
+                )
+
+                if resultado:
+
+                    marcadores_alternativas.append(
+                        {
+                            "letra": (
+                                resultado.group(1).upper()
+                            ),
+                            "linha": indice_linha,
+                        }
+                    )
+
+                    continue
+
+                # --------------------------------------------
+                # Marcador junto do texto.
+                #
+                # Exemplo:
+                # B identificar contextos...
+                # --------------------------------------------
+
+                resultado = re.match(
+                    r"^\(?([A-E])\)?(?:[\.\:\-])?\s+(.+)$",
+                    linha_limpa
+                )
+
+                if resultado:
+
+                    marcadores_alternativas.append(
+                        {
+                            "letra": (
+                                resultado.group(1).upper()
+                            ),
+                            "linha": indice_linha,
+                        }
+                    )
+
+            # ------------------------------------------------
+            # Procura uma sequência A-B-C-D-E.
+            # ------------------------------------------------
+
+            sequencia = None
+
+            for indice_marcador, marcador_alt in enumerate(
+                marcadores_alternativas
+            ):
+
+                if marcador_alt["letra"] != "A":
+                    continue
+
+                candidatos = [
+                    marcador_alt
+                ]
+
+                proxima_letra = "B"
+
+                for proximo in (
+                    marcadores_alternativas[
+                        indice_marcador + 1:
+                    ]
+                ):
+
+                    if proximo["letra"] != proxima_letra:
+                        continue
+
+                    candidatos.append(
+                        proximo
+                    )
+
+                    if proxima_letra == "B":
+
+                        proxima_letra = "C"
+
+                    elif proxima_letra == "C":
+
+                        proxima_letra = "D"
+
+                    elif proxima_letra == "D":
+
+                        proxima_letra = "E"
+
+                    elif proxima_letra == "E":
+
+                        break
+
+                if len(candidatos) == 5:
+
+                    sequencia = candidatos
+
+                    break
+
+            # ------------------------------------------------
+            # Se encontrou A-B-C-D-E, tudo antes do A
+            # será considerado o enunciado.
+            # ------------------------------------------------
+
+            if sequencia:
+
+                primeira_alternativa = (
+                    sequencia[0]["linha"]
+                )
+
+                enunciado = "\n".join(
+                    linhas_conteudo[
+                        :primeira_alternativa
+                    ]
+                ).strip()
+
+                enunciado = (
+                    limpar_conteudo_questao(
+                        enunciado
+                    )
+                )
 
         # ----------------------------------------------------
         # Guarda temporariamente texto de apoio.
@@ -955,7 +1096,10 @@ def separar_questoes_generico(texto):
                 texto_e
             )
 
+            # ------------------------------------------------
             # Atualiza a alternativa E.
+            # ------------------------------------------------
+
             alternativa[
                 "texto"
             ] = limpar_texto_alternativa(
@@ -970,7 +1114,7 @@ def separar_questoes_generico(texto):
 
         questao = {
             "numero": numero,
-            "texto": conteudo,
+            "texto": enunciado,
             "alternativas": alternativas,
             "_texto_apoio": texto_apoio,
         }
@@ -980,21 +1124,18 @@ def separar_questoes_generico(texto):
         )
 
     # ========================================================
-    # TRANSFERIR TEXTOS DE APOIO
+    # 6. TRANSFERIR TEXTOS DE APOIO
     # ========================================================
 
     for indice, questao in enumerate(
         questoes
     ):
 
-        # Pega o texto temporário.
         texto_apoio = questao.pop(
             "_texto_apoio",
             ""
         )
 
-        # Se não existe texto de apoio,
-        # não há nada para fazer.
         if not texto_apoio:
             continue
 
@@ -1016,8 +1157,6 @@ def separar_questoes_generico(texto):
                 ]
             )
 
-            # Coloca o texto de apoio no início
-            # da próxima questão.
             proxima_questao[
                 "texto"
             ] = (

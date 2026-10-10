@@ -28,6 +28,25 @@ Thumbs.db
 
 # Backup do banco de dados
 dados_backup.json
+backup_antes_limpar_usuarios.json
+db.sqlite3.backup
 
 # Arquivos estáticos gerados pelo collectstatic
 staticfiles/
+
+
+# Ambiente virtual
+venv/
+.venv/
+env/
+
+# Variáveis de ambiente e segredos
+.env
+.env.*
+
+# Banco de dados local
+db.sqlite3
+
+# Arquivos Python
+__pycache__/
+*.py[cod]

@@ -28,7 +28,9 @@
 # ============================================================
 
 import re
+import unicodedata
 
+from django.db import transaction
 from pypdf import PdfReader
 
 
@@ -178,7 +180,7 @@ def encontrar_marcadores_questoes(texto):
 
         # ----------------------------------------------------
         # Normaliza apenas o necessário para reconhecer
-        # "QUESTÃO".
+        # marcadores em português, inglês e espanhol.
         # ----------------------------------------------------
 
         linha_busca = (
@@ -205,6 +207,14 @@ def encontrar_marcadores_questoes(texto):
                 "QUESTÃƒO",
                 "QUESTAO"
             )
+            .replace(
+                "QUESTION",
+                "QUESTAO"
+            )
+            .replace(
+                "PREGUNTA",
+                "QUESTAO"
+            )
         )
 
         # ----------------------------------------------------
@@ -226,8 +236,8 @@ def encontrar_marcadores_questoes(texto):
 
         if resultado is None:
 
-            resultado = re.search(
-                r"\bQUESTAO\s*0*(\d{1,3})\b",
+            resultado = re.match(
+                r"^\s*QUESTAO\s*0*(\d{1,3})\b",
                 linha_busca
             )
 
@@ -254,6 +264,30 @@ def encontrar_marcadores_questoes(texto):
 # ============================================================
 # 5. SELECIONAR BLOCO PRINCIPAL
 # ============================================================
+
+def _dividir_blocos(marcadores):
+    blocos = []
+
+    if not marcadores:
+        return blocos
+
+    bloco_atual = [marcadores[0]]
+
+    for marcador in marcadores[1:]:
+        numero_anterior = bloco_atual[-1]['numero']
+        numero_atual = marcador['numero']
+
+        if numero_atual == numero_anterior + 1:
+            bloco_atual.append(marcador)
+        else:
+            blocos.append(bloco_atual)
+            bloco_atual = [marcador]
+
+    if bloco_atual:
+        blocos.append(bloco_atual)
+
+    return blocos
+
 
 def selecionar_bloco_principal(marcadores):
     """
@@ -287,49 +321,7 @@ def selecionar_bloco_principal(marcadores):
     # 2. Divide os marcadores em blocos contínuos.
     # --------------------------------------------------------
 
-    blocos = []
-
-    bloco_atual = [
-        marcadores[0]
-    ]
-
-    for marcador in marcadores[1:]:
-
-        numero_anterior = (
-            bloco_atual[-1]["numero"]
-        )
-
-        numero_atual = (
-            marcador["numero"]
-        )
-
-        # Se a numeração continuar normalmente,
-        # mantém no mesmo bloco.
-        if numero_atual == (
-            numero_anterior + 1
-        ):
-
-            bloco_atual.append(
-                marcador
-            )
-
-        else:
-
-            # A numeração reiniciou.
-            blocos.append(
-                bloco_atual
-            )
-
-            bloco_atual = [
-                marcador
-            ]
-
-    # Adiciona o último bloco.
-    if bloco_atual:
-
-        blocos.append(
-            bloco_atual
-        )
+    blocos = _dividir_blocos(marcadores)
 
     # --------------------------------------------------------
     # 3. Estrutura especial encontrada no ENEM.
@@ -402,6 +394,32 @@ def selecionar_bloco_principal(marcadores):
     )
 
     return maior_bloco
+
+
+def selecionar_blocos_enem(marcadores):
+    """
+    Preserva as duas seções de língua estrangeira do ENEM.
+
+    A estrutura esperada é um primeiro bloco 1–5 e um segundo
+    bloco que reinicia em 1 e segue até a questão 90. Os cinco
+    números repetidos pertencem a idiomas diferentes.
+    """
+
+    blocos = _dividir_blocos(marcadores)
+
+    if len(blocos) >= 2:
+        primeiro = [item['numero'] for item in blocos[0]]
+        segundo = [item['numero'] for item in blocos[1]]
+
+        if (
+            primeiro == [1, 2, 3, 4, 5]
+            and segundo
+            and segundo[0] == 1
+            and 6 in segundo
+        ):
+            return blocos[0] + blocos[1]
+
+    return selecionar_bloco_principal(marcadores)
 
 
 # ============================================================
@@ -759,7 +777,17 @@ def separar_material_apos_alternativa(texto):
         "Leia os Textos",
         "Leia o texto",
         "Leia os textos",
+        "Read the Text",
+        "Read the Texts",
+        "Read the text",
+        "Read the texts",
+        "Lee el Texto",
+        "Lee los Textos",
+        "Lee el texto",
+        "Lee los textos",
         "Fonte:",
+        "Source:",
+        "Fuente:",
     ]
 
     posicoes = []
@@ -803,12 +831,53 @@ def separar_material_apos_alternativa(texto):
         texto_alternativa,
         texto_apoio
     )
-    
+
+
+def detectar_idioma_secao(linhas, linha_questao):
+    """
+    Detecta o idioma da seção ENEM que contém a questão.
+
+    A classificação considera apenas o cabeçalho oficial da seção,
+    nunca palavras isoladas encontradas no enunciado.
+    """
+
+    for linha in reversed(linhas[:linha_questao + 1]):
+        normalizada = unicodedata.normalize(
+            'NFKD',
+            linha.upper()
+        ).encode(
+            'ASCII',
+            'ignore'
+        ).decode('ASCII')
+
+        normalizada = re.sub(
+            r'\s+',
+            ' ',
+            normalizada
+        ).strip()
+
+        if re.search(
+            r'\bOPCAO\s+INGLES\b',
+            normalizada
+        ):
+            return 'Inglês'
+
+        if re.search(
+            r'\bOPCAO\s+ESPANHOL\b',
+            normalizada
+        ):
+            return 'Espanhol'
+
+    return None
+
 # ============================================================
 # 9. SEPARAR QUESTÕES GENERICAMENTE
 # ============================================================
 
-def separar_questoes_generico(texto):
+def separar_questoes_generico(
+    texto,
+    preservar_blocos_repetidos=False
+):
     """
     Separa questões de qualquer prova.
 
@@ -833,9 +902,14 @@ def separar_questoes_generico(texto):
     # 3. Seleciona o bloco principal.
     # --------------------------------------------------------
 
-    marcadores = selecionar_bloco_principal(
-        marcadores
-    )
+    if preservar_blocos_repetidos:
+        marcadores = selecionar_blocos_enem(
+            marcadores
+        )
+    else:
+        marcadores = selecionar_bloco_principal(
+            marcadores
+        )
 
     questoes = []
 
@@ -1117,6 +1191,14 @@ def separar_questoes_generico(texto):
             "texto": enunciado,
             "alternativas": alternativas,
             "_texto_apoio": texto_apoio,
+            "_idioma": (
+                detectar_idioma_secao(
+                    linhas,
+                    linha_inicio
+                )
+                if numero in range(1, 6)
+                else None
+            ),
         }
 
         questoes.append(
@@ -1171,16 +1253,6 @@ def separar_questoes_generico(texto):
 
     return questoes
 
-    # ========================================================
-    # LIMPEZA FINAL DAS ALTERNATIVAS
-    # ========================================================
-
-    for questao in questoes:
-        for alternativa in questao["alternativas"]:
-            alternativa["texto"] = limpar_texto_alternativa(
-                alternativa["texto"]
-            )
-
 
 # ============================================================
 # 10. COMPATIBILIDADE COM O ENEM
@@ -1194,7 +1266,8 @@ def separar_questoes_enem(texto):
     """
 
     return separar_questoes_generico(
-        texto
+        texto,
+        preservar_blocos_repetidos=True
     )
 
 
@@ -1202,7 +1275,33 @@ def separar_questoes_enem(texto):
 # 11. EXTRAIR GABARITO GENERICAMENTE
 # ============================================================
 
-def extrair_gabarito_generico(texto):
+def _idioma_gabarito_na_linha(linhas, indice_linha):
+    for linha in reversed(linhas[:indice_linha + 1]):
+        normalizada = unicodedata.normalize(
+            'NFKD',
+            linha.upper()
+        ).encode(
+            'ASCII',
+            'ignore'
+        ).decode('ASCII')
+        normalizada = re.sub(r'\s+', ' ', normalizada).strip()
+
+        if re.search(r'\bOPCAO\s+INGLES\b', normalizada):
+            return 'Inglês'
+        if re.search(r'\bOPCAO\s+ESPANHOL\b', normalizada):
+            return 'Espanhol'
+        if normalizada in {'INGLES', 'LINGUA INGLESA'}:
+            return 'Inglês'
+        if normalizada in {'ESPANHOL', 'LINGUA ESPANHOLA'}:
+            return 'Espanhol'
+
+    return None
+
+
+def extrair_gabarito_generico(
+    texto,
+    preservar_idiomas=False
+):
     """
     Tenta localizar respostas no formato:
 
@@ -1225,11 +1324,35 @@ def extrair_gabarito_generico(texto):
     linhas = texto.splitlines()
 
     # Percorre todas as linhas.
-    for linha in linhas:
+    for indice_linha, linha in enumerate(linhas):
 
         linha_limpa = (
             linha.strip()
         )
+
+        # O gabarito oficial pode trazer as duas opções na mesma
+        # linha: número, resposta de Inglês e resposta de Espanhol.
+        # As duas colunas precisam ser preservadas separadamente.
+        resultado_duplo = re.match(
+            r"^0*(\d{1,2})\s*[\-\.\:\)]?\s*"
+            r"([A-E])\s+([A-E])\b",
+            linha_limpa,
+            re.IGNORECASE
+        )
+
+        if (
+            preservar_idiomas
+            and resultado_duplo
+            and int(resultado_duplo.group(1)) in range(1, 6)
+        ):
+            numero_duplo = int(resultado_duplo.group(1))
+            gabarito[('Inglês', numero_duplo)] = (
+                resultado_duplo.group(2).upper()
+            )
+            gabarito[('Espanhol', numero_duplo)] = (
+                resultado_duplo.group(3).upper()
+            )
+            continue
 
         # Procura número + letra.
         resultado = re.match(
@@ -1250,9 +1373,29 @@ def extrair_gabarito_generico(texto):
                 .upper()
             )
 
-            gabarito[
-                numero
-            ] = letra
+            idioma = None
+            if preservar_idiomas and numero in range(1, 6):
+                idioma = _idioma_gabarito_na_linha(
+                    linhas,
+                    indice_linha
+                )
+
+                # Alguns extratores removem os cabeçalhos do gabarito.
+                # Quando o mesmo número aparece novamente, preserva a
+                # ordem das duas opções do ENEM em vez de sobrescrever.
+                if idioma is None:
+                    if ('Inglês', numero) not in gabarito:
+                        idioma = 'Inglês'
+                    elif ('Espanhol', numero) not in gabarito:
+                        idioma = 'Espanhol'
+
+            chave = (
+                (idioma, numero)
+                if idioma
+                else numero
+            )
+
+            gabarito[chave] = letra
 
     return gabarito
 
@@ -1269,8 +1412,19 @@ def extrair_gabarito_enem(texto):
     """
 
     return extrair_gabarito_generico(
-        texto
+        texto,
+        preservar_idiomas=True
     )
+
+
+def obter_resposta_gabarito(questao, gabarito):
+    numero = questao['numero']
+    idioma = questao.get('_idioma') or questao.get('idioma')
+
+    if idioma and numero in range(1, 6):
+        return gabarito.get((idioma, numero))
+
+    return gabarito.get(numero)
 
 
 # ============================================================
@@ -1289,6 +1443,11 @@ def validar_questoes_com_gabarito(
     """
 
     erros = []
+
+    if not questoes:
+        erros.append(
+            'Nenhuma questão foi encontrada no PDF da prova.'
+        )
 
     # Percorre todas as questões.
     for questao in questoes:
@@ -1321,7 +1480,12 @@ def validar_questoes_com_gabarito(
         # Verifica se existe resposta no gabarito.
         # ----------------------------------------------------
 
-        if numero not in gabarito:
+        resposta = obter_resposta_gabarito(
+            questao,
+            gabarito
+        )
+
+        if resposta is None:
 
             erros.append(
                 (
@@ -1382,11 +1546,11 @@ def preparar_questoes(
             )
 
             # Verifica se é a resposta correta.
-            correta = (
-                gabarito.get(
-                    numero
-                ) == letra
+            resposta = obter_resposta_gabarito(
+                questao,
+                gabarito
             )
+            correta = resposta == letra
 
             alternativas.append(
                 {
@@ -1403,6 +1567,9 @@ def preparar_questoes(
                     "texto"
                 ],
                 "alternativas": alternativas,
+                "idioma": questao.get(
+                    "_idioma"
+                ),
             }
         )
 
@@ -1413,6 +1580,7 @@ def preparar_questoes(
 # 15. IMPORTAR QUESTÕES NO BANCO
 # ============================================================
 
+@transaction.atomic
 def importar_questoes_no_banco(
     prova,
     questoes,
@@ -1428,12 +1596,19 @@ def importar_questoes_no_banco(
 
     # Importa os modelos somente quando a função for utilizada.
     from .models import (
-        Questao,
         Alternativa,
+        Disciplina,
+        Questao,
     )
 
     if gabarito is None:
         gabarito = {}
+
+    # Permite reprocessar uma prova que ainda não possui
+    # simulados sem deixar questões antigas duplicadas.
+    Questao.objects.filter(
+        prova=prova
+    ).delete()
 
     quantidade_importada = 0
 
@@ -1451,6 +1626,14 @@ def importar_questoes_no_banco(
             "texto"
         ]
 
+        idioma = questao_data.get('idioma')
+        if not (
+            prova.tipo == 'enem'
+            and numero in range(1, 6)
+            and idioma in {'Inglês', 'Espanhol'}
+        ):
+            idioma = None
+
         # ----------------------------------------------------
         # Cria os dados básicos da questão.
         # ----------------------------------------------------
@@ -1459,6 +1642,7 @@ def importar_questoes_no_banco(
             "prova": prova,
             "numero": numero,
             "enunciado": enunciado,
+            "idioma": idioma,
         }
 
         # ----------------------------------------------------
@@ -1470,24 +1654,19 @@ def importar_questoes_no_banco(
             for campo in Questao._meta.fields
         }
 
-        if (
-            "disciplina"
-            in campos_questao
-        ):
+        if "disciplina" in campos_questao:
 
-            # Não força uma disciplina específica.
-            #
-            # A prova pode ser:
-            #
-            # ENEM
-            # EXATO
-            # vestibular
-            # concurso
-            # etc.
+            nome_disciplina = (
+                idioma
+                if idioma
+                else 'Não classificada'
+            )
 
-            dados_questao[
-                "disciplina"
-            ] = ""
+            disciplina, _ = Disciplina.objects.get_or_create(
+                nome=nome_disciplina
+            )
+
+            dados_questao['disciplina'] = disciplina
 
         # ----------------------------------------------------
         # Cria a questão.
@@ -1522,10 +1701,9 @@ def importar_questoes_no_banco(
                 )
             )
 
-            correta = (
-                gabarito.get(
-                    numero
-                ) == letra
+            correta = alternativa_data.get(
+                'correta',
+                gabarito.get(numero) == letra
             )
 
             # ------------------------------------------------

@@ -210,6 +210,9 @@
 
                             <strong>
                                 Questão {{ questao.numero }}
+                                {% if questao.idioma %}
+                                    — {{ questao.idioma }}
+                                {% endif %}
                             </strong>
 
                             <span class="text-muted">

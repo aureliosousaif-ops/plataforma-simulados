@@ -139,6 +139,18 @@ class Questao(models.Model):
     # Número da questão dentro da prova.
     numero = models.PositiveIntegerField()
 
+    # Idioma da variante de língua estrangeira do ENEM.
+    # Questões das demais áreas permanecem sem idioma.
+    idioma = models.CharField(
+        max_length=20,
+        choices=[
+            ('Inglês', 'Inglês'),
+            ('Espanhol', 'Espanhol'),
+        ],
+        blank=True,
+        null=True
+    )
+
     # Texto principal da questão.
     enunciado = models.TextField()
 
@@ -164,19 +176,25 @@ class Questao(models.Model):
     # Configurações adicionais do modelo.
     class Meta:
         # Ordena as questões pela prova e pelo número.
-        ordering = ['prova', 'numero']
+        ordering = ['prova', 'numero', 'idioma']
 
         # Impede duas questões com o mesmo número na mesma prova.
         constraints = [
             models.UniqueConstraint(
+                fields=['prova', 'numero', 'idioma'],
+                name='numero_unico_por_prova_idioma'
+            ),
+            models.UniqueConstraint(
                 fields=['prova', 'numero'],
-                name='numero_unico_por_prova'
+                condition=models.Q(idioma__isnull=True),
+                name='numero_unico_por_prova_sem_idioma'
             )
         ]
 
     # Nome exibido no Admin.
     def __str__(self):
-        return f'{self.prova} - Questão {self.numero}'
+        idioma = f' ({self.idioma})' if self.idioma else ''
+        return f'{self.prova} - Questão {self.numero}{idioma}'
 
 
 # Modelo responsável pelas alternativas das questões.

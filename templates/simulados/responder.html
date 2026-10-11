@@ -67,6 +67,9 @@
                 <span class="badge bg-primary-subtle text-primary px-3 py-2">
 
                     Questão {{ resposta.questao.numero }}
+                    {% if resposta.questao.idioma %}
+                        — {{ resposta.questao.idioma }}
+                    {% endif %}
 
                 </span>
 
@@ -273,17 +276,17 @@
             {% for item in respostas %}
 
                 <a
-                    href="?questao={{ item.questao.numero }}"
+                    href="?questao={{ forloop.counter }}"
                     class="
                         examix-question-number
 
-                        {% if item.questao.numero == resposta.questao.numero %}
+                        {% if forloop.counter == numero_atual %}
                             active
                         {% endif %}
                     "
                 >
 
-                    {{ item.questao.numero }}
+                    {{ item.questao.numero }}{% if item.questao.idioma %} ({{ item.questao.idioma }}){% endif %}
 
                 </a>
 

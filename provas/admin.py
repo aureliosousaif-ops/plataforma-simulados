@@ -66,6 +66,7 @@ class QuestaoAdmin(admin.ModelAdmin):
     # Campos mostrados na lista de questões.
     list_display = (
         'numero',
+        'idioma',
         'prova',
         'disciplina',
         'dificuldade',
@@ -75,6 +76,7 @@ class QuestaoAdmin(admin.ModelAdmin):
     # Filtros disponíveis.
     list_filter = (
         'prova',
+        'idioma',
         'disciplina',
         'dificuldade',
         'ativa',

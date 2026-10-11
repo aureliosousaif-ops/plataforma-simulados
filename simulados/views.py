@@ -190,7 +190,8 @@ def responder(request, simulado_id):
             'questao__alternativas'
         )
         .order_by(
-            'questao__numero'
+            'questao__numero',
+            'questao__idioma'
         )
     )
 
@@ -684,7 +685,8 @@ def resultado(request, simulado_id):
             'questao__alternativas'
         )
         .order_by(
-            'questao__numero'
+            'questao__numero',
+            'questao__idioma'
         )
     )
 

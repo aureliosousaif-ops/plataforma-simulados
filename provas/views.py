@@ -5,6 +5,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 # Decorator que permite acesso somente aos desenvolvedores.
 from usuarios.decorators import desenvolvedor_required
@@ -170,6 +171,17 @@ def processar(request, prova_id):
         id=prova_id
     )
 
+    if prova.tipo != 'enem':
+        messages.error(
+            request,
+            'A plataforma está configurada para processar apenas provas do ENEM.'
+        )
+
+        return redirect(
+            'provas:detalhe',
+            prova_id=prova.id
+        )
+
     # ---------------------------------------------------------
     # SEÇÃO 4.1 — PROTEÇÃO CONTRA REPROCESSAMENTO
     # ---------------------------------------------------------
@@ -236,12 +248,14 @@ def processar(request, prova_id):
 
         # Limpa uma mensagem de erro anterior.
         prova.mensagem_importacao = ''
+        prova.data_processamento = None
 
         # Salva somente esses campos.
         prova.save(
             update_fields=[
                 'status_importacao',
-                'mensagem_importacao'
+                'mensagem_importacao',
+                'data_processamento'
             ]
         )
 
@@ -299,11 +313,13 @@ def processar(request, prova_id):
 
             # Salva os detalhes do problema.
             prova.mensagem_importacao = mensagem
+            prova.data_processamento = None
 
             prova.save(
                 update_fields=[
                     'status_importacao',
-                    'mensagem_importacao'
+                    'mensagem_importacao',
+                    'data_processamento'
                 ]
             )
 
@@ -336,7 +352,19 @@ def processar(request, prova_id):
 
         quantidade = importar_questoes_no_banco(
             prova,
-            questoes_preparadas
+            questoes_preparadas,
+            gabarito
+        )
+
+        prova.status_importacao = 'processada'
+        prova.data_processamento = timezone.now()
+        prova.mensagem_importacao = ''
+        prova.save(
+            update_fields=[
+                'status_importacao',
+                'data_processamento',
+                'mensagem_importacao'
+            ]
         )
 
         # -----------------------------------------------------
@@ -362,12 +390,14 @@ def processar(request, prova_id):
         prova.mensagem_importacao = str(
             erro
         )
+        prova.data_processamento = None
 
         # Atualiza o banco.
         prova.save(
             update_fields=[
                 'status_importacao',
-                'mensagem_importacao'
+                'mensagem_importacao',
+                'data_processamento'
             ]
         )
 

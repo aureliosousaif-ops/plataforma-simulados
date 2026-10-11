@@ -2,9 +2,13 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from .importador import (
+    _encontrar_marcadores_alternativas,
     detectar_idioma_secao,
     extrair_gabarito_enem,
+    extrair_alternativas_generico,
     importar_questoes_no_banco,
+    limpar_texto,
+    limpar_texto_alternativa,
     preparar_questoes,
     separar_questoes_enem,
 )
@@ -84,6 +88,238 @@ class ParserEnemTestCase(TestCase):
         self.assertIsNone(
             detectar_idioma_secao(linhas, 1)
         )
+
+    def test_remove_apenas_linhas_de_impressao(self):
+        texto = '\n'.join([
+            'ENEM2024',
+            '010175AZ3',
+            'El virus de la cancelación apareció en ENEM2024.',
+            'O código 010175AZ3 aparece no enunciado legítimo.',
+        ])
+
+        limpo = limpar_texto(texto)
+
+        self.assertNotIn('\nENEM2024\n', f'\n{limpo}\n')
+        self.assertNotIn('\n010175AZ3\n', f'\n{limpo}\n')
+        self.assertIn('El virus de la cancelación apareció en ENEM2024.', limpo)
+        self.assertIn('O código 010175AZ3 aparece no enunciado legítimo.', limpo)
+
+    def test_remove_codigo_no_final_sem_apagar_texto_da_alternativa(self):
+        texto = 'Alternativa legítima em espanhol. *010175AZ3* ENEM2024'
+
+        self.assertEqual(
+            limpar_texto_alternativa(texto),
+            'Alternativa legítima em espanhol.'
+        )
+
+    def test_alternativas_separam_questoes_consecutivas(self):
+        texto = '\n'.join([
+            'Enunciado em espanhol sobre cultura.',
+            'A', 'dar una mano',
+            'B', 'cancelar una cuenta',
+            'C', 'ignorar el problema',
+            'D', 'buscar ayuda',
+            'E', 'cambiar de opinión',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['letra'] for alternativa in alternativas],
+            ['A', 'B', 'C', 'D', 'E']
+        )
+        self.assertEqual(alternativas[0]['texto'], 'dar una mano')
+        self.assertEqual(alternativas[4]['texto'], 'cambiar de opinión')
+
+    def test_alternativas_extraidas_de_uma_linha(self):
+        texto = (
+            'Enunciado sobre El virus de la cancelación. '
+            'A) dar una mano B) cancelar una cuenta '
+            'C) ignorar el problema D) buscar ayuda E) cambiar de opinión'
+        )
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['letra'] for alternativa in alternativas],
+            ['A', 'B', 'C', 'D', 'E']
+        )
+        self.assertEqual(alternativas[0]['texto'], 'dar una mano')
+        self.assertEqual(alternativas[4]['texto'], 'cambiar de opinión')
+
+    def test_marcadores_separados_com_espacos_e_pontuacao(self):
+        texto = '\n'.join([
+            'Enunciado da questão.',
+            'A )', 'Primeira alternativa.',
+            'B.', 'Segunda alternativa.',
+            '(C)', 'Terceira alternativa.',
+            'D -', 'Quarta alternativa.',
+            'E:', 'Quinta alternativa.',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['letra'] for alternativa in alternativas],
+            ['A', 'B', 'C', 'D', 'E']
+        )
+        self.assertEqual(
+            alternativas[0]['texto'],
+            'Primeira alternativa.'
+        )
+
+    def test_marcadores_sem_pontuacao_nao_confundem_inicio_de_frase(self):
+        texto = '\n'.join([
+            'A alternativa correta depende do texto.',
+            'B exemplo aparece no enunciado.',
+            'A', 'Primeira alternativa iniciada por A.',
+            'B', 'Segunda alternativa.',
+            'C', 'Terceira alternativa.',
+            'D', 'Quarta alternativa.',
+            'E', 'Quinta alternativa.',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['letra'] for alternativa in alternativas],
+            ['A', 'B', 'C', 'D', 'E']
+        )
+        self.assertEqual(
+            alternativas[0]['texto'],
+            'Primeira alternativa iniciada por A.'
+        )
+
+    def test_reconhece_apenas_marcadores_validos(self):
+        linhas = [
+            'A',
+            'A)',
+            '(A)',
+            'A.',
+            'A:',
+            'A alternativa correta depende do texto.',
+            'B exemplo aparece no enunciado.',
+        ]
+
+        marcadores = _encontrar_marcadores_alternativas(linhas)
+
+        self.assertEqual(
+            [linha['letra'] for linha in marcadores],
+            ['A', 'A', 'A', 'A', 'A']
+        )
+
+    def test_expansao_inline_preserva_pontuacao_das_alternativas(self):
+        texto = (
+            'Enunciado. '
+            'A) primeira, com vírgula. '
+            'B. segunda? '
+            'C: terceira; '
+            'D- quarta! '
+            'E) quinta.'
+        )
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(alternativas[0]['texto'], 'primeira, com vírgula.')
+        self.assertEqual(alternativas[1]['texto'], 'segunda?')
+        self.assertEqual(alternativas[2]['texto'], 'terceira;')
+        self.assertEqual(alternativas[3]['texto'], 'quarta!')
+        self.assertEqual(alternativas[4]['texto'], 'quinta.')
+
+    def test_marcador_junto_sem_pontuacao_no_formato_real(self):
+        texto = '\n'.join([
+            'Enunciado da questão 1.',
+            'A', 'identificar ameaças.',
+            'B identificar contextos que podem representar perigo.',
+            'C', 'ignorar os sinais.',
+            'D', 'avaliar o cenário.',
+            'E', 'procurar ajuda.',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['letra'] for alternativa in alternativas],
+            ['A', 'B', 'C', 'D', 'E']
+        )
+        self.assertEqual(
+            alternativas[1]['texto'],
+            'identificar contextos que podem representar perigo.'
+        )
+
+    def test_remove_cauda_repetida_do_rodape_na_alternativa_e(self):
+        texto = '\n'.join([
+            'Enunciado da questão 8.',
+            'A', 'Primeira.',
+            'B', 'Segunda.',
+            'C', 'Terceira.',
+            'D', 'Quarta.',
+            'E', 'Quinta com acento e pontuação! ENEM2024ENEM2024',
+            '010175AZ3 informação de impressão e paginação.',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            alternativas[4]['texto'],
+            'Quinta com acento e pontuação!'
+        )
+        self.assertNotIn('ENEM2024', alternativas[4]['texto'])
+
+    def test_questao_8_com_sequencia_restrita_abced(self):
+        texto = '\n'.join([
+            'Enunciado da questão 8.',
+            'A', 'Alternativa A, com acento.',
+            'B', 'Alternativa B.',
+            'C', 'Alternativa C.',
+            'D', 'Alternativa D.',
+            'E', 'Alternativa E! ENEM2024ENEM2024',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['letra'] for alternativa in alternativas],
+            ['A', 'B', 'C', 'D', 'E']
+        )
+        self.assertEqual(alternativas[0]['texto'], 'Alternativa A, com acento.')
+        self.assertEqual(alternativas[4]['texto'], 'Alternativa E!')
+
+    def test_questao_16_ignora_a_interno_antes_de_d(self):
+        texto = '\n'.join([
+            'A', 'Alternativa A.',
+            'B', 'Alternativa B.',
+            'C', 'Alternativa C. A superação depende do contexto.',
+            'A superação não é um marcador isolado.',
+            'D', 'Alternativa D.',
+            'E', 'Alternativa E.',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['letra'] for alternativa in alternativas],
+            ['A', 'B', 'C', 'D', 'E']
+        )
+        self.assertIn('A superação', alternativas[2]['texto'])
+
+    def test_questao_66_ignora_a_interno_antes_de_c(self):
+        texto = '\n'.join([
+            'A', 'Alternativa A.',
+            'B', 'Alternativa B.',
+            'A ampliação aparece no texto da alternativa.',
+            'C', 'Alternativa C.',
+            'D', 'Alternativa D.',
+            'E', 'Alternativa E.',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['letra'] for alternativa in alternativas],
+            ['A', 'B', 'C', 'D', 'E']
+        )
+        self.assertIn('A ampliação', alternativas[1]['texto'])
 
     def test_separa_questoes_e_alternativas_sem_duplicacao(self):
         questoes = separar_questoes_enem(
@@ -167,6 +403,45 @@ class ParserEnemTestCase(TestCase):
         ]
 
         self.assertEqual(corretas, ['C', 'D'])
+
+    def test_preparacao_garante_cinco_alternativas_uma_correta_e_texto_limpo(self):
+        questoes = [
+            {
+                'numero': numero,
+                'texto': f'Enunciado {numero}.',
+                '_idioma': None,
+                'alternativas': [
+                    {
+                        'letra': letra,
+                        'texto': (
+                            f'Texto {letra} da questão {numero}.'
+                            + (' ENEM2024ENEM2024' if letra == 'E' else '')
+                        ),
+                    }
+                    for letra in 'ABCDE'
+                ],
+            }
+            for numero in range(1, 4)
+        ]
+        gabarito = {1: 'A', 2: 'C', 3: 'E'}
+
+        preparadas = preparar_questoes(questoes, gabarito)
+
+        self.assertEqual(len(preparadas), 3)
+        for questao in preparadas:
+            alternativas = questao['alternativas']
+            self.assertEqual(
+                [alternativa['letra'] for alternativa in alternativas],
+                ['A', 'B', 'C', 'D', 'E']
+            )
+            self.assertTrue(all(alternativa['texto'] for alternativa in alternativas))
+            self.assertEqual(
+                sum(alternativa['correta'] for alternativa in alternativas),
+                1
+            )
+            self.assertTrue(
+                all('ENEM2024' not in alternativa['texto'] for alternativa in alternativas)
+            )
 
     def test_gabarito_preserva_respostas_diferentes_das_duas_opcoes(self):
         texto = '\n'.join([

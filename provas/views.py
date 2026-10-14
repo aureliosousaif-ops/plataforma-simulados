@@ -4,6 +4,7 @@
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -21,6 +22,7 @@ from .importador import (
     validar_questoes_com_gabarito,
     preparar_questoes_para_importacao,
     importar_questoes_no_banco,
+    validar_estrutura_questoes,
 )
 
 
@@ -165,250 +167,99 @@ def processar(request, prova_id):
             prova_id=prova_id
         )
 
-    # Busca a prova pelo ID.
-    prova = get_object_or_404(
-        Prova,
-        id=prova_id
-    )
-
-    if prova.tipo != 'enem':
-        messages.error(
-            request,
-            'A plataforma está configurada para processar apenas provas do ENEM.'
+    with transaction.atomic():
+        prova = get_object_or_404(
+            Prova.objects.select_for_update(),
+            id=prova_id,
         )
 
-        return redirect(
-            'provas:detalhe',
-            prova_id=prova.id
-        )
-
-    # ---------------------------------------------------------
-    # SEÇÃO 4.1 — PROTEÇÃO CONTRA REPROCESSAMENTO
-    # ---------------------------------------------------------
-
-    # Se a prova já foi utilizada em algum simulado,
-    # não permitimos apagar e recriar suas questões.
-    #
-    # Isso protege o histórico dos alunos.
-    if prova.simulados.exists():
-
-        messages.error(
-            request,
-            'Esta prova já possui simulados vinculados '
-            'e não pode ser reprocessada para preservar '
-            'o histórico dos alunos.'
-        )
-
-        return redirect(
-            'provas:detalhe',
-            prova_id=prova.id
-        )
-
-    # ---------------------------------------------------------
-    # SEÇÃO 4.2 — VERIFICAÇÃO DO PDF DA PROVA
-    # ---------------------------------------------------------
-
-    # Verifica se o PDF da prova foi enviado.
-    if not prova.arquivo_pdf:
-
-        messages.error(
-            request,
-            'Esta prova não possui um PDF.'
-        )
-
-        return redirect(
-            'provas:detalhe',
-            prova_id=prova.id
-        )
-
-    # ---------------------------------------------------------
-    # SEÇÃO 4.3 — VERIFICAÇÃO DO GABARITO
-    # ---------------------------------------------------------
-
-    # Verifica se o PDF do gabarito foi enviado.
-    if not prova.arquivo_gabarito:
-
-        messages.error(
-            request,
-            'Esta prova não possui um PDF de gabarito.'
-        )
-
-        return redirect(
-            'provas:detalhe',
-            prova_id=prova.id
-        )
-
-    try:
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.4 — MARCA A PROVA COMO PROCESSANDO
-        # -----------------------------------------------------
-
-        prova.status_importacao = 'processando'
-
-        # Limpa uma mensagem de erro anterior.
-        prova.mensagem_importacao = ''
-        prova.data_processamento = None
-
-        # Salva somente esses campos.
-        prova.save(
-            update_fields=[
-                'status_importacao',
-                'mensagem_importacao',
-                'data_processamento'
-            ]
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.5 — EXTRAI O TEXTO DO PDF DA PROVA
-        # -----------------------------------------------------
-
-        texto_prova = extrair_texto_pdf(
-            prova.arquivo_pdf.path
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.6 — SEPARA AS QUESTÕES
-        # -----------------------------------------------------
-
-        questoes = separar_questoes_enem(
-            texto_prova
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.7 — EXTRAI O TEXTO DO GABARITO
-        # -----------------------------------------------------
-
-        texto_gabarito = extrair_texto_pdf(
-            prova.arquivo_gabarito.path
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.8 — EXTRAI AS RESPOSTAS DO GABARITO
-        # -----------------------------------------------------
-
-        gabarito = extrair_gabarito_enem(
-            texto_gabarito
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.9 — VALIDA AS QUESTÕES
-        # -----------------------------------------------------
-
-        problemas = validar_questoes_com_gabarito(
-            questoes,
-            gabarito
-        )
-
-        # Se existirem problemas, não salva as questões.
-        if problemas:
-
-            # Junta todos os problemas em uma única mensagem.
-            mensagem = '\n'.join(
-                problemas
-            )
-
-            # Marca a prova como erro.
-            prova.status_importacao = 'erro'
-
-            # Salva os detalhes do problema.
-            prova.mensagem_importacao = mensagem
-            prova.data_processamento = None
-
-            prova.save(
-                update_fields=[
-                    'status_importacao',
-                    'mensagem_importacao',
-                    'data_processamento'
-                ]
-            )
-
-            # Mostra uma mensagem para o usuário.
+        if prova.tipo != 'enem':
             messages.error(
                 request,
-                'A prova não pôde ser processada. '
+                'A plataforma está configurada para processar apenas provas do ENEM.'
+            )
+            return redirect('provas:detalhe', prova_id=prova.id)
+
+        if prova.status_importacao == 'processando':
+            messages.error(
+                request,
+                'Esta prova já está sendo processada. Aguarde a conclusão.'
+            )
+            return redirect('provas:detalhe', prova_id=prova.id)
+
+        if prova.simulados.exists():
+            messages.error(
+                request,
+                'Esta prova já possui simulados vinculados e não pode ser reprocessada '
+                'para preservar o histórico dos alunos.'
+            )
+            return redirect('provas:detalhe', prova_id=prova.id)
+
+        if not prova.arquivo_pdf:
+            messages.error(request, 'Esta prova não possui um PDF.')
+            return redirect('provas:detalhe', prova_id=prova.id)
+
+        if not prova.arquivo_gabarito:
+            messages.error(request, 'Esta prova não possui um PDF de gabarito.')
+            return redirect('provas:detalhe', prova_id=prova.id)
+
+        prova.status_importacao = 'processando'
+        prova.mensagem_importacao = ''
+        prova.data_processamento = None
+        prova.save(update_fields=[
+            'status_importacao',
+            'mensagem_importacao',
+            'data_processamento',
+        ])
+
+        try:
+            with transaction.atomic():
+                texto_prova = extrair_texto_pdf(prova.arquivo_pdf.path)
+                questoes = separar_questoes_enem(texto_prova)
+                texto_gabarito = extrair_texto_pdf(prova.arquivo_gabarito.path)
+                gabarito = extrair_gabarito_enem(texto_gabarito)
+
+                problemas = validar_questoes_com_gabarito(questoes, gabarito)
+                problemas.extend(validar_estrutura_questoes(questoes, gabarito))
+                if problemas:
+                    raise ValueError('\n'.join(problemas))
+
+                questoes_preparadas = preparar_questoes_para_importacao(
+                    questoes,
+                    gabarito,
+                )
+                quantidade = importar_questoes_no_banco(
+                    prova,
+                    questoes_preparadas,
+                    gabarito,
+                )
+
+                prova.status_importacao = 'processada'
+                prova.data_processamento = timezone.now()
+                prova.mensagem_importacao = ''
+                prova.save(update_fields=[
+                    'status_importacao',
+                    'data_processamento',
+                    'mensagem_importacao',
+                ])
+        except Exception as erro:
+            prova.status_importacao = 'erro'
+            prova.mensagem_importacao = str(erro)
+            prova.data_processamento = None
+            prova.save(update_fields=[
+                'status_importacao',
+                'mensagem_importacao',
+                'data_processamento',
+            ])
+            messages.error(
+                request,
+                'Ocorreu um erro durante o processamento da prova. '
                 'Verifique os detalhes.'
             )
-
-            return redirect(
-                'provas:detalhe',
-                prova_id=prova.id
-            )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.10 — PREPARA AS QUESTÕES
-        # -----------------------------------------------------
-
-        questoes_preparadas = (
-            preparar_questoes_para_importacao(
-                questoes,
-                gabarito
-            )
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.11 — SALVA AS QUESTÕES NO BANCO
-        # -----------------------------------------------------
-
-        quantidade = importar_questoes_no_banco(
-            prova,
-            questoes_preparadas,
-            gabarito
-        )
-
-        prova.status_importacao = 'processada'
-        prova.data_processamento = timezone.now()
-        prova.mensagem_importacao = ''
-        prova.save(
-            update_fields=[
-                'status_importacao',
-                'data_processamento',
-                'mensagem_importacao'
-            ]
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.12 — SUCESSO
-        # -----------------------------------------------------
+            return redirect('provas:detalhe', prova_id=prova.id)
 
         messages.success(
             request,
-            f'Prova processada com sucesso! '
-            f'{quantidade} questões foram importadas.'
+            f'Prova processada com sucesso! {quantidade} questões foram importadas.'
         )
-
-    except Exception as erro:
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.13 — TRATAMENTO DE ERRO
-        # -----------------------------------------------------
-
-        # Marca a prova como erro.
-        prova.status_importacao = 'erro'
-
-        # Salva a mensagem técnica do erro.
-        prova.mensagem_importacao = str(
-            erro
-        )
-        prova.data_processamento = None
-
-        # Atualiza o banco.
-        prova.save(
-            update_fields=[
-                'status_importacao',
-                'mensagem_importacao',
-                'data_processamento'
-            ]
-        )
-
-        # Mostra uma mensagem simples para o usuário.
-        messages.error(
-            request,
-            'Ocorreu um erro durante o processamento da prova.'
-        )
-
-    # Volta para a página da prova.
-    return redirect(
-        'provas:detalhe',
-        prova_id=prova.id
-    )
+        return redirect('provas:detalhe', prova_id=prova.id)

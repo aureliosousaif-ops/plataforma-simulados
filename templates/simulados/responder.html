@@ -115,12 +115,12 @@
                      06. ALTERNATIVAS
                      ================================= -->
 
-                <div class="examix-alternativas">
+                <div class="examix-alternatives">
 
                     {% for alternativa in resposta.questao.alternativas.all %}
 
                         <label
-                            class="examix-alternativa"
+                            class="examix-alternative"
                             for="alternativa_{{ alternativa.id }}"
                         >
 
@@ -130,6 +130,7 @@
                                 name="alternativa"
                                 id="alternativa_{{ alternativa.id }}"
                                 value="{{ alternativa.id }}"
+                                required
 
                                 {% if resposta.alternativa_id == alternativa.id %}
                                     checked
@@ -138,7 +139,7 @@
 
 
                             <!-- Letra -->
-                            <strong>
+                            <strong class="examix-alternative-letter">
 
                                 {{ alternativa.letra }})
 
@@ -146,7 +147,7 @@
 
 
                             <!-- Texto -->
-                            <span class="examix-alternativa-texto">
+                            <span class="examix-alternative-text">
 
                                 {{ alternativa.texto|linebreaksbr }}
 

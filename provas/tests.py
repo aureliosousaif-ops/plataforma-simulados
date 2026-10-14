@@ -11,6 +11,7 @@ from .importador import (
     limpar_texto_alternativa,
     preparar_questoes,
     separar_questoes_enem,
+    validar_estrutura_questoes,
 )
 from .models import Disciplina, Prova, Questao
 
@@ -285,6 +286,31 @@ class ParserEnemTestCase(TestCase):
         self.assertEqual(alternativas[0]['texto'], 'Alternativa A, com acento.')
         self.assertEqual(alternativas[4]['texto'], 'Alternativa E!')
 
+    def test_prioriza_bloco_isolado_antes_de_bloco_inline_seguinte(self):
+        texto = '\n'.join([
+            'Enunciado da questão 1.',
+            'A', 'Alternativa correta da questão 1.',
+            'B', 'Outra alternativa da questão 1.',
+            'C', 'Terceira alternativa da questão 1.',
+            'D', 'Quarta alternativa da questão 1.',
+            'E', 'Quinta alternativa da questão 1.',
+            'A) alternativa da questão 2. B) segunda. C) terceira. '
+            'D) quarta. E) quinta.',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['texto'] for alternativa in alternativas],
+            [
+                'Alternativa correta da questão 1.',
+                'Outra alternativa da questão 1.',
+                'Terceira alternativa da questão 1.',
+                'Quarta alternativa da questão 1.',
+                'Quinta alternativa da questão 1.',
+            ],
+        )
+
     def test_questao_16_ignora_a_interno_antes_de_d(self):
         texto = '\n'.join([
             'A', 'Alternativa A.',
@@ -442,6 +468,61 @@ class ParserEnemTestCase(TestCase):
             self.assertTrue(
                 all('ENEM2024' not in alternativa['texto'] for alternativa in alternativas)
             )
+
+    def test_validacao_estrutural_aceita_questao_completa_e_gabarito(self):
+        questao = {
+            'numero': 1,
+            'texto': 'Enunciado completo.',
+            '_idioma': 'Inglês',
+            'alternativas': [
+                {'letra': letra, 'texto': f'Texto {letra}.'}
+                for letra in 'ABCDE'
+            ],
+        }
+
+        self.assertEqual(
+            validar_estrutura_questoes(
+                [questao],
+                {('Inglês', 1): 'C'},
+            ),
+            [],
+        )
+
+    def test_validacao_estrutural_rejeita_letras_texto_vazio_e_artefato(self):
+        questao = {
+            'numero': 8,
+            'texto': 'Enunciado completo.',
+            'alternativas': [
+                {'letra': 'A', 'texto': 'Texto A.'},
+                {'letra': 'B', 'texto': ''},
+                {'letra': 'C', 'texto': 'Texto C.'},
+                {'letra': 'D', 'texto': 'Texto D.'},
+                {'letra': 'E', 'texto': 'Texto E ENEM2024.'},
+            ],
+        }
+
+        erros = validar_estrutura_questoes([questao], {8: 'A'})
+
+        self.assertFalse(any('letras encontradas' in erro for erro in erros))
+        self.assertIn('alternativa B sem texto', '\n'.join(erros))
+        self.assertIn('artefato de impressão', '\n'.join(erros))
+
+    def test_validacao_estrutural_rejeita_alternativa_vazia_em_sequencia_valida(self):
+        questao = {
+            'numero': 9,
+            'texto': 'Enunciado completo.',
+            'alternativas': [
+                {'letra': 'A', 'texto': 'Texto A.'},
+                {'letra': 'B', 'texto': 'Texto B.'},
+                {'letra': 'C', 'texto': 'Texto C.'},
+                {'letra': 'D', 'texto': 'Texto D.'},
+                {'letra': 'E', 'texto': ''},
+            ],
+        }
+
+        erros = validar_estrutura_questoes([questao], {9: 'E'})
+
+        self.assertIn('alternativa E sem texto', '\n'.join(erros))
 
     def test_gabarito_preserva_respostas_diferentes_das_duas_opcoes(self):
         texto = '\n'.join([

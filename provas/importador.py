@@ -232,6 +232,7 @@ def _encontrar_marcadores_alternativas(
             encontrados.append({
                 'letra': isolado.group(1).upper(),
                 'linha': indice,
+                'isolado': True,
             })
             continue
 
@@ -247,6 +248,7 @@ def _encontrar_marcadores_alternativas(
             encontrados.append({
                 'letra': junto.group(1).upper(),
                 'linha': indice,
+                'isolado': False,
             })
     return encontrados
 
@@ -280,15 +282,27 @@ def _encontrar_sequencia_abced(marcadores):
                 selecionados[-1]['linha']
                 - selecionados[0]['linha']
             )
-            candidatos.append((distancia, selecionados))
+            quantidade_isolados = sum(
+                marcador.get('isolado', False)
+                for marcador in selecionados
+            )
+            candidatos.append((
+                quantidade_isolados,
+                selecionados[0]['linha'],
+                distancia,
+                selecionados,
+            ))
 
     if not candidatos:
         return None
 
-    # A sequência mais curta tende a ser a sequência real de alternativas;
-    # marcadores A internos ficam fora dela e permanecem no texto da opção.
-    candidatos.sort(key=lambda item: item[0])
-    return candidatos[0][1]
+    # Marcadores isolados são mais confiáveis do que letras junto do texto.
+    # Isso evita escolher um bloco A-E inline da questão seguinte quando o
+    # bloco real da questão atual aparece primeiro no texto extraído.
+    # Em empate, a sequência que aparece primeiro vence; a distância fica
+    # apenas como critério final para manter a preferência por blocos compactos.
+    candidatos.sort(key=lambda item: (-item[0], item[1], item[2]))
+    return candidatos[0][3]
 
 
 def extrair_alternativas_generico(texto):
@@ -297,18 +311,31 @@ def extrair_alternativas_generico(texto):
 
     texto = _expandir_alternativas_inline(texto)
     linhas = texto.splitlines()
-    sequencia = _encontrar_sequencia_abced(
-        _encontrar_marcadores_alternativas(
-            linhas,
-            permitir_marcadores_sem_pontuacao=True,
-        )
+    marcadores = _encontrar_marcadores_alternativas(
+        linhas,
+        permitir_marcadores_sem_pontuacao=True,
     )
+    sequencia = _encontrar_sequencia_abced(marcadores)
     if not sequencia:
         return []
 
+    limite_final = len(linhas)
+    marcadores_posteriores = [
+        marcador
+        for marcador in marcadores
+        if marcador['linha'] > sequencia[-1]['linha']
+    ]
+    proxima_sequencia = _encontrar_sequencia_abced(marcadores_posteriores)
+    if proxima_sequencia:
+        limite_final = proxima_sequencia[0]['linha']
+
     alternativas = []
     for indice, marcador in enumerate(sequencia):
-        fim = sequencia[indice + 1]['linha'] if indice < 4 else len(linhas)
+        fim = (
+            sequencia[indice + 1]['linha']
+            if indice < 4
+            else limite_final
+        )
         partes = linhas[marcador['linha']:fim]
         if partes:
             partes[0] = re.sub(
@@ -504,6 +531,52 @@ def validar_questoes_com_gabarito(questoes, gabarito):
         if obter_resposta_gabarito(questao, gabarito) is None:
             identificador = f'{questao.get("_idioma")}: ' if questao.get('_idioma') else ''
             erros.append(f'Questão {identificador}{numero}: gabarito não encontrado.')
+    return erros
+
+
+def validar_estrutura_questoes(questoes, gabarito):
+    """Valida a estrutura que será persistida pela interface de processamento."""
+    erros = []
+    letras_esperadas = ['A', 'B', 'C', 'D', 'E']
+    artefato_impressao = re.compile(
+        r'ENEM\s*2024|\*?\d{6}[A-Z]{2}\d+\*?',
+        re.IGNORECASE,
+    )
+
+    for questao in questoes:
+        numero = questao['numero']
+        identificador = f'{questao.get("_idioma")}: ' if questao.get('_idioma') else ''
+        alternativas = questao.get('alternativas') or []
+        letras = [alternativa.get('letra') for alternativa in alternativas]
+
+        if not (questao.get('texto') or '').strip():
+            erros.append(
+                f'Questão {identificador}{numero}: enunciado sem texto.'
+            )
+
+        if letras != letras_esperadas:
+            erros.append(
+                f'Questão {identificador}{numero}: letras encontradas '
+                f'{letras!r}; esperado {letras_esperadas!r}.'
+            )
+            continue
+
+        for alternativa in alternativas:
+            texto = (alternativa.get('texto') or '').strip()
+            if not texto:
+                erros.append(
+                    f'Questão {identificador}{numero}: alternativa '
+                    f'{alternativa.get("letra")} sem texto.'
+                )
+            elif artefato_impressao.search(texto):
+                erros.append(
+                    f'Questão {identificador}{numero}: alternativa '
+                    f'{alternativa.get("letra")} contém artefato de impressão.'
+                )
+
+        if obter_resposta_gabarito(questao, gabarito) is None:
+            continue
+
     return erros
 
 

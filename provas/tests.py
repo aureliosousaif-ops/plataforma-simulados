@@ -353,6 +353,37 @@ class ParserEnemTestCase(TestCase):
             ],
         )
 
+    def test_questao_1_real_ignora_bloco_linha_a_linha_apos_rodape(self):
+        texto = '\n'.join([
+            'El vírus de la cancelación',
+            'Na argumentação apresentada sobre cultura do cancelamento, esse texto objetiva',
+            'A', 'apresentar o conceito desse tipo de prática.',
+            'B', 'mostrar a contrariedade das mídias com relação a essa atitude.',
+            'C', 'criticar o impacto dessa cultura sobre a vida representada nas redes.',
+            'D', 'evidenciar a democratização dessa prática na sociedade virtual.',
+            'E', 'discorrer historicamente sobre a origem e as causas dessa cultura.',
+            '*010175AZ3*',
+            'ENEM2024ENEM2024ENEM2024',
+            'A)', 'dar oportunidade a pessoas que parecem necessitadas.',
+            'B)', 'identificar contextos que podem representar perigo.',
+            'C)', 'tirar proveito de situações que podem ser adversas.',
+            'D)', 'evitar dificuldades que parecem ser intransponíveis.',
+            'E)', 'contestar circunstâncias que parecem ser harmônicas.',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['texto'] for alternativa in alternativas],
+            [
+                'apresentar o conceito desse tipo de prática.',
+                'mostrar a contrariedade das mídias com relação a essa atitude.',
+                'criticar o impacto dessa cultura sobre a vida representada nas redes.',
+                'evidenciar a democratização dessa prática na sociedade virtual.',
+                'discorrer historicamente sobre a origem e as causas dessa cultura.',
+            ],
+        )
+
     def test_questao_16_ignora_a_interno_antes_de_d(self):
         texto = '\n'.join([
             'A', 'Alternativa A.',

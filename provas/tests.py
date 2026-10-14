@@ -311,6 +311,48 @@ class ParserEnemTestCase(TestCase):
             ],
         )
 
+    def test_questao_1_real_nao_recebe_alternativas_da_questao_seguinte(self):
+        texto = '\n'.join([
+            'El vírus de la cancelación',
+            '¿De qué se trata este fenómeno?',
+            'Na argumentação apresentada sobre cultura do cancelamento, '
+            'esse texto objetiva',
+            'A',
+            'apresentar o conceito desse tipo de prática.',
+            'B',
+            'mostrar a contrariedade das mídias com relação a essa atitude.',
+            'C',
+            'criticar o impacto dessa cultura sobre a vida representada nas redes.',
+            'D',
+            'evidenciar a democratização dessa prática na sociedade virtual.',
+            'E',
+            'discorrer historicamente sobre a origem e as causas dessa cultura.',
+            '*010175AZ3*',
+            'ENEM2024ENEM2024ENEM2024',
+            'A) dar oportunidade a pessoas que parecem necessitadas. '
+            'B) identificar contextos que podem representar perigo. '
+            'C) tirar proveito de situações que podem ser adversas. '
+            'D) evitar dificuldades que parecem ser intransponíveis. '
+            'E) contestar circunstâncias que parecem ser harmônicas.',
+        ])
+
+        questoes = separar_questoes_enem(
+            'QUESTÃO 01\n' + texto + '\nQUESTÃO 02\nPróximo enunciado'
+        )
+        questao = questoes[0]
+
+        self.assertIn('El vírus de la cancelación', questao['texto'])
+        self.assertEqual(
+            [alternativa['texto'] for alternativa in questao['alternativas']],
+            [
+                'apresentar o conceito desse tipo de prática.',
+                'mostrar a contrariedade das mídias com relação a essa atitude.',
+                'criticar o impacto dessa cultura sobre a vida representada nas redes.',
+                'evidenciar a democratização dessa prática na sociedade virtual.',
+                'discorrer historicamente sobre a origem e as causas dessa cultura.',
+            ],
+        )
+
     def test_questao_16_ignora_a_interno_antes_de_d(self):
         texto = '\n'.join([
             'A', 'Alternativa A.',

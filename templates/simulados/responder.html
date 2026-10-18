@@ -287,7 +287,7 @@
                     "
                 >
 
-                    {{ item.questao.numero }}{% if item.questao.idioma %} ({{ item.questao.idioma }}){% endif %}
+                    {{ item.questao.numero }}<br>{% if item.questao.idioma == "Inglês" %}(ING){% elif item.questao.idioma == "Espanhol" %}(ESP){% endif %}
 
                 </a>
 

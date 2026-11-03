@@ -33,7 +33,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # No Render será configurado como False.
 DEBUG = os.environ.get(
     'DEBUG',
-    'True'
+    'False'
 ).lower() == 'true'
 
 # Hosts permitidos.
@@ -188,8 +188,9 @@ TEMPLATES = [
 # Obtém a URL do banco através do arquivo .env.
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# Se DATABASE_URL existir, utiliza PostgreSQL.
-if DATABASE_URL:
+# Em desenvolvimento, mantém o banco local mesmo que o .env
+# contenha a URL do banco de produção.
+if DATABASE_URL and not DEBUG:
 
     DATABASES = {
         'default': dj_database_url.parse(
@@ -246,9 +247,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # INTERNACIONALIZAÇÃO
 # ==========================================
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'pt-br'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
 
@@ -312,6 +313,7 @@ LOGOUT_REDIRECT_URL = '/'
 # Define o backend utilizado pelo django-allauth.
 AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 

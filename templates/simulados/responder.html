@@ -67,6 +67,9 @@
                 <span class="badge bg-primary-subtle text-primary px-3 py-2">
 
                     Questão {{ resposta.questao.numero }}
+                    {% if resposta.questao.idioma %}
+                        — {{ resposta.questao.idioma }}
+                    {% endif %}
 
                 </span>
 
@@ -112,12 +115,12 @@
                      06. ALTERNATIVAS
                      ================================= -->
 
-                <div class="examix-alternativas">
+                <div class="examix-alternatives">
 
                     {% for alternativa in resposta.questao.alternativas.all %}
 
                         <label
-                            class="examix-alternativa"
+                            class="examix-alternative"
                             for="alternativa_{{ alternativa.id }}"
                         >
 
@@ -127,6 +130,7 @@
                                 name="alternativa"
                                 id="alternativa_{{ alternativa.id }}"
                                 value="{{ alternativa.id }}"
+                                required
 
                                 {% if resposta.alternativa_id == alternativa.id %}
                                     checked
@@ -135,7 +139,7 @@
 
 
                             <!-- Letra -->
-                            <strong>
+                            <strong class="examix-alternative-letter">
 
                                 {{ alternativa.letra }})
 
@@ -143,7 +147,7 @@
 
 
                             <!-- Texto -->
-                            <span class="examix-alternativa-texto">
+                            <span class="examix-alternative-text">
 
                                 {{ alternativa.texto|linebreaksbr }}
 
@@ -273,17 +277,17 @@
             {% for item in respostas %}
 
                 <a
-                    href="?questao={{ item.questao.numero }}"
+                    href="?questao={{ forloop.counter }}"
                     class="
                         examix-question-number
 
-                        {% if item.questao.numero == resposta.questao.numero %}
+                        {% if forloop.counter == numero_atual %}
                             active
                         {% endif %}
                     "
                 >
 
-                    {{ item.questao.numero }}
+                    {{ item.questao.numero }}<br>{% if item.questao.idioma == "Inglês" %}(ING){% elif item.questao.idioma == "Espanhol" %}(ESP){% endif %}
 
                 </a>
 

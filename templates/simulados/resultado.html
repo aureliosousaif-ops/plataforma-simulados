@@ -316,6 +316,9 @@
 
                             Questão
                             {{ resposta.questao.numero }}
+                            {% if resposta.questao.idioma %}
+                                — {{ resposta.questao.idioma }}
+                            {% endif %}
 
                         </strong>
 

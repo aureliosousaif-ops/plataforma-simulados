@@ -1,0 +1,299 @@
+warning: in the working copy of '.work/teste_importacao_enem.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/.work/teste_importacao_enem.py b/.work/teste_importacao_enem.py[m
+[1mindex 14a7fd8..7020519 100644[m
+[1m--- a/.work/teste_importacao_enem.py[m
+[1m+++ b/.work/teste_importacao_enem.py[m
+[36m@@ -1,10 +1,15 @@[m
+ import os[m
+[32m+[m[32mimport re[m
+[32m+[m[32mimport sys[m
+[32m+[m[32mimport traceback[m
+ from collections import Counter[m
+[32m+[m[32mfrom pathlib import Path[m
+ [m
+[31m-os.environ.setdefault([m
+[31m-    'DJANGO_SETTINGS_MODULE',[m
+[31m-    'config.settings'[m
+[31m-)[m
+[32m+[m
+[32m+[m[32mPROJECT_ROOT = Path(__file__).resolve().parents[1][m
+[32m+[m[32msys.path.insert(0, str(PROJECT_ROOT))[m
+[32m+[m[32mos.chdir(PROJECT_ROOT)[m
+[32m+[m[32mos.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')[m
+ [m
+ import django[m
+ [m
+[36m@@ -23,70 +28,213 @@[m [mfrom provas.importador import ([m
+ from provas.models import Prova[m
+ [m
+ [m
+[31m-with transaction.atomic():[m
+[31m-    prova = Prova.objects.create([m
+[31m-        nome='TESTE ENEM TEMPORARIO',[m
+[31m-        tipo='enem',[m
+[31m-        ano=2024,[m
+[31m-        arquivo_pdf='provas/2024_PV_impresso_D1_CD1.pdf',[m
+[31m-        arquivo_gabarito='gabaritos/2024_GB_impresso_D1_CD1.pdf',[m
+[31m-        ativa=False,[m
+[31m-    )[m
+[32m+[m[32mLETRAS_ESPERADAS = ['A', 'B', 'C', 'D', 'E'][m
+[32m+[m[32mARTEFATO_IMPRESSAO = re.compile([m
+[32m+[m[32m    r'ENEM\s*2024|\*?\d{6}[A-Z]{2}\d+\*?',[m
+[32m+[m[32m    re.IGNORECASE,[m
+[32m+[m[32m)[m
+ [m
+[31m-    texto_prova = extrair_texto_pdf(prova.arquivo_pdf.path)[m
+[31m-    texto_gabarito = extrair_texto_pdf(prova.arquivo_gabarito.path)[m
+[31m-    questoes = separar_questoes_enem(texto_prova)[m
+[31m-    gabarito = extrair_gabarito_enem(texto_gabarito)[m
+[31m-    problemas = validar_questoes_com_gabarito(questoes, gabarito)[m
+[31m-[m
+[31m-    if problemas:[m
+[31m-        raise RuntimeError('\n'.join(problemas[:20]))[m
+[31m-[m
+[31m-    preparadas = preparar_questoes_para_importacao(questoes, gabarito)[m
+[31m-    quantidade = importar_questoes_no_banco(prova, preparadas, gabarito)[m
+[31m-    corretas_preparadas = sum([m
+[31m-        alternativa.get('correta', False)[m
+[31m-        for questao in preparadas[m
+[31m-        for alternativa in questao['alternativas'][m
+[31m-    )[m
+[31m-    corretas_banco = sum([m
+[31m-        alternativa.correta[m
+[31m-        for questao in prova.questoes.all()[m
+[31m-        for alternativa in questao.alternativas.all()[m
+[31m-    )[m
+ [m
+[31m-    texto_normalizado = texto_prova.upper()[m
+[31m-    print({[m
+[31m-        'questoes_extraidas': len(questoes),[m
+[31m-        'gabarito_extraido': len(gabarito),[m
+[31m-        'questoes_importadas': quantidade,[m
+[31m-        'questoes_por_idioma': dict([m
+[31m-            Counter([m
+[31m-                questao.get('_idioma') or 'Não identificado'[m
+[31m-                for questao in questoes[m
+[32m+[m[32mdef validar_estrutura_questoes(questoes, prefixo=''):[m
+[32m+[m[32m    problemas = [][m
+[32m+[m[32m    validas = 0[m
+[32m+[m
+[32m+[m[32m    for questao in questoes:[m
+[32m+[m[32m        numero = questao.get('numero')[m
+[32m+[m[32m        alternativas = questao.get('alternativas', [])[m
+[32m+[m[32m        letras = [alternativa.get('letra') for alternativa in alternativas][m
+[32m+[m
+[32m+[m[32m        if letras != LETRAS_ESPERADAS:[m
+[32m+[m[32m            problemas.append([m
+[32m+[m[32m                f'{prefixo}Questão {numero}: letras encontradas {letras!r}; '[m
+[32m+[m[32m                f'esperado {LETRAS_ESPERADAS!r}.'[m
+             )[m
+[31m-        ),[m
+[31m-        'alternativas_corretas_preparadas': corretas_preparadas,[m
+[31m-        'alternativas_corretas_no_banco': corretas_banco,[m
+[31m-        'idiomas_extraidos_questoes_01_05': [[m
+[31m-            questao.get('_idioma')[m
+[31m-            for questao in questoes[m
+[31m-            if questao['numero'] in range(1, 6)[m
+[31m-        ],[m
+[31m-        'marcadores_QUESTION_no_pdf': texto_normalizado.count('QUESTION'),[m
+[31m-        'marcadores_PREGUNTA_no_pdf': texto_normalizado.count('PREGUNTA'),[m
+[31m-        'marcadores_QUESTAO_no_pdf': texto_normalizado.count('QUESTAO'),[m
+[31m-        'disciplinas_importadas': sorted([m
+[31m-            set(prova.questoes.values_list('disciplina__nome', flat=True))[m
+[31m-        ),[m
+[31m-        'questoes_por_disciplina': dict([m
+[31m-            Counter([m
+[31m-                prova.questoes.values_list([m
+[31m-                    'disciplina__nome',[m
+[31m-                    flat=True[m
+[32m+[m[32m            continue[m
+[32m+[m
+[32m+[m[32m        problemas_questao = [][m
+[32m+[m[32m        for alternativa in alternativas:[m
+[32m+[m[32m            texto = (alternativa.get('texto') or '').strip()[m
+[32m+[m[32m            letra = alternativa.get('letra')[m
+[32m+[m[32m            if not texto:[m
+[32m+[m[32m                problemas_questao.append(f'alternativa {letra} sem texto')[m
+[32m+[m[32m            if ARTEFATO_IMPRESSAO.search(texto):[m
+[32m+[m[32m                problemas_questao.append([m
+[32m+[m[32m                    f'alternativa {letra} contém artefato de impressão'[m
+                 )[m
+[32m+[m
+[32m+[m[32m        corretas = [[m
+[32m+[m[32m            alternativa for alternativa in alternativas[m
+[32m+[m[32m            if alternativa.get('correta') is True[m
+[32m+[m[32m        ][m
+[32m+[m[32m        if len(corretas) != 1:[m
+[32m+[m[32m            problemas_questao.append([m
+[32m+[m[32m                f'{len(corretas)} alternativas marcadas como corretas'[m
+[32m+[m[32m            )[m
+[32m+[m
+[32m+[m[32m        if problemas_questao:[m
+[32m+[m[32m            problemas.append([m
+[32m+[m[32m                f'{prefixo}Questão {numero}: ' + '; '.join(problemas_questao)[m
+[32m+[m[32m            )[m
+[32m+[m[32m        else:[m
+[32m+[m[32m            validas += 1[m
+[32m+[m
+[32m+[m[32m    return validas, problemas[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef main():[m
+[32m+[m[32m    prova_id = None[m
+[32m+[m[32m    relatorio = {}[m
+[32m+[m[32m    erro = None[m
+[32m+[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        with transaction.atomic():[m
+[32m+[m[32m            prova = Prova.objects.create([m
+[32m+[m[32m                nome='TESTE ENEM TEMPORARIO',[m
+[32m+[m[32m                tipo='enem',[m
+[32m+[m[32m                ano=2024,[m
+[32m+[m[32m                arquivo_pdf='provas/2024_PV_impresso_D1_CD1.pdf',[m
+[32m+[m[32m                arquivo_gabarito='gabaritos/2024_GB_impresso_D1_CD1.pdf',[m
+[32m+[m[32m                ativa=False,[m
+             )[m
+[31m-        ),[m
+[32m+[m[32m            prova_id = prova.id[m
+[32m+[m
+[32m+[m[32m            texto_prova = extrair_texto_pdf(prova.arquivo_pdf.path)[m
+[32m+[m[32m            texto_gabarito = extrair_texto_pdf(prova.arquivo_gabarito.path)[m
+[32m+[m[32m            questoes = separar_questoes_enem(texto_prova)[m
+[32m+[m[32m            gabarito = extrair_gabarito_enem(texto_gabarito)[m
+[32m+[m
+[32m+[m[32m            problemas = validar_questoes_com_gabarito(questoes, gabarito)[m
+[32m+[m[32m            validas_extraidas, problemas_estrutura = validar_estrutura_questoes([m
+[32m+[m[32m                [[m
+[32m+[m[32m                    {[m
+[32m+[m[32m                        **questao,[m
+[32m+[m[32m                        'alternativas': [[m
+[32m+[m[32m                            {[m
+[32m+[m[32m                                **alternativa,[m
+[32m+[m[32m                                'correta': alternativa.get('letra') == ([m
+[32m+[m[32m                                    gabarito.get([m
+[32m+[m[32m                                        (questao.get('_idioma'), questao['numero'])[m
+[32m+[m[32m                                    )[m
+[32m+[m[32m                                    if questao.get('_idioma')[m
+[32m+[m[32m                                    else gabarito.get(questao['numero'])[m
+[32m+[m[32m                                ),[m
+[32m+[m[32m                            }[m
+[32m+[m[32m                            for alternativa in questao['alternativas'][m
+[32m+[m[32m                        ],[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                    for questao in questoes[m
+[32m+[m[32m                ],[m
+[32m+[m[32m                prefixo='Extração: ',[m
+[32m+[m[32m            )[m
+[32m+[m[32m            problemas.extend(problemas_estrutura)[m
+[32m+[m
+[32m+[m[32m            if len(questoes) != 95:[m
+[32m+[m[32m                problemas.append([m
+[32m+[m[32m                    f'Quantidade de questões extraídas: {len(questoes)}; esperado 95.'[m
+[32m+[m[32m                )[m
+[32m+[m[32m            if len(gabarito) != 95:[m
+[32m+[m[32m                problemas.append([m
+[32m+[m[32m                    f'Quantidade de respostas extraídas: {len(gabarito)}; esperado 95.'[m
+[32m+[m[32m                )[m
+[32m+[m
+[32m+[m[32m            if problemas:[m
+[32m+[m[32m                raise RuntimeError('\n'.join(problemas[:50]))[m
+[32m+[m
+[32m+[m[32m            preparadas = preparar_questoes_para_importacao(questoes, gabarito)[m
+[32m+[m[32m            quantidade = importar_questoes_no_banco(prova, preparadas, gabarito)[m
+[32m+[m[32m            questoes_banco = list([m
+[32m+[m[32m                prova.questoes.prefetch_related('alternativas').all()[m
+[32m+[m[32m            )[m
+[32m+[m[32m            validas_banco, problemas_banco = validar_estrutura_questoes([m
+[32m+[m[32m                [[m
+[32m+[m[32m                    {[m
+[32m+[m[32m                        'numero': questao.numero,[m
+[32m+[m[32m                        'alternativas': [[m
+[32m+[m[32m                            {[m
+[32m+[m[32m                                'letra': alternativa.letra,[m
+[32m+[m[32m                                'texto': alternativa.texto,[m
+[32m+[m[32m                                'correta': alternativa.correta,[m
+[32m+[m[32m                            }[m
+[32m+[m[32m                            for alternativa in questao.alternativas.all()[m
+[32m+[m[32m                        ],[m
+[32m+[m[32m                    }[m
+[32m+[m[32m                    for questao in questoes_banco[m
+[32m+[m[32m                ],[m
+[32m+[m[32m                prefixo='Banco temporário: ',[m
+[32m+[m[32m            )[m
+[32m+[m[32m            if problemas_banco:[m
+[32m+[m[32m                raise RuntimeError('\n'.join(problemas_banco[:50]))[m
+[32m+[m
+[32m+[m[32m            corretas_preparadas = sum([m
+[32m+[m[32m                alternativa.get('correta', False)[m
+[32m+[m[32m                for questao in preparadas[m
+[32m+[m[32m                for alternativa in questao['alternativas'][m
+[32m+[m[32m            )[m
+[32m+[m[32m            corretas_banco = sum([m
+[32m+[m[32m                alternativa.correta[m
+[32m+[m[32m                for questao in questoes_banco[m
+[32m+[m[32m                for alternativa in questao.alternativas.all()[m
+[32m+[m[32m            )[m
+[32m+[m
+[32m+[m[32m            relatorio = {[m
+[32m+[m[32m                'questoes_extraidas': len(questoes),[m
+[32m+[m[32m                'gabarito_extraido': len(gabarito),[m
+[32m+[m[32m                'questoes_importadas': quantidade,[m
+[32m+[m[32m                'questoes_com_5_alternativas_validas_extraidas': validas_extraidas,[m
+[32m+[m[32m                'questoes_com_5_alternativas_validas_banco': validas_banco,[m
+[32m+[m[32m                'problemas_encontrados': problemas,[m
+[32m+[m[32m                'questoes_por_idioma': dict([m
+[32m+[m[32m                    Counter([m
+[32m+[m[32m                        questao.get('_idioma') or 'Não identificado'[m
+[32m+[m[32m                        for questao in questoes[m
+[32m+[m[32m                    )[m
+[32m+[m[32m                ),[m
+[32m+[m[32m                'alternativas_corretas_preparadas': corretas_preparadas,[m
+[32m+[m[32m                'alternativas_corretas_no_banco': corretas_banco,[m
+[32m+[m[32m                'idiomas_extraidos_questoes_01_05': [[m
+[32m+[m[32m                    questao.get('_idioma')[m
+[32m+[m[32m                    for questao in questoes[m
+[32m+[m[32m                    if questao['numero'] in range(1, 6)[m
+[32m+[m[32m                ],[m
+[32m+[m[32m                'disciplinas_importadas': sorted([m
+[32m+[m[32m                    set([m
+[32m+[m[32m                        questao.disciplina.nome[m
+[32m+[m[32m                        for questao in questoes_banco[m
+[32m+[m[32m                    )[m
+[32m+[m[32m                ),[m
+[32m+[m[32m                'questoes_por_disciplina': dict([m
+[32m+[m[32m                    Counter([m
+[32m+[m[32m                        questao.disciplina.nome[m
+[32m+[m[32m                        for questao in questoes_banco[m
+[32m+[m[32m                    )[m
+[32m+[m[32m                ),[m
+[32m+[m[32m            }[m
+[32m+[m
+[32m+[m[32m            print(relatorio)[m
+[32m+[m[32m            print('ROLLBACK_SOLICITADO: True')[m
+[32m+[m[32m            transaction.set_rollback(True)[m
+[32m+[m
+[32m+[m[32m    except Exception as exc:[m
+[32m+[m[32m        erro = exc[m
+[32m+[m[32m        print('IMPORTACAO_TESTE_ERRO: True')[m
+[32m+[m[32m        print(f'{type(exc).__name__}: {exc}')[m
+[32m+[m[32m        traceback.print_exc()[m
+[32m+[m
+[32m+[m[32m    rollback_confirmado = ([m
+[32m+[m[32m        prova_id is not None[m
+[32m+[m[32m        and not Prova.objects.filter(pk=prova_id).exists()[m
+[32m+[m[32m    )[m
+[32m+[m[32m    print({[m
+[32m+[m[32m        'prova_temporaria_id': prova_id,[m
+[32m+[m[32m        'rollback_confirmado': rollback_confirmado,[m
+[32m+[m[32m        'erro': type(erro).__name__ if erro else None,[m
+     })[m
+ [m
+[31m-    transaction.set_rollback(True)[m
+[32m+[m[32m    if erro is not None:[m
+[32m+[m[32m        raise erro[m
+[32m+[m[32m    if not rollback_confirmado:[m
+[32m+[m[32m        raise RuntimeError('Rollback não confirmado para a prova temporária.')[m
+[32m+[m
+[32m+[m
+[32m+[m[32mif __name__ == '__main__':[m
+[32m+[m[32m    main()[m

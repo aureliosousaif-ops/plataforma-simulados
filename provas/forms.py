@@ -83,6 +83,16 @@ class ProvaForm(forms.ModelForm):
             ),
         }
 
+    def clean_tipo(self):
+        tipo = self.cleaned_data.get('tipo')
+
+        if tipo != 'enem':
+            raise forms.ValidationError(
+                'A plataforma aceita somente provas do ENEM.'
+            )
+
+        return tipo
+
     def clean_arquivo_pdf(self):
         """
         Garante que o arquivo da prova seja PDF.

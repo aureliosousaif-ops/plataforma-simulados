@@ -113,18 +113,6 @@ class CadastroForm(UserCreationForm):
         }
 
     # =========================================================
-    # VALIDAÇÃO DA SENHA
-    # =========================================================
-
-    def validate_password(self, password, user=None):
-        """
-        Mantém a senha sem os validadores extras
-        configurados pelo Django.
-        """
-
-        return
-
-    # =========================================================
     # CONFIRMAÇÃO DA SENHA
     # =========================================================
 
@@ -172,17 +160,15 @@ class CadastroForm(UserCreationForm):
             # Salva o usuário.
             usuario.save()
 
-            # Cria automaticamente o perfil como aluno.
-            Perfil.objects.create(
+            # Atualiza o perfil criado pelo signal.
+            perfil, _ = Perfil.objects.get_or_create(
                 usuario=usuario,
-                tipo='aluno',
-                idade=self.cleaned_data.get('idade'),
-                escolaridade=self.cleaned_data.get(
-                    'escolaridade'
-                ),
-                objetivo=self.cleaned_data.get(
-                    'objetivo'
-                )
             )
+
+            perfil.tipo = 'aluno'
+            perfil.idade = self.cleaned_data.get('idade')
+            perfil.escolaridade = self.cleaned_data.get('escolaridade')
+            perfil.objetivo = self.cleaned_data.get('objetivo')
+            perfil.save()
 
         return usuario

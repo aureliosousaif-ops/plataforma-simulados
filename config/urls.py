@@ -1,16 +1,12 @@
 # Importa as configurações de arquivos de mídia.
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path, include
+from django.urls import include, path
 # Importa o painel administrativo do Django.
 from django.contrib import admin
 
 # Permite renderizar páginas.
 from django.shortcuts import render
-
-# Importa as funções para criar as URLs.
-from django.urls import include, path
-
 
 def home(request):
     """

@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% load examix_texto %}
+
 {% block title %}
     Responder simulado | Examix
 {% endblock %}
@@ -77,15 +79,26 @@
 
 
             <!-- =====================================
-                 04. ENUNCIADO
+                 04. TEXTO-BASE COMPARTILHADO
+                 ===================================== -->
+
+            {% if resposta.questao.textos_base_exibicao %}
+
+                {% include 'includes/texto_base.html' with textos_base=resposta.questao.textos_base_exibicao %}
+
+            {% endif %}
+
+
+            <!-- =====================================
+                 04.1 ENUNCIADO
                  ===================================== -->
 
             <div class="examix-question-text mb-4">
 
                 {% if resposta.questao.enunciado %}
 
-                    <!-- Mostra somente o enunciado -->
-                    {{ resposta.questao.enunciado|linebreaks }}
+                    <!-- Mostra o enunciado com as linhas do PDF reorganizadas -->
+                    {{ resposta.questao.enunciado|normalizar_enunciado|linebreaks }}
 
                 {% else %}
 
@@ -99,6 +112,33 @@
                 {% endif %}
 
             </div>
+
+
+            <!-- =====================================
+                 04.1 IMAGENS DA QUESTÃO
+                 ===================================== -->
+
+            {% if resposta.questao.imagens_exibicao %}
+
+                <div class="examix-question-images mb-4">
+
+                    {% for imagem in resposta.questao.imagens_exibicao %}
+
+                        <figure class="examix-question-image">
+
+                            <img
+                                src="{{ imagem.url }}"
+                                alt="Imagem da questão {{ resposta.questao.numero }}"
+                                loading="lazy"
+                            >
+
+                        </figure>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
 
 
             <!-- =====================================

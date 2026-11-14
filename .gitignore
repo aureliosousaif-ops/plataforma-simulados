@@ -18,8 +18,12 @@ __pycache__/
 # Banco de dados local e backups
 db.sqlite3
 db.sqlite3.backup
+*.sqlite3
 dados_backup.json
 backup_antes_limpar_usuarios.json
+
+# Backups locais gerados durante correções
+outputs/*.zip
 
 # Arquivos enviados
 media/

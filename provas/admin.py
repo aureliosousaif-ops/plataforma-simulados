@@ -1,7 +1,16 @@
 from django.contrib import admin
 
 # Importa os modelos que serão administrados pelo Django Admin.
-from .models import Alternativa, Disciplina, Prova, Questao
+from .models import (
+    Alternativa,
+    Disciplina,
+    ImagemProva,
+    ImagemQuestao,
+    Prova,
+    Questao,
+    QuestaoTextoBase,
+    TextoBase,
+)
 
 
 # Configuração do cadastro de provas.
@@ -59,6 +68,16 @@ class AlternativaInline(admin.TabularInline):
     max_num = 5
 
 
+# Permite associar textos-base dentro da questão.
+class QuestaoTextoBaseInline(admin.TabularInline):
+
+    # Modelo utilizado pelo formulário.
+    model = QuestaoTextoBase
+
+    # Quantidade de linhas extras exibidas.
+    extra = 0
+
+
 # Configuração do cadastro de questões.
 @admin.register(Questao)
 class QuestaoAdmin(admin.ModelAdmin):
@@ -90,4 +109,109 @@ class QuestaoAdmin(admin.ModelAdmin):
     # Mostra as alternativas dentro da questão.
     inlines = [
         AlternativaInline,
+        QuestaoTextoBaseInline,
     ]
+
+
+# Configuração do cadastro de imagens extraídas.
+@admin.register(ImagemProva)
+class ImagemProvaAdmin(admin.ModelAdmin):
+
+    # Campos mostrados na lista.
+    list_display = (
+        'prova',
+        'pagina',
+        'indice_pagina',
+        'largura',
+        'altura',
+        'exibida',
+        'ignorada',
+    )
+
+    # Filtros disponíveis.
+    list_filter = (
+        'prova',
+        'exibida',
+        'ignorada',
+    )
+
+    # Permite pesquisar pelo hash ou nome original.
+    search_fields = (
+        'hash_sha256',
+        'nome_original',
+    )
+
+
+# Configuração do cadastro de associações imagem/questão.
+@admin.register(ImagemQuestao)
+class ImagemQuestaoAdmin(admin.ModelAdmin):
+
+    # Campos mostrados na lista.
+    list_display = (
+        'imagem',
+        'questao',
+        'confirmada',
+        'origem',
+        'ordem',
+    )
+
+    # Filtros disponíveis.
+    list_filter = (
+        'confirmada',
+        'origem',
+        'imagem__prova',
+    )
+
+    # Permite pesquisar pela prova/questão relacionada.
+    search_fields = (
+        'questao__enunciado',
+        'imagem__nome_original',
+    )
+
+
+# Configuração do cadastro de textos-base compartilhados.
+@admin.register(TextoBase)
+class TextoBaseAdmin(admin.ModelAdmin):
+
+    # Campos mostrados na lista.
+    list_display = (
+        'prova',
+        'titulo',
+        'identificador',
+        'ordem',
+    )
+
+    # Filtros disponíveis.
+    list_filter = (
+        'prova',
+    )
+
+    # Permite pesquisar pelo título, cabeçalho ou conteúdo.
+    search_fields = (
+        'titulo',
+        'identificador',
+        'texto',
+    )
+
+
+# Configuração do cadastro de vínculos texto-base/questão.
+@admin.register(QuestaoTextoBase)
+class QuestaoTextoBaseAdmin(admin.ModelAdmin):
+
+    # Campos mostrados na lista.
+    list_display = (
+        'texto_base',
+        'questao',
+        'ordem',
+    )
+
+    # Filtros disponíveis.
+    list_filter = (
+        'texto_base__prova',
+    )
+
+    # Permite pesquisar pela questão relacionada.
+    search_fields = (
+        'questao__enunciado',
+        'texto_base__texto',
+    )

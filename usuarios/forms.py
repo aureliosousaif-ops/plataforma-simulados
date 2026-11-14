@@ -9,6 +9,12 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import Perfil
 
 
+# Mensagem única para nome de usuário já cadastrado.
+USERNAME_EM_USO = (
+    'Este nome de usuário já está em uso. Escolha outro.'
+)
+
+
 # =========================================================
 # SEÇÃO 1 — FORMULÁRIO DE CADASTRO
 # =========================================================
@@ -111,6 +117,36 @@ class CadastroForm(UserCreationForm):
         labels = {
             'username': 'Nome de usuário'
         }
+
+        error_messages = {
+            'username': {
+                'unique': USERNAME_EM_USO,
+            },
+        }
+
+    # =========================================================
+    # NOME DE USUÁRIO
+    # =========================================================
+
+    def clean_username(self):
+        """
+        Impede o cadastro de um nome de usuário já existente.
+
+        A comparação ignora maiúsculas/minúsculas, pois dois nomes
+        que diferem apenas na caixa confundem o login do usuário.
+        """
+
+        username = self.cleaned_data.get('username')
+
+        if not username:
+            return username
+
+        # Verifica antes de tentar salvar no banco.
+        if User.objects.filter(username__iexact=username).exists():
+
+            raise forms.ValidationError(USERNAME_EM_USO)
+
+        return username
 
     # =========================================================
     # CONFIRMAÇÃO DA SENHA

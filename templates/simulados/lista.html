@@ -59,7 +59,7 @@
 
                                 <small class="text-muted">
                                     📝
-                                    {{ prova.questoes.count }}
+                                    {{ prova.total_questoes }}
                                     questões
                                 </small>
 
@@ -78,6 +78,42 @@
 
                                 <!-- Proteção CSRF do Django -->
                                 {% csrf_token %}
+
+                                <!--
+                                    Quando a prova possui as duas
+                                    variantes de língua estrangeira,
+                                    o aluno escolhe qual responder.
+                                -->
+                                {% if prova.idiomas_disponiveis|length > 1 %}
+
+                                    <div class="mb-3">
+
+                                        <label
+                                            for="idioma_{{ prova.id }}"
+                                            class="form-label small text-muted mb-1"
+                                        >
+                                            Idioma das questões 1–5
+                                        </label>
+
+                                        <select
+                                            name="idioma"
+                                            id="idioma_{{ prova.id }}"
+                                            class="form-select form-select-sm"
+                                        >
+
+                                            {% for idioma in prova.idiomas_disponiveis %}
+
+                                                <option value="{{ idioma }}">
+                                                    {{ idioma }}
+                                                </option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                {% endif %}
 
                                 <!-- Botão para iniciar -->
                                 <button

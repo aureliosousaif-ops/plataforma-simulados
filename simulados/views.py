@@ -4,12 +4,41 @@
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from provas.models import Prova, Alternativa
+from provas.models import (
+    Alternativa,
+    Prova,
+    distribuir_textos_base,
+)
 
 from .models import RespostaSimulado, Simulado
+
+
+# Ordem de preferência das opções de língua estrangeira do ENEM.
+ORDEM_IDIOMAS = ['Inglês', 'Espanhol']
+
+
+def _idiomas_disponiveis(questoes):
+    """Retorna os idiomas das questões 1–5 na ordem de preferência."""
+    encontrados = {
+        questao.idioma
+        for questao in questoes
+        if (
+            questao.numero in range(1, 6)
+            and questao.idioma
+        )
+    }
+
+    return [
+        idioma
+        for idioma in ORDEM_IDIOMAS
+        if idioma in encontrados
+    ] + sorted(
+        encontrados - set(ORDEM_IDIOMAS)
+    )
 
 
 # ==========================================
@@ -26,10 +55,33 @@ def lista(request):
     """
 
     # Busca somente provas ativas e já processadas.
-    provas = Prova.objects.filter(
-        ativa=True,
-        status_importacao='processada'
+    provas = list(
+        Prova.objects.filter(
+            ativa=True,
+            status_importacao='processada'
+        )
     )
+
+    # Prepara os dados exibidos em cada card.
+    for prova in provas:
+
+        # Busca as questões ativas da prova.
+        questoes = list(
+            prova.questoes.filter(ativa=True)
+        )
+
+        # As variantes 1–5 de Inglês/Espanhol representam a mesma
+        # questão. Por isso, o total real é a quantidade de números
+        # distintos, não a quantidade de registros.
+        prova.total_questoes = len({
+            questao.numero
+            for questao in questoes
+        })
+
+        # Idiomas disponíveis nas questões 1–5.
+        prova.idiomas_disponiveis = _idiomas_disponiveis(
+            questoes
+        )
 
     # Exibe a lista de provas.
     return render(
@@ -95,40 +147,94 @@ def iniciar(request, prova_id):
     )
 
     # ==========================================
-    # CRIA O SIMULADO
+    # BUSCA AS QUESTÕES ATIVAS
     # ==========================================
 
-    # Cria uma nova tentativa para
-    # o usuário atualmente logado.
-    simulado = Simulado.objects.create(
-        usuario=request.user,
-        prova=prova
-    )
-
-    # Busca todas as questões ativas
-    # pertencentes à prova.
-    questoes = prova.questoes.filter(
-        ativa=True
-    )
-
-    # ==========================================
-    # CRIA AS RESPOSTAS
-    # ==========================================
-
-    # Cria uma resposta vazia para
-    # cada questão do simulado.
-    respostas = [
-        RespostaSimulado(
-            simulado=simulado,
-            questao=questao
+    questoes = list(
+        prova.questoes.filter(
+            ativa=True
+        ).order_by(
+            'numero',
+            'idioma'
         )
-        for questao in questoes
-    ]
-
-    # Salva todas as respostas de uma vez.
-    RespostaSimulado.objects.bulk_create(
-        respostas
     )
+
+    # Não permite iniciar um simulado sem questões.
+    if not questoes:
+
+        messages.error(
+            request,
+            'Esta prova não possui questões ativas para realizar.'
+        )
+
+        return redirect(
+            'simulados:lista'
+        )
+
+    # ==========================================
+    # ESCOLHA DO IDIOMA
+    # ==========================================
+
+    # O ENEM oferece as questões 1–5 em Inglês e em Espanhol.
+    # As duas variantes permanecem no acervo da prova, mas cada
+    # tentativa deve responder apenas uma delas.
+    idiomas = _idiomas_disponiveis(questoes)
+
+    idioma_escolhido = None
+
+    if idiomas:
+
+        idioma_solicitado = request.POST.get(
+            'idioma'
+        )
+
+        if idioma_solicitado in idiomas:
+
+            idioma_escolhido = idioma_solicitado
+
+        else:
+
+            idioma_escolhido = idiomas[0]
+
+        questoes = [
+            questao
+            for questao in questoes
+            if (
+                not (
+                    questao.numero in range(1, 6)
+                    and questao.idioma
+                )
+                or questao.idioma == idioma_escolhido
+            )
+        ]
+
+    # ==========================================
+    # CRIA O SIMULADO E AS RESPOSTAS
+    # ==========================================
+
+    with transaction.atomic():
+
+        # Cria uma nova tentativa para
+        # o usuário atualmente logado.
+        simulado = Simulado.objects.create(
+            usuario=request.user,
+            prova=prova
+        )
+
+        # Cria uma resposta vazia para
+        # cada questão do simulado.
+        respostas = [
+            RespostaSimulado(
+                simulado=simulado,
+                questao=questao
+            )
+            for questao in questoes
+        ]
+
+        # Salva todas as respostas de uma vez.
+        RespostaSimulado.objects.bulk_create(
+            respostas
+        )
 
     # ==========================================
     # PRIMEIRA QUESTÃO
@@ -188,7 +294,9 @@ def responder(request, simulado_id):
             'questao__disciplina'
         )
         .prefetch_related(
-            'questao__alternativas'
+            'questao__alternativas',
+            'questao__imagens_associadas__imagem',
+            'questao__textos_base_vinculados__texto_base',
         )
         .order_by(
             'questao__numero',
@@ -693,13 +801,22 @@ def resultado(request, simulado_id):
             'alternativa'
         )
         .prefetch_related(
-            'questao__alternativas'
+            'questao__alternativas',
+            'questao__imagens_associadas__imagem',
+            'questao__textos_base_vinculados__texto_base',
         )
         .order_by(
             'questao__numero',
             'questao__idioma'
         )
     )
+
+    # Em telas que mostram todas as questões, cada texto-base aparece
+    # apenas antes da primeira questão do grupo.
+    distribuir_textos_base([
+        resposta.questao
+        for resposta in respostas
+    ])
 
     # Total de questões.
     total = len(respostas)

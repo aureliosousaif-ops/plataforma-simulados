@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% load examix_texto %}
+
+{% block title %}
+    Imprimir - {{ prova.nome }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .examix-print-question {
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .examix-print-question:last-child {
+        border-bottom: 0;
+    }
+
+    .examix-print-images img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    @page {
+        size: A4;
+        margin: 1.5cm;
+    }
+
+    @media print {
+        .examix-navbar,
+        .examix-footer,
+        .examix-no-print {
+            display: none !important;
+        }
+
+        body {
+            background: #fff !important;
+        }
+
+        .container {
+            width: auto !important;
+            max-width: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .examix-print-question {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        a {
+            color: #000 !important;
+            text-decoration: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- Cabeçalho da impressão -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+
+        <div>
+            <h1 class="h3 mb-1">{{ prova.nome }}</h1>
+
+            <p class="text-muted mb-0">
+                {{ prova.tipo }} — {{ prova.ano }}
+            </p>
+        </div>
+
+        <div class="d-flex gap-2 examix-no-print">
+
+            <button
+                type="button"
+                class="btn btn-primary"
+                onclick="window.print();"
+            >
+                Imprimir
+            </button>
+
+            <a
+                href="{% url 'provas:detalhe' prova.id %}"
+                class="btn btn-secondary"
+            >
+                Voltar
+            </a>
+
+        </div>
+
+    </div>
+
+    <p class="text-muted examix-no-print">
+        Esta versão exibe as imagens confirmadas das questões. Use a opção
+        de impressão do navegador para gerar o PDF ou enviar para a impressora.
+    </p>
+
+    {% for questao in questoes %}
+
+        <article class="examix-print-question">
+
+            <h2 class="h5">
+                Questão {{ questao.numero }}
+                {% if questao.idioma %}
+                    — {{ questao.idioma }}
+                {% endif %}
+            </h2>
+
+            {% if questao.textos_base_para_exibir %}
+
+                {% include 'includes/texto_base.html' with textos_base=questao.textos_base_para_exibir %}
+
+            {% endif %}
+
+            <div class="mb-3">
+                {% if questao.enunciado %}
+                    {{ questao.enunciado|normalizar_enunciado|linebreaks }}
+                {% else %}
+                    <p class="text-muted">
+                        Enunciado não encontrado.
+                    </p>
+                {% endif %}
+            </div>
+
+            {% if questao.imagens_exibicao %}
+                <div class="examix-print-images mb-3">
+
+                    {% for imagem in questao.imagens_exibicao %}
+
+                        <figure class="text-center mb-3">
+                            <img
+                                src="{{ imagem.url }}"
+                                alt="Imagem da questão {{ questao.numero }}"
+                            >
+                        </figure>
+
+                    {% endfor %}
+
+                </div>
+            {% endif %}
+
+            <div class="examix-print-alternatives">
+
+                {% for alternativa in questao.alternativas.all %}
+
+                    <p class="mb-2">
+                        <strong>{{ alternativa.letra }})</strong>
+                        {{ alternativa.texto|linebreaksbr }}
+                    </p>
+
+                {% empty %}
+
+                    <p class="text-muted mb-0">
+                        Nenhuma alternativa encontrada.
+                    </p>
+
+                {% endfor %}
+
+            </div>
+
+        </article>
+
+    {% empty %}
+
+        <div class="alert alert-info">
+            Nenhuma questão foi importada ainda.
+        </div>
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}

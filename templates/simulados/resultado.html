@@ -371,6 +371,40 @@
                     </small>
 
 
+                    <!-- TEXTO-BASE COMPARTILHADO -->
+
+                    {% if resposta.questao.textos_base_para_exibir %}
+
+                        {% include 'includes/texto_base.html' with textos_base=resposta.questao.textos_base_para_exibir %}
+
+                    {% endif %}
+
+
+                    <!-- IMAGENS DA QUESTÃO -->
+
+                    {% if resposta.questao.imagens_exibicao %}
+
+                        <div class="examix-question-images mb-3">
+
+                            {% for imagem in resposta.questao.imagens_exibicao %}
+
+                                <figure class="examix-question-image">
+
+                                    <img
+                                        src="{{ imagem.url }}"
+                                        alt="Imagem da questão {{ resposta.questao.numero }}"
+                                        loading="lazy"
+                                    >
+
+                                </figure>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+
                     <!-- RESPOSTA DO ALUNO -->
 
                     {% if resposta.respondida %}

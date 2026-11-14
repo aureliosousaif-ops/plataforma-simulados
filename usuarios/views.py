@@ -6,9 +6,10 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
+from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
 
-from .forms import CadastroForm
+from .forms import CadastroForm, USERNAME_EM_USO
 
 
 # =========================================================
@@ -34,23 +35,44 @@ def cadastro(request):
         # Verifica se os dados são válidos.
         if form.is_valid():
 
-            # Cria o usuário e o perfil.
-            usuario = form.save()
+            try:
 
-            # Faz login automaticamente após o cadastro.
-            login(
-                request,
-                usuario
-            )
+                # Garante que usuário e perfil sejam gravados juntos.
+                #
+                # O bloco atômico também protege contra dois envios
+                # simultâneos do mesmo nome de usuário: a validação do
+                # formulário pode passar nos dois, mas só um grava.
+                with transaction.atomic():
 
-            # Mostra mensagem de sucesso.
-            messages.success(
-                request,
-                'Cadastro realizado com sucesso!'
-            )
+                    # Cria o usuário e o perfil.
+                    usuario = form.save()
 
-            # Vai para a página inicial.
-            return redirect('home')
+            except IntegrityError:
+
+                # Alguém cadastrou o mesmo nome entre a validação e a
+                # gravação. Mostra o erro no formulário em vez de 500.
+                form.add_error('username', USERNAME_EM_USO)
+
+            else:
+
+                # Faz login automaticamente após o cadastro.
+                #
+                # O backend precisa ser informado porque o projeto
+                # usa dois backends de autenticação (allauth e Django).
+                login(
+                    request,
+                    usuario,
+                    backend='django.contrib.auth.backends.ModelBackend'
+                )
+
+                # Mostra mensagem de sucesso.
+                messages.success(
+                    request,
+                    'Cadastro realizado com sucesso!'
+                )
+
+                # Vai para a página inicial.
+                return redirect('home')
 
     else:
 

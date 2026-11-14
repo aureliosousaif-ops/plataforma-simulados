@@ -1041,13 +1041,18 @@ main {
 /* Enunciado */
 
 .examix-question-text {
+    width: 100%;
+    max-width: none;
+
     margin-top: 25px;
 
     color: var(--examix-text);
 
-    font-size: 1.08rem;
+    font-size: 1.12rem;
 
-    line-height: 1.8;
+    line-height: 1.85;
+
+    text-align: left;
 
     overflow-wrap: break-word;
 
@@ -1055,7 +1060,7 @@ main {
 }
 
 .examix-question-text p {
-    margin-bottom: 15px;
+    margin-bottom: 1.05rem;
 }
 
 .examix-question-text p:last-child {
@@ -1694,5 +1699,73 @@ main {
 
     .examix-question-card {
         padding: 16px;
+    }
+}
+
+
+/* =========================================================
+   IMAGENS DAS QUESTÕES
+   ========================================================= */
+
+.examix-question-images {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.examix-question-image {
+    margin: 0;
+
+    padding: 12px;
+
+    background: var(--examix-white);
+
+    border: 1px solid var(--examix-border);
+    border-radius: 10px;
+
+    text-align: center;
+}
+
+.examix-question-image img {
+    display: block;
+
+    max-width: 100%;
+    height: auto;
+
+    margin: 0 auto;
+
+    object-fit: contain;
+}
+
+.examix-review-image {
+    max-height: 260px;
+    width: auto;
+}
+
+
+/* =========================================================
+   IMPRESSÃO DAS QUESTÕES
+   ========================================================= */
+
+@media print {
+
+    .examix-navbar,
+    .examix-footer,
+    .examix-no-print {
+        display: none !important;
+    }
+
+    body {
+        background: #fff !important;
+    }
+
+    .examix-question-image {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .examix-question-image img {
+        max-width: 100% !important;
+        height: auto !important;
     }
 }

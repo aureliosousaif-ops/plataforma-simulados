@@ -50,17 +50,6 @@ services:
       - key: WEB_CONCURRENCY
         value: "2"
 
-      # Preencha no painel do Render. Sem eles o build apenas
-      # não cria o superusuário.
-      - key: DJANGO_SUPERUSER_USERNAME
-        sync: false
-      - key: DJANGO_SUPERUSER_EMAIL
-        sync: false
-      - key: DJANGO_SUPERUSER_PASSWORD
-        sync: false
-
-      # Opcionais: login com Google.
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
+      # Nenhuma variável é pedida na criação do Blueprint.
+      # Superusuário e login com Google podem ser adicionados
+      # depois em examix -> Environment (veja DEPLOY_RENDER.md).

@@ -63,27 +63,27 @@ serviço (`RENDER_EXTERNAL_HOSTNAME`) em `ALLOWED_HOSTS` e em
 `CSRF_TRUSTED_ORIGINS`, então não é necessário corrigir o domínio
 manualmente caso o nome `examix` já esteja em uso.
 
-### Variáveis que você deve preencher
+### Variáveis opcionais (painel do Render)
 
-No painel do Render, em **examix → Environment**:
+O Blueprint não pede nenhuma variável na criação, para que o
+**Apply** funcione sem risco de conflito com os dados migrados.
+Se precisar, adicione depois em **examix → Environment**:
 
 | Variável | Para que serve |
 |---|---|
-| `DJANGO_SUPERUSER_USERNAME` | cria o administrador no build |
+| `DJANGO_SUPERUSER_USERNAME` | cria o administrador no próximo build |
 | `DJANGO_SUPERUSER_EMAIL` | e-mail do administrador |
 | `DJANGO_SUPERUSER_PASSWORD` | senha do administrador |
 | `GOOGLE_CLIENT_ID` | opcional, login com Google |
 | `GOOGLE_CLIENT_SECRET` | opcional, login com Google |
 
-> **Atenção ao migrar dados:** se você vai carregar o
-> `dados_producao.json` (passo 4), **deixe as três variáveis do
-> superusuário em branco**. O arquivo já contém os usuários locais,
-> incluindo o superusuário; criar outro com o mesmo nome faria a
-> carga falhar por duplicidade.
+> **Atenção ao migrar dados:** não crie um superusuário com o mesmo
+> nome de um usuário já existente. O `dados_producao.json` (passo 4)
+> já traz os usuários locais; um segundo usuário com o mesmo nome
+> faria a carga falhar por duplicidade.
 >
-> O plano free **não oferece Shell**. Se você não preencher as
-> variáveis e também não migrar os dados, crie o administrador do
-> seu computador apontando para o banco do Render:
+> O plano free **não oferece Shell**. Para criar um administrador
+> sem migrar dados, rode do seu computador:
 >
 > ```powershell
 > $env:DATABASE_URL = "<External Database URL>"

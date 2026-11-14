@@ -1,12 +1,15 @@
 # Importa as configurações de arquivos de mídia.
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import include, path
+from django.urls import include, path, re_path
 # Importa o painel administrativo do Django.
 from django.contrib import admin
 
 # Permite renderizar páginas.
 from django.shortcuts import render
+
+# Entrega arquivos de mídia também fora do modo de desenvolvimento.
+from django.views.static import serve
 
 def home(request):
     """
@@ -120,3 +123,15 @@ if settings.DEBUG:
         settings.MEDIA_URL,
         document_root=settings.MEDIA_ROOT
     )
+
+# Em produção o DEBUG fica desligado, mas as imagens e os PDFs
+# enviados para a pasta de mídia continuam precisando ser servidos.
+else:
+
+    urlpatterns += [
+        re_path(
+            r'^media/(?P<path>.*)$',
+            serve,
+            {'document_root': settings.MEDIA_ROOT},
+        ),
+    ]

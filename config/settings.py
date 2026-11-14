@@ -48,6 +48,14 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+# O Render informa o domínio público do serviço nesta variável.
+# Incluí-lo automaticamente evita erro de host quando o nome do
+# serviço precisar de sufixo (ex.: examix-abc1.onrender.com).
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
 
 # ==========================================
 # SEGURANÇA EM PRODUÇÃO E DESENVOLVIMENTO
@@ -77,6 +85,13 @@ if not DEBUG:
         ).split(',')
         if origin.strip()
     ]
+
+    # Usa o domínio informado pelo Render como origem confiável,
+    # independentemente do nome final do serviço.
+    if RENDER_EXTERNAL_HOSTNAME:
+        CSRF_TRUSTED_ORIGINS.append(
+            f'https://{RENDER_EXTERNAL_HOSTNAME}'
+        )
 
 else:
 
@@ -261,6 +276,19 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# WhiteNoise comprime e serve os arquivos estáticos coletados
+# diretamente pelo processo web em produção.
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': (
+            'whitenoise.storage.CompressedStaticFilesStorage'
+        ),
+    },
+}
+
 
 # ==========================================
 # ARQUIVOS DE MÍDIA
@@ -268,7 +296,11 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 
-MEDIA_ROOT = BASE_DIR / 'media'
+# Permite apontar a mídia para um disco persistente no Render
+# (por exemplo, /var/data/media) sem alterar o código.
+MEDIA_ROOT = Path(
+    os.environ.get('MEDIA_ROOT') or (BASE_DIR / 'media')
+)
 
 
 # ==========================================

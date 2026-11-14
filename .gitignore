@@ -22,6 +22,9 @@ db.sqlite3.backup
 dados_backup.json
 backup_antes_limpar_usuarios.json
 
+# Exportação de dados para o PostgreSQL do Render (contém hashes de senha)
+dados_producao.json
+
 # Backups locais gerados durante correções
 outputs/*.zip
 

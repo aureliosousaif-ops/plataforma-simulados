@@ -55,6 +55,9 @@ O `render.yaml` já define automaticamente:
 | `DATABASE_URL` | banco `examix-db` |
 | `PYTHON_VERSION` | `3.13.7` |
 
+O comando de start já faz o bind na porta `$PORT` exigida pelo
+Render (padrão `10000`) e usa o WSGI `config.wsgi:application`.
+
 O `settings.py` também inclui automaticamente o domínio real do
 serviço (`RENDER_EXTERNAL_HOSTNAME`) em `ALLOWED_HOSTS` e em
 `CSRF_TRUSTED_ORIGINS`, então não é necessário corrigir o domínio
@@ -72,9 +75,22 @@ No painel do Render, em **examix → Environment**:
 | `GOOGLE_CLIENT_ID` | opcional, login com Google |
 | `GOOGLE_CLIENT_SECRET` | opcional, login com Google |
 
-> Se as três variáveis do superusuário não forem preenchidas, o
-> build continua normalmente e o administrador pode ser criado
-> depois pelo **Shell** do Render com `python manage.py createsuperuser`.
+> **Atenção ao migrar dados:** se você vai carregar o
+> `dados_producao.json` (passo 4), **deixe as três variáveis do
+> superusuário em branco**. O arquivo já contém os usuários locais,
+> incluindo o superusuário; criar outro com o mesmo nome faria a
+> carga falhar por duplicidade.
+>
+> O plano free **não oferece Shell**. Se você não preencher as
+> variáveis e também não migrar os dados, crie o administrador do
+> seu computador apontando para o banco do Render:
+>
+> ```powershell
+> $env:DATABASE_URL = "<External Database URL>"
+> $env:DEBUG = "False"
+> .venv\Scripts\python.exe -X utf8 manage.py createsuperuser
+> Remove-Item Env:\DATABASE_URL, Env:\DEBUG
+> ```
 
 ---
 
@@ -98,8 +114,14 @@ scripts\carregar_dados_render.ps1 -DatabaseUrl "<External Database URL>"
 
 - O arquivo `dados_producao.json` contém hashes de senha e está no
   `.gitignore`. **Não o envie ao GitHub.**
-- Rode a carga apenas uma vez, com o banco do Render ainda vazio.
-- Ao final, o script mostra a contagem de registros dos dois lados.
+- Rode a carga apenas uma vez, depois que o primeiro deploy
+  terminar (o build já cria as tabelas com `migrate`).
+- **Não preencha** `DJANGO_SUPERUSER_*` no Render se for usar este
+  caminho: os usuários já vêm no arquivo.
+- Se a carga falhar no meio, o banco do Render fica parcialmente
+  preenchido. Nesse caso, apague o banco pelo painel e crie outro
+  antes de repetir — não rode `loaddata` duas vezes.
+- Ao final, o script mostra a contagem de registros do banco novo.
 
 ---
 
@@ -108,9 +130,10 @@ scripts\carregar_dados_render.ps1 -DatabaseUrl "<External Database URL>"
 Após o build terminar (status **Live**):
 
 1. Abra `https://examix.onrender.com/` (ou o domínio mostrado no
-   painel).
+   painel). Na primeira visita o Render pode levar cerca de
+   1 minuto para acordar o serviço.
 2. Confira a página inicial, o login e o painel `/admin/`.
-3. Entre com o superusuário criado no passo 3.
+3. Entre com o superusuário migrado (ou o criado no passo 3).
 4. Abra uma prova e um simulado para confirmar que as questões e
    as imagens carregam.
 
@@ -139,20 +162,47 @@ Após o build terminar (status **Live**):
 
 ---
 
-## 7. Limitações do plano free
+## 7. Backup do banco (importante no plano free)
 
-- O serviço "hiberna" após alguns minutos sem acesso; a primeira
-  requisição pode demorar ~50 segundos.
-- O disco é efêmero: arquivos enviados depois do deploy (novos PDFs
-  ou imagens) são perdidos em um novo deploy. Para persistir,
-  use um **Disco** do Render (plano pago) e defina
-  `MEDIA_ROOT=/var/data/media`.
-- O PostgreSQL free expira após o período definido pelo Render;
-  faça backup pelo painel antes disso.
+O PostgreSQL free **não tem backup automático** e **expira 30 dias
+após a criação** (com 14 dias de carência antes da exclusão).
+
+Depois que o site estiver no ar, rode periodicamente:
+
+```powershell
+scripts\backup_render.ps1 -DatabaseUrl "<External Database URL>"
+```
+
+O arquivo é salvo em `backups/` (ignorado pelo Git e protegido por
+conter hashes de senha). Para restaurar em um banco novo:
+
+```powershell
+scripts\carregar_dados_render.ps1 -DatabaseUrl "<nova URL externa>"
+```
 
 ---
 
-## 8. Segurança
+## 8. Limitações do plano free
+
+- O serviço hiberna após **15 minutos** sem acesso. A primeira
+  requisição depois disso demora cerca de **1 minuto**.
+- O workspace tem **750 horas/mês** de instância free.
+- O disco é efêmero: arquivos enviados depois do deploy (novos PDFs
+  ou imagens) são perdidos em um redeploy ou reinício. O plano free
+  **não permite anexar disco persistente**. Para persistir envios,
+  use um plano pago e defina `MEDIA_ROOT=/var/data/media`.
+  As imagens e PDFs já versionados no repositório continuam
+  disponíveis porque são recriados a cada build.
+- Apenas **um** PostgreSQL free por workspace, com **1 GB** fixo.
+- O PostgreSQL free expira em **30 dias** e não oferece Shell nem
+  backups. Para um uso contínuo, troque o banco para um plano pago
+  em **examix-db → Plan** antes do vencimento (os dados são
+  preservados na troca de plano).
+- O plano free não permite Shell, nem escala além de uma instância.
+
+---
+
+## 9. Segurança
 
 - `SECRET_KEY`, `DATABASE_URL` e credenciais ficam apenas nas
   variáveis de ambiente do Render.

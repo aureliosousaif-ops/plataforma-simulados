@@ -6,6 +6,8 @@ from .models import (
     Disciplina,
     ImagemProva,
     ImagemQuestao,
+    ImportacaoItem,
+    ImportacaoLote,
     Prova,
     Questao,
     QuestaoTextoBase,
@@ -20,16 +22,27 @@ class ProvaAdmin(admin.ModelAdmin):
     # Campos mostrados na lista de provas.
     list_display = (
         'nome',
+        'chave_oficial',
         'tipo',
         'ano',
+        'modalidade',
+        'dia',
+        'caderno',
+        'acessibilidade',
+        'origem',
+        'status_importacao',
         'ativa',
-        'data_criacao',
     )
 
     # Filtros disponíveis no Admin.
     list_filter = (
         'tipo',
         'ano',
+        'modalidade',
+        'dia',
+        'acessibilidade',
+        'origem',
+        'status_importacao',
         'ativa',
     )
 
@@ -37,6 +50,20 @@ class ProvaAdmin(admin.ModelAdmin):
     search_fields = (
         'nome',
         'descricao',
+        'chave_oficial',
+    )
+
+    # Dados vindos do catálogo oficial: o Admin serve para consulta,
+    # a atualização desses campos é responsabilidade do comando de
+    # importação.
+    readonly_fields = (
+        'chave_oficial',
+        'origem',
+        'fonte_url',
+        'url_prova',
+        'url_gabarito',
+        'url_prova_espanhol',
+        'url_gabarito_espanhol',
     )
 
 
@@ -66,6 +93,11 @@ class AlternativaInline(admin.TabularInline):
 
     # Limita a quantidade máxima para cinco.
     max_num = 5
+
+    # Permite localizar a imagem sem carregar todas as opções no select.
+    autocomplete_fields = (
+        'imagem',
+    )
 
 
 # Permite associar textos-base dentro da questão.
@@ -215,3 +247,134 @@ class QuestaoTextoBaseAdmin(admin.ModelAdmin):
         'questao__enunciado',
         'texto_base__texto',
     )
+
+
+# Mostra os itens processados dentro da página do lote.
+class ImportacaoItemInline(admin.TabularInline):
+
+    # Modelo utilizado pelo formulário.
+    model = ImportacaoItem
+
+    # Nenhum item extra: o lote só mostra o que o comando registrou.
+    extra = 0
+
+    # Itens são gerenciados pelo comando; aqui é apenas consulta.
+    can_delete = False
+
+    # Campos exibidos e somente leitura.
+    fields = (
+        'chave_oficial',
+        'status',
+        'etapa',
+        'tentativas',
+        'mensagem',
+    )
+    readonly_fields = fields
+
+    # Mensagens de erro podem ser longas.
+    def has_add_permission(self, request):
+        return False
+
+
+# Configuração da consulta dos lotes de importação.
+@admin.register(ImportacaoLote)
+class ImportacaoLoteAdmin(admin.ModelAdmin):
+
+    # Campos mostrados na lista de lotes.
+    list_display = (
+        'identificador',
+        'ano',
+        'modalidade',
+        'status',
+        'criado_em',
+        'atualizado_em',
+    )
+
+    # Filtros disponíveis.
+    list_filter = (
+        'status',
+        'ano',
+        'modalidade',
+    )
+
+    # Permite pesquisar pelo identificador.
+    search_fields = (
+        'identificador',
+    )
+
+    # Mostra os itens dentro da página do lote.
+    inlines = (
+        ImportacaoItemInline,
+    )
+
+    # O lote é criado e encerrado pelo comando; aqui é apenas consulta.
+    readonly_fields = (
+        'identificador',
+        'ano',
+        'modalidade',
+        'status',
+        'resumo',
+        'criado_em',
+        'atualizado_em',
+    )
+
+    # Não faz sentido criar lote pela mão.
+    def has_add_permission(self, request):
+        return False
+
+
+# Resumo da mensagem para a listagem de itens.
+@admin.display(description='Mensagem')
+def mensagem_resumida(item):
+    texto = item.mensagem or ''
+    if len(texto) > 80:
+        return f'{texto[:80]}…'
+    return texto
+
+
+# Configuração da consulta dos itens de importação.
+@admin.register(ImportacaoItem)
+class ImportacaoItemAdmin(admin.ModelAdmin):
+
+    # Campos mostrados na lista de itens.
+    list_display = (
+        'chave_oficial',
+        'lote',
+        'status',
+        'etapa',
+        'tentativas',
+        mensagem_resumida,
+        'atualizado_em',
+    )
+
+    # Filtros disponíveis: o filtro por status dá acesso direto aos
+    # erros de importação.
+    list_filter = (
+        'status',
+        'etapa',
+    )
+
+    # Permite pesquisar pela chave ou pelo texto do erro.
+    search_fields = (
+        'chave_oficial',
+        'mensagem',
+    )
+
+    # O item é escrito pelo comando de importação; aqui é apenas
+    # consulta, inclusive dos detalhes estruturados do erro.
+    readonly_fields = (
+        'lote',
+        'chave_oficial',
+        'prova',
+        'status',
+        'etapa',
+        'tentativas',
+        'mensagem',
+        'detalhes',
+        'criado_em',
+        'atualizado_em',
+    )
+
+    # Não faz sentido criar item pela mão.
+    def has_add_permission(self, request):
+        return False

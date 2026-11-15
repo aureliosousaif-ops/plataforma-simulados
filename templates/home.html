@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Início | Examix{% endblock %}
+{% block title %}Examix | Simulados ENEM{% endblock %}
 
 {% block extra_css %}
 
@@ -689,17 +689,17 @@
         <div class="home-hero-content">
 
             <span class="home-badge">
-                Plataforma de estudos
+                Simulados ENEM
             </span>
 
             <h1>
-                Prepare-se melhor.<br>
-                <span>Estude com o Examix.</span>
+                Sua preparação para o ENEM<br>
+                <span>começa com o Examix.</span>
             </h1>
 
             <p>
-                Faça simulados, acompanhe seu desempenho
-                e descubra como está sua evolução nos estudos.
+                Faça simulados do ENEM, acompanhe seu desempenho
+                e descubra como está sua evolução.
             </p>
 
             <div class="home-actions">
@@ -710,7 +710,7 @@
                         href="{% url 'simulados:lista' %}"
                         class="home-btn home-btn-primary"
                     >
-                        🚀 Começar um simulado
+                        🚀 Começar um simulado ENEM
                     </a>
 
                 {% else %}
@@ -753,11 +753,11 @@
             <div>
 
                 <h2>
-                    Simulados
+                    Simulados ENEM
                 </h2>
 
                 <p>
-                    Resolva provas e questões diretamente pela plataforma.
+                    Resolva provas e questões do ENEM diretamente pela plataforma.
                 </p>
 
             </div>
@@ -774,11 +774,11 @@
             <div>
 
                 <h2>
-                    Desempenho
+                    Desempenho no ENEM
                 </h2>
 
                 <p>
-                    Acompanhe seus resultados e sua evolução nos estudos.
+                    Acompanhe seus acertos e sua evolução a cada simulado.
                 </p>
 
             </div>
@@ -799,7 +799,7 @@
                 </h2>
 
                 <p>
-                    Acompanhe o tempo utilizado durante seus simulados.
+                    Acompanhe o tempo utilizado durante seus simulados do ENEM.
                 </p>
 
             </div>
@@ -824,11 +824,11 @@
             </span>
 
             <h2>
-                Continue seus estudos
+                Continue seus estudos para o ENEM
             </h2>
 
             <p>
-                Acesse rapidamente os recursos da sua conta.
+                Acesse rapidamente os recursos da sua preparação.
             </p>
 
         </div>
@@ -853,11 +853,11 @@
                 <div>
 
                     <h3>
-                        Simulados
+                        Simulados ENEM
                     </h3>
 
                     <p>
-                        Escolha uma prova e comece a responder.
+                        Escolha uma prova do ENEM e comece a responder.
                     </p>
 
                     <span class="dashboard-link">
@@ -889,7 +889,7 @@
                     </h3>
 
                     <p>
-                        Consulte suas provas iniciadas e seus resultados.
+                        Consulte seus simulados do ENEM iniciados e seus resultados.
                     </p>
 
                     <span class="dashboard-link">
@@ -921,7 +921,7 @@
                     </h3>
 
                     <p>
-                        Veja seus resultados e acompanhe sua evolução.
+                        Veja seus resultados e acompanhe sua evolução no ENEM.
                     </p>
 
                     <span class="dashboard-link">
@@ -951,28 +951,28 @@
             {% if user.is_authenticated %}
 
                 <h2>
-                    Continue avançando nos seus estudos.
+                    Continue avançando na sua preparação para o ENEM.
                 </h2>
 
                 <p>
-                    Cada simulado é uma oportunidade para melhorar.
+                    Cada simulado do ENEM é uma oportunidade para melhorar.
                 </p>
 
                 <a
                     href="{% url 'simulados:lista' %}"
                     class="home-btn home-btn-primary"
                 >
-                    🚀 Fazer um simulado
+                    🚀 Fazer um simulado ENEM
                 </a>
 
             {% else %}
 
                 <h2>
-                    Comece sua preparação com o Examix.
+                    Comece sua preparação para o ENEM com o Examix.
                 </h2>
 
                 <p>
-                    Crie sua conta e acompanhe sua evolução.
+                    Crie sua conta e acompanhe sua evolução nos simulados.
                 </p>
 
                 <a

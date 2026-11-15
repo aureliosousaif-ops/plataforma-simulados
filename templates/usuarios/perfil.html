@@ -1,47 +1,122 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    Meu perfil
+    Meu perfil | Examix
 {% endblock %}
 
 {% block content %}
 
-<h2 class="mb-4">
-    Meu perfil
-</h2>
+<div class="container py-4">
 
-<div class="card">
+    <!-- ========================================== -->
+    <!-- CABEÇALHO -->
+    <!-- ========================================== -->
 
-    <div class="card-body">
+    <div class="mb-4">
 
-        <h5 class="card-title">
-            {{ user.username }}
-        </h5>
+        <h1 class="fw-bold">
+            Meu perfil
+        </h1>
 
-        <p>
-            <strong>E-mail:</strong>
-            {{ user.email }}
+        <p class="text-muted mb-0">
+            Consulte os dados da sua conta no Examix.
         </p>
 
-        <p>
-            <strong>Tipo:</strong>
-            {{ user.perfil.get_tipo_display }}
-        </p>
+    </div>
 
-        <p>
-            <strong>Idade:</strong>
-            {{ user.perfil.idade|default:"Não informado" }}
-        </p>
 
-        <p>
-            <strong>Escolaridade:</strong>
-            {{ user.perfil.get_escolaridade_display|default:"Não informado" }}
-        </p>
+    <!-- ========================================== -->
+    <!-- DADOS DO USUÁRIO -->
+    <!-- ========================================== -->
 
-        <p>
-            <strong>Objetivo:</strong>
-            {{ user.perfil.get_objetivo_display|default:"Não informado" }}
-        </p>
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body p-4">
+
+            <h2 class="h5 fw-bold mb-4 text-break">
+                {{ user.username }}
+            </h2>
+
+
+            <div class="row g-4">
+
+                <!-- E-mail -->
+
+                <div class="col-12 col-sm-6">
+
+                    <small class="text-muted d-block mb-1">
+                        E-mail
+                    </small>
+
+                    <strong class="text-break">
+                        {{ user.email|default:"Não informado" }}
+                    </strong>
+
+                </div>
+
+
+                <!-- Tipo -->
+
+                <div class="col-12 col-sm-6">
+
+                    <small class="text-muted d-block mb-1">
+                        Tipo
+                    </small>
+
+                    <strong>
+                        {{ user.perfil.get_tipo_display }}
+                    </strong>
+
+                </div>
+
+
+                <!-- Idade -->
+
+                <div class="col-12 col-sm-6">
+
+                    <small class="text-muted d-block mb-1">
+                        Idade
+                    </small>
+
+                    <strong>
+                        {{ user.perfil.idade|default:"Não informado" }}
+                    </strong>
+
+                </div>
+
+
+                <!-- Escolaridade -->
+
+                <div class="col-12 col-sm-6">
+
+                    <small class="text-muted d-block mb-1">
+                        Escolaridade
+                    </small>
+
+                    <strong>
+                        {{ user.perfil.get_escolaridade_display|default:"Não informado" }}
+                    </strong>
+
+                </div>
+
+
+                <!-- Objetivo -->
+
+                <div class="col-12">
+
+                    <small class="text-muted d-block mb-1">
+                        Objetivo
+                    </small>
+
+                    <strong>
+                        ENEM
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </div>
 
     </div>
 

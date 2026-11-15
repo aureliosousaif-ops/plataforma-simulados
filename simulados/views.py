@@ -54,11 +54,12 @@ def lista(request):
     os simulados disponíveis sem fazer login.
     """
 
-    # Busca somente provas ativas e já processadas.
+    # Busca somente provas ativas, já processadas e do ENEM.
     provas = list(
         Prova.objects.filter(
             ativa=True,
-            status_importacao='processada'
+            status_importacao='processada',
+            tipo='enem'
         )
     )
 
@@ -138,12 +139,13 @@ def iniciar(request, prova_id):
     # BUSCA A PROVA
     # ==========================================
 
-    # Busca somente uma prova válida.
+    # Busca somente uma prova válida do ENEM.
     prova = get_object_or_404(
         Prova,
         id=prova_id,
         ativa=True,
-        status_importacao='processada'
+        status_importacao='processada',
+        tipo='enem'
     )
 
     # ==========================================

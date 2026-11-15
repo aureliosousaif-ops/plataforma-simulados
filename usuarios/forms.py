@@ -58,9 +58,16 @@ class CadastroForm(UserCreationForm):
     # OBJETIVO
     # ---------------------------------------------------------
 
+    # A plataforma é exclusivamente voltada para o ENEM.
+    # As demais opções continuam disponíveis no admin para
+    # preservar os dados históricos, mas não são exibidas
+    # no cadastro público.
     objetivo = forms.ChoiceField(
-        choices=Perfil.OBJETIVOS,
+        choices=[
+            ('enem', 'ENEM'),
+        ],
         required=False,
+        initial='enem',
         label='Objetivo de estudo'
     )
 

@@ -3,7 +3,7 @@
 {% load examix_texto %}
 
 {% block title %}
-    Responder simulado | Examix
+    Responder simulado ENEM | Examix
 {% endblock %}
 
 {% block content %}
@@ -21,7 +21,7 @@
 
             <!-- Status -->
             <div class="text-primary fw-bold small mb-2">
-                SIMULADO EM ANDAMENTO
+                SIMULADO ENEM EM ANDAMENTO
             </div>
 
             <!-- Nome da prova -->
@@ -191,6 +191,21 @@
 
                                 {{ alternativa.texto|linebreaksbr }}
 
+                                {% if alternativa.imagem %}
+
+                                    <figure class="mt-2 mb-0">
+
+                                        <img
+                                            src="{{ alternativa.imagem.arquivo.url }}"
+                                            class="img-fluid"
+                                            alt="Imagem da alternativa {{ alternativa.letra }} da questão {{ resposta.questao.numero }}"
+                                            loading="lazy"
+                                        >
+
+                                    </figure>
+
+                                {% endif %}
+
                             </span>
 
                         </label>
@@ -304,15 +319,40 @@
     <div class="mt-4">
 
         <!-- Título -->
-        <h6 class="fw-bold mb-3">
+        <h6 class="fw-bold mb-2">
 
             Navegação das questões
 
         </h6>
 
 
+        <!-- Legenda dos estados -->
+        <div class="examix-question-legend">
+
+            <span>
+                <span class="examix-legend-dot"></span>
+                Não respondida
+            </span>
+
+            <span>
+                <span class="examix-legend-dot is-answered"></span>
+                Respondida
+            </span>
+
+            <span>
+                <span class="examix-legend-dot is-current"></span>
+                Questão atual
+            </span>
+
+        </div>
+
+
         <!-- Números das questões -->
-        <div class="examix-question-navigation">
+        <div
+            class="examix-question-navigation"
+            role="navigation"
+            aria-label="Navegação das questões"
+        >
 
             {% for item in respostas %}
 
@@ -320,14 +360,20 @@
                     href="?questao={{ forloop.counter }}"
                     class="
                         examix-question-number
-
-                        {% if forloop.counter == numero_atual %}
-                            active
-                        {% endif %}
+                        {% if item.respondida %}is-answered{% endif %}
+                        {% if forloop.counter == numero_atual %}is-current{% endif %}
                     "
+                    {% if forloop.counter == numero_atual %}aria-current="page"{% endif %}
+                    title="Questão {{ item.questao.numero }}{% if item.questao.idioma == 'Inglês' %} (Inglês){% elif item.questao.idioma == 'Espanhol' %} (Espanhol){% endif %} — {% if item.respondida %}respondida{% else %}não respondida{% endif %}"
                 >
 
-                    {{ item.questao.numero }}<br>{% if item.questao.idioma == "Inglês" %}(ING){% elif item.questao.idioma == "Espanhol" %}(ESP){% endif %}
+                    <span>{{ item.questao.numero }}</span>
+
+                    {% if item.questao.idioma == "Inglês" %}
+                        <small>(ING)</small>
+                    {% elif item.questao.idioma == "Espanhol" %}
+                        <small>(ESP)</small>
+                    {% endif %}
 
                 </a>
 

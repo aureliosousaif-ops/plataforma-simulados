@@ -70,6 +70,125 @@ class Prova(models.Model):
         blank=True
     )
 
+    # -----------------------------------------------------
+    # Catálogo oficial do ENEM
+    # -----------------------------------------------------
+
+    # Identificador estável da prova no catálogo oficial.
+    # É usado para evitar duplicações nas importações em lote.
+    # Provas cadastradas manualmente permanecem com o campo vazio.
+    chave_oficial = models.CharField(
+        max_length=80,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    # Modalidade de aplicação da prova.
+    modalidade = models.CharField(
+        max_length=20,
+        choices=[
+            ('regular', 'Regular'),
+            ('digital', 'Digital'),
+        ],
+        blank=True
+    )
+
+    # Dia de aplicação da prova.
+    dia = models.PositiveSmallIntegerField(
+        choices=[
+            (1, '1º dia'),
+            (2, '2º dia'),
+        ],
+        blank=True,
+        null=True
+    )
+
+    # Número do caderno oficial.
+    caderno = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    # Cor do caderno oficial.
+    cor_caderno = models.CharField(
+        max_length=20,
+        blank=True
+    )
+
+    # Formato de acessibilidade do caderno.
+    acessibilidade = models.CharField(
+        max_length=20,
+        choices=[
+            ('padrao', 'Padrão'),
+            ('braile_ledor', 'Braille/Ledor'),
+            ('libras', 'Libras'),
+        ],
+        default='padrao'
+    )
+
+    # Idioma do caderno, quando a prova é separada por idioma.
+    idioma_caderno = models.CharField(
+        max_length=30,
+        blank=True
+    )
+
+    # Links oficiais do INEP para a prova e o gabarito.
+    url_prova = models.URLField(
+        max_length=500,
+        blank=True
+    )
+
+    url_gabarito = models.URLField(
+        max_length=500,
+        blank=True
+    )
+
+    # Variante em espanhol dos cadernos digitais do primeiro dia.
+    url_prova_espanhol = models.URLField(
+        max_length=500,
+        blank=True
+    )
+
+    url_gabarito_espanhol = models.URLField(
+        max_length=500,
+        blank=True
+    )
+
+    arquivo_pdf_espanhol = models.FileField(
+        upload_to='provas/espanhol/',
+        blank=True,
+        null=True
+    )
+
+    arquivo_gabarito_espanhol = models.FileField(
+        upload_to='gabaritos/espanhol/',
+        blank=True,
+        null=True
+    )
+
+    # Página oficial de onde os links foram obtidos.
+    fonte_url = models.URLField(
+        max_length=500,
+        blank=True
+    )
+
+    # Quantidade de questões confirmada para a prova.
+    quantidade_questoes = models.PositiveIntegerField(
+        blank=True,
+        null=True
+    )
+
+    # Indica se a prova foi criada manualmente ou pelo catálogo.
+    origem = models.CharField(
+        max_length=20,
+        choices=[
+            ('manual', 'Manual'),
+            ('catalogo_oficial', 'Catálogo oficial'),
+        ],
+        default='manual'
+    )
+
     # Guarda a data e hora em que a prova foi processada.
     data_processamento = models.DateTimeField(
         blank=True,
@@ -88,6 +207,63 @@ class Prova(models.Model):
     def __str__(self):
         # Nome que será exibido para a prova.
         return f'{self.nome} - {self.ano}'
+
+    @property
+    def area_conhecimento(self):
+        """
+        Área de conhecimento avaliada no dia da aplicação.
+        """
+        if self.dia == 1:
+            return (
+                'Linguagens, Códigos e suas Tecnologias e '
+                'Ciências Humanas e suas Tecnologias'
+            )
+
+        if self.dia == 2:
+            return (
+                'Ciências da Natureza e suas Tecnologias e '
+                'Matemática e suas Tecnologias'
+            )
+
+        return ''
+
+    @property
+    def dia_display(self):
+        """
+        Devolve o dia de aplicação já formatado.
+        """
+        if self.dia == 1:
+            return '1º dia'
+
+        if self.dia == 2:
+            return '2º dia'
+
+        return ''
+
+    @property
+    def modalidade_display(self):
+        """
+        Devolve a modalidade já formatada.
+        """
+        return self.get_modalidade_display() if self.modalidade else ''
+
+    @property
+    def caderno_display(self):
+        """
+        Devolve o caderno no formato usado pelo INEP.
+        """
+        partes = []
+
+        if self.caderno:
+            partes.append(f'Caderno {self.caderno}')
+
+        if self.cor_caderno:
+            partes.append(self.cor_caderno)
+
+        if self.origem == 'catalogo_oficial' and self.acessibilidade != 'padrao':
+            partes.append(self.get_acessibilidade_display())
+
+        return ' (' + ', '.join(partes) + ')' if partes else ''
 
 # Modelo responsável pelas disciplinas.
 class Disciplina(models.Model):
@@ -235,6 +411,11 @@ class Questao(models.Model):
                 continue
 
             if imagem.ignorada or not imagem.exibida:
+                continue
+
+            # Imagens usadas como conteúdo de uma alternativa não devem
+            # aparecer novamente como imagem do enunciado.
+            if imagem.alternativas_como_imagem.exists():
                 continue
 
             if associacao.origem == 'automatica':
@@ -563,6 +744,16 @@ class Alternativa(models.Model):
         default=False
     )
 
+    # Imagem usada como conteúdo da alternativa.
+    # Algumas questões do ENEM apresentam as opções apenas como figuras.
+    imagem = models.ForeignKey(
+        ImagemProva,
+        on_delete=models.SET_NULL,
+        related_name='alternativas_como_imagem',
+        blank=True,
+        null=True
+    )
+
     # Configurações adicionais.
     class Meta:
         # Ordena as alternativas pela letra.
@@ -608,3 +799,149 @@ def distribuir_textos_base(questoes):
         questao.textos_base_para_exibir = exibir
 
     return questoes
+
+
+# Modelo que registra uma execução do comando de importação em lote.
+class ImportacaoLote(models.Model):
+
+    # Estados possíveis do lote.
+    STATUS = [
+        ('em_andamento', 'Em andamento'),
+        ('concluido', 'Concluído'),
+        ('interrompido', 'Interrompido'),
+    ]
+
+    # Identificador legível do lote.
+    identificador = models.CharField(
+        max_length=120,
+        unique=True
+    )
+
+    # Filtros utilizados na execução.
+    ano = models.PositiveIntegerField(
+        blank=True,
+        null=True
+    )
+
+    modalidade = models.CharField(
+        max_length=20,
+        blank=True
+    )
+
+    # Estado atual do lote.
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS,
+        default='em_andamento'
+    )
+
+    # Resumo final com os totais da execução.
+    resumo = models.JSONField(
+        default=dict,
+        blank=True
+    )
+
+    criado_em = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    atualizado_em = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = ['-criado_em']
+
+    def __str__(self):
+        return self.identificador
+
+
+# Modelo que registra o estado de cada prova do catálogo.
+# A chave oficial é única para permitir retomar uma importação
+# interrompida sem duplicar provas.
+class ImportacaoItem(models.Model):
+
+    # Estados possíveis de um item.
+    STATUS = [
+        ('pendente', 'Pendente'),
+        ('cadastrado', 'Cadastrado'),
+        ('importado', 'Importado'),
+        ('ignorado', 'Ignorado'),
+        ('erro', 'Erro'),
+    ]
+
+    # Etapas do processamento de um item.
+    ETAPAS = [
+        ('cadastro', 'Cadastro'),
+        ('download', 'Download'),
+        ('extracao', 'Extração'),
+        ('importacao', 'Importação'),
+        ('concluido', 'Concluído'),
+    ]
+
+    # Lote que processou o item pela última vez.
+    lote = models.ForeignKey(
+        ImportacaoLote,
+        on_delete=models.SET_NULL,
+        related_name='itens',
+        blank=True,
+        null=True
+    )
+
+    # Chave oficial da prova no catálogo.
+    chave_oficial = models.CharField(
+        max_length=80,
+        unique=True
+    )
+
+    # Prova criada ou atualizada pelo item.
+    prova = models.ForeignKey(
+        Prova,
+        on_delete=models.SET_NULL,
+        related_name='importacoes',
+        blank=True,
+        null=True
+    )
+
+    # Estado e etapa atuais.
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS,
+        default='pendente'
+    )
+
+    etapa = models.CharField(
+        max_length=20,
+        choices=ETAPAS,
+        default='cadastro'
+    )
+
+    # Quantidade de tentativas já realizadas.
+    tentativas = models.PositiveIntegerField(
+        default=0
+    )
+
+    # Mensagem individual de erro ou alerta.
+    mensagem = models.TextField(
+        blank=True
+    )
+
+    # Detalhes estruturados do processamento.
+    detalhes = models.JSONField(
+        default=dict,
+        blank=True
+    )
+
+    criado_em = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    atualizado_em = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = ['chave_oficial']
+
+    def __str__(self):
+        return f'{self.chave_oficial} ({self.get_status_display()})'

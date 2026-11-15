@@ -29,6 +29,9 @@ backups/
 # Backups locais gerados durante correções
 outputs/*.zip
 
+# Diagnósticos, pilotos e relatórios locais (banco, mídia e PDFs do INEP)
+outputs/
+
 # Arquivos enviados
 media/
 

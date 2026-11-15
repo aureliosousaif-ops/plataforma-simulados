@@ -211,10 +211,14 @@ if DATABASE_URL and not DEBUG:
 # SQLite durante o desenvolvimento.
 else:
 
+    # Permite apontar o SQLite para outro arquivo em testes
+    # isolados, sem alterar o banco principal.
+    SQLITE_PATH = os.environ.get('SQLITE_PATH')
+
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': Path(SQLITE_PATH) if SQLITE_PATH else BASE_DIR / 'db.sqlite3',
         }
     }
 

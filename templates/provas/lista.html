@@ -6,6 +6,7 @@
 
 {% block content %}
 
+<!-- Área principal da página. -->
 <div class="container py-4">
 
     <!-- Cabeçalho -->
@@ -29,6 +30,40 @@
 
     </div>
 
+    <!-- Filtro de visibilidade -->
+    <div class="mb-4">
+
+        <div
+            class="btn-group examix-filtro-visibilidade"
+            role="group"
+            aria-label="Filtro de visibilidade das provas"
+        >
+
+            <a
+                href="?visibilidade=todas"
+                class="btn btn-outline-primary{% if visibilidade == 'todas' %} active{% endif %}"
+            >
+                Todas
+            </a>
+
+            <a
+                href="?visibilidade=visiveis"
+                class="btn btn-outline-primary{% if visibilidade == 'visiveis' %} active{% endif %}"
+            >
+                Visíveis
+            </a>
+
+            <a
+                href="?visibilidade=ocultas"
+                class="btn btn-outline-primary{% if visibilidade == 'ocultas' %} active{% endif %}"
+            >
+                Ocultas
+            </a>
+
+        </div>
+
+    </div>
+
     <!-- Lista de provas -->
     {% if provas %}
 
@@ -38,7 +73,7 @@
 
                 <div class="col-md-6 col-lg-4">
 
-                    <div class="card h-100 shadow-sm">
+                    <div class="card h-100 shadow-sm{% if not prova.ativa %} border-secondary{% endif %}">
 
                         <div class="card-body">
 
@@ -66,21 +101,21 @@
                                 {{ prova.ano }}
                             </p>
 
-                            <!-- Status da prova -->
+                            <!-- Estado atual da prova -->
                             <p class="mb-2">
 
-                                <strong>Status:</strong>
+                                <strong>Estado:</strong>
 
                                 {% if prova.ativa %}
 
                                     <span class="badge text-bg-success">
-                                        Ativa
+                                        Visível
                                     </span>
 
                                 {% else %}
 
                                     <span class="badge text-bg-secondary">
-                                        Inativa
+                                        Oculta
                                     </span>
 
                                 {% endif %}
@@ -103,10 +138,65 @@
 
                             <a
                                 href="{% url 'provas:detalhe' prova.id %}"
-                                class="btn btn-outline-primary w-100"
+                                class="btn btn-outline-primary w-100 mb-2"
                             >
                                 Ver prova
                             </a>
+
+                            <!-- Ações administrativas -->
+                            <div class="d-flex flex-column flex-sm-row gap-2">
+
+                                {% if prova.ativa %}
+
+                                    <!-- Ocultar prova -->
+                                    <form
+                                        method="post"
+                                        action="{% url 'provas:ocultar' prova.id %}"
+                                        class="flex-fill"
+                                    >
+
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-outline-secondary w-100"
+                                        >
+                                            Ocultar
+                                        </button>
+
+                                    </form>
+
+                                {% else %}
+
+                                    <!-- Reexibir prova -->
+                                    <form
+                                        method="post"
+                                        action="{% url 'provas:reexibir' prova.id %}"
+                                        class="flex-fill"
+                                    >
+
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-outline-success w-100"
+                                        >
+                                            Reexibir
+                                        </button>
+
+                                    </form>
+
+                                {% endif %}
+
+                                <!-- Excluir prova (passa pela confirmação) -->
+                                <a
+                                    href="{% url 'provas:excluir' prova.id %}"
+                                    class="btn btn-outline-danger flex-fill"
+                                >
+                                    Excluir
+                                </a>
+
+                            </div>
 
                         </div>
 

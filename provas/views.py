@@ -3,15 +3,22 @@
 # =========================================================
 
 from django.contrib import messages
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models import Exists, OuterRef
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 # Decorator que permite acesso somente aos desenvolvedores.
 from usuarios.decorators import desenvolvedor_required
 
+# Tentativas de simulados bloqueiam a exclusão definitiva da prova.
+from simulados.models import RespostaSimulado
+
 from .models import (
+    Alternativa,
     ImagemProva,
     ImagemQuestao,
     Prova,
@@ -51,6 +58,18 @@ from .imagens import (
 # SEÇÃO 1 — LISTA DE PROVAS
 # =========================================================
 
+# Verifica se o usuário é administrador (desenvolvedor).
+def _e_desenvolvedor(usuario):
+
+    if not usuario.is_authenticated:
+        return False
+
+    try:
+        return usuario.perfil.tipo == 'desenvolvedor'
+    except Exception:
+        return False
+
+
 @desenvolvedor_required
 def lista(request):
     """
@@ -60,12 +79,22 @@ def lista(request):
     # Busca todas as provas cadastradas.
     provas = Prova.objects.all()
 
+    # Filtro de visibilidade exclusivo da área administrativa:
+    # ocultar uma prova é justamente desativá-la (Prova.ativa).
+    visibilidade = request.GET.get('visibilidade', 'todas')
+
+    if visibilidade == 'visiveis':
+        provas = provas.filter(ativa=True)
+    elif visibilidade == 'ocultas':
+        provas = provas.filter(ativa=False)
+
     # Envia as provas para o template.
     return render(
         request,
         'provas/lista.html',
         {
-            'provas': provas
+            'provas': provas,
+            'visibilidade': visibilidade,
         }
     )
 
@@ -137,6 +166,11 @@ def detalhe(request, prova_id):
         Prova,
         id=prova_id
     )
+
+    # Prova oculta: somente administradores podem abrir o detalhe
+    # diretamente pela URL.
+    if not prova.ativa and not _e_desenvolvedor(request.user):
+        raise Http404('Prova não disponível.')
 
     # Busca todas as questões relacionadas à prova.
     questoes = (
@@ -670,6 +704,172 @@ def imprimir(request, prova_id):
         {
             'prova': prova,
             'questoes': questoes,
+        }
+    )
+
+
+# =========================================================
+# SEÇÃO 9 — GESTÃO ADMINISTRATIVA DA PROVA
+# =========================================================
+
+def _caminhos_de_arquivos_da_prova(prova):
+    """
+    Lista os nomes de arquivo no storage que pertencem à prova:
+    PDFs (incluindo os em espanhol) e todas as imagens extraídas.
+    """
+
+    nomes = []
+
+    for campo in (
+        'arquivo_pdf',
+        'arquivo_gabarito',
+        'arquivo_pdf_espanhol',
+        'arquivo_gabarito_espanhol',
+    ):
+        nome = getattr(prova, campo).name
+        if nome:
+            nomes.append(nome)
+
+    for imagem in prova.imagens.all():
+        if imagem.arquivo.name:
+            nomes.append(imagem.arquivo.name)
+
+    return nomes
+
+
+@desenvolvedor_required
+@require_POST
+def ocultar(request, prova_id):
+    """
+    Oculta a prova da plataforma.
+
+    A prova continua salva no banco e visível na área
+    administrativa; apenas deixa de ser oferecida a alunos
+    (listagens e novos simulados).
+    """
+
+    prova = get_object_or_404(Prova, id=prova_id)
+
+    prova.ativa = False
+    prova.save(update_fields=['ativa'])
+
+    messages.success(
+        request,
+        f'A prova "{prova.nome}" foi ocultada. '
+        'Ela continua salva e pode ser reexibida a qualquer momento.'
+    )
+
+    return redirect('provas:lista')
+
+
+@desenvolvedor_required
+@require_POST
+def reexibir(request, prova_id):
+    """
+    Reexibe uma prova que foi ocultada.
+    """
+
+    prova = get_object_or_404(Prova, id=prova_id)
+
+    prova.ativa = True
+    prova.save(update_fields=['ativa'])
+
+    messages.success(
+        request,
+        f'A prova "{prova.nome}" voltou a ficar visível na plataforma.'
+    )
+
+    return redirect('provas:lista')
+
+
+@desenvolvedor_required
+def excluir(request, prova_id):
+    """
+    Exclui definitivamente uma prova, com confirmação.
+
+    A página de confirmação mostra exatamente o que será removido.
+    Se existirem tentativas de simulados vinculadas, a exclusão é
+    bloqueada: o histórico dos alunos não pode ser perdido — nesse
+    caso o administrador deve ocultar a prova.
+    """
+
+    prova = get_object_or_404(Prova, id=prova_id)
+
+    # Relacionamentos que serão avaliados antes da exclusão.
+    totais = {
+        'questoes': prova.questoes.count(),
+        'alternativas': Alternativa.objects.filter(
+            questao__prova=prova
+        ).count(),
+        'imagens': prova.imagens.count(),
+        'textos_base': prova.textos_base.count(),
+        'tentativas': prova.simulados.count(),
+        'respostas': RespostaSimulado.objects.filter(
+            simulado__prova=prova
+        ).count(),
+    }
+
+    if request.method == 'POST':
+
+        # Histórico de alunos impede a exclusão definitiva. A
+        # verificação é repetida aqui para evitar corridas entre a
+        # confirmação e a execução.
+        if totais['tentativas'] > 0:
+            messages.error(
+                request,
+                f'A prova "{prova.nome}" não pode ser excluída: '
+                f'existem {totais["tentativas"]} tentativa(s) de '
+                'simulado vinculada(s). Excluir a prova apagaria o '
+                'histórico dos alunos. Oculte a prova para retirá-la '
+                'da plataforma preservando o histórico.'
+            )
+            return redirect('provas:lista')
+
+        # Arquivos no storage são coletados antes da exclusão, pois
+        # os registros somem junto com a prova.
+        nomes_de_arquivos = _caminhos_de_arquivos_da_prova(prova)
+
+        try:
+
+            # Transação: a exclusão acontece por completo ou não
+            # acontece (o banco também protege Simulado/Resposta
+            # com on_delete=PROTECT).
+            with transaction.atomic():
+                prova.delete()
+
+        except ProtectedError:
+            messages.error(
+                request,
+                f'A prova "{prova.nome}" não pode ser excluída: '
+                'existem registros vinculados (simulados de alunos). '
+                'Oculte a prova para retirá-la da plataforma '
+                'preservando o histórico.'
+            )
+            return redirect('provas:lista')
+
+        # Remoção dos arquivos depois do commit: uma falha aqui não
+        # desfaz a exclusão no banco; arquivos remanescentes ficam
+        # órfãos e podem ser limpos manualmente.
+        for nome in nomes_de_arquivos:
+            try:
+                default_storage.delete(nome)
+            except Exception:
+                pass
+
+        messages.success(
+            request,
+            f'A prova "{prova.nome}" foi excluída definitivamente.'
+        )
+
+        return redirect('provas:lista')
+
+    # GET: página de confirmação com o resumo do que será removido.
+    return render(
+        request,
+        'provas/excluir.html',
+        {
+            'prova': prova,
+            'totais': totais,
         }
     )
 

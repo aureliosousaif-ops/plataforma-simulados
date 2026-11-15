@@ -21,8 +21,9 @@ Excluir prova
 
             <!-- Mensagem de confirmação. -->
             <p>
-                Tem certeza que deseja excluir a prova
-                <strong>{{ prova.nome }}</strong>?
+                Tem certeza que deseja excluir definitivamente a prova
+                <strong>{{ prova.nome }}</strong>
+                {% if prova.ano %}({{ prova.ano }}){% endif %}?
             </p>
 
             <!-- Aviso sobre a exclusão. -->
@@ -30,6 +31,58 @@ Excluir prova
                 Essa ação não poderá ser desfeita.
             </p>
 
+            {% if totais.tentativas > 0 %}
+
+                <!-- Exclusão bloqueada por histórico de alunos. -->
+                <div class="alert alert-warning">
+
+                    <strong>Exclusão bloqueada.</strong>
+                    Esta prova possui
+                    {{ totais.tentativas }} tentativa(s) de simulado
+                    e {{ totais.respostas }} resposta(s) de alunos.
+                    Excluí-la apagaria o histórico — por isso a
+                    plataforma não permite. Para retirar a prova da
+                    plataforma preservando o histórico,
+                    <strong>oculte-a</strong> na listagem de provas.
+
+                </div>
+
+            {% else %}
+
+                <!-- Resumo do que será removido. -->
+                <div class="card mb-3">
+
+                    <div class="card-header">
+                        Serão removidos junto com a prova:
+                    </div>
+
+                    <ul class="list-group list-group-flush">
+
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Questões</span>
+                            <strong>{{ totais.questoes }}</strong>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Alternativas</span>
+                            <strong>{{ totais.alternativas }}</strong>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Imagens extraídas</span>
+                            <strong>{{ totais.imagens }}</strong>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Textos-base</span>
+                            <strong>{{ totais.textos_base }}</strong>
+                        </li>
+
+                    </ul>
+
+                </div>
+
+            {% endif %}
 
             <!-- Formulário de exclusão. -->
             <form method="post">
@@ -41,6 +94,7 @@ Excluir prova
                 <button
                     type="submit"
                     class="btn btn-danger"
+                    {% if totais.tentativas > 0 %}disabled{% endif %}
                 >
                     Sim, excluir
                 </button>

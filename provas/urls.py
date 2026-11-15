@@ -66,4 +66,25 @@ urlpatterns = [
         views.imprimir,
         name='imprimir'
     ),
+
+    # Oculta a prova para os usuários comuns (POST).
+    path(
+        '<int:prova_id>/ocultar/',
+        views.ocultar,
+        name='ocultar'
+    ),
+
+    # Reexibe uma prova ocultada (POST).
+    path(
+        '<int:prova_id>/reexibir/',
+        views.reexibir,
+        name='reexibir'
+    ),
+
+    # Confirmação e execução da exclusão definitiva.
+    path(
+        '<int:prova_id>/excluir/',
+        views.excluir,
+        name='excluir'
+    ),
 ]

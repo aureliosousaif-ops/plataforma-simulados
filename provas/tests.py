@@ -12,7 +12,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError, transaction
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
 from pypdf import PdfWriter
@@ -3550,3 +3550,280 @@ class IndicePaginaProvaRealTestCase(TestCase):
             localizar_pagina_questao(self.prova, self.questao),
             15,
         )
+
+
+class GestaoAdministrativaProvasTestCase(TestCase):
+    """
+    Ocultar, reexibir e excluir provas na área administrativa.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        from simulados.models import RespostaSimulado, Simulado
+
+        cls.simulados = Simulado
+        cls.respostas_simulado = RespostaSimulado
+
+        cls.desenvolvedor = User.objects.create_user(
+            username='dev_gestao',
+            password='SenhaTeste123!',
+        )
+        Perfil.objects.update_or_create(
+            usuario=cls.desenvolvedor,
+            defaults={'tipo': 'desenvolvedor'},
+        )
+
+        cls.aluno = User.objects.create_user(
+            username='aluno_gestao',
+            password='SenhaTeste123!',
+        )
+        Perfil.objects.update_or_create(
+            usuario=cls.aluno,
+            defaults={'tipo': 'aluno'},
+        )
+
+        cls.disciplina = Disciplina.objects.create(
+            nome='Matemática da gestão'
+        )
+
+        cls.prova = Prova.objects.create(
+            nome='ENEM Gestão 2024',
+            tipo='enem',
+            ano=2024,
+            status_importacao='processada',
+        )
+        cls.questao = Questao.objects.create(
+            prova=cls.prova,
+            disciplina=cls.disciplina,
+            numero=1,
+            enunciado='Enunciado da questão 1.',
+        )
+        cls.imagem = ImagemProva.objects.create(
+            prova=cls.prova,
+            arquivo=ContentFile(b'conteudo', name='provas/imagens/gestao.png'),
+            hash_sha256='0' * 64,
+        )
+        cls.alternativa = Alternativa.objects.create(
+            questao=cls.questao,
+            letra='A',
+            texto='Texto da alternativa A.',
+            imagem=cls.imagem,
+        )
+
+        cls.url_ocultar = reverse(
+            'provas:ocultar', args=[cls.prova.id]
+        )
+        cls.url_reexibir = reverse(
+            'provas:reexibir', args=[cls.prova.id]
+        )
+        cls.url_excluir = reverse(
+            'provas:excluir', args=[cls.prova.id]
+        )
+        cls.url_lista = reverse('provas:lista')
+        cls.url_detalhe = reverse(
+            'provas:detalhe', args=[cls.prova.id]
+        )
+
+    def _ocultar_pelo_desenvolvedor(self):
+        self.client.force_login(self.desenvolvedor)
+        return self.client.post(self.url_ocultar)
+
+    def test_desenvolvedor_oculta_prova(self):
+        resposta = self._ocultar_pelo_desenvolvedor()
+
+        self.assertRedirects(resposta, self.url_lista)
+        self.prova.refresh_from_db()
+        self.assertFalse(self.prova.ativa)
+
+    def test_desenvolvedor_reexibe_prova_ocultada(self):
+        self._ocultar_pelo_desenvolvedor()
+
+        resposta = self.client.post(self.url_reexibir)
+
+        self.assertRedirects(resposta, self.url_lista)
+        self.prova.refresh_from_db()
+        self.assertTrue(self.prova.ativa)
+
+    def test_prova_oculta_nao_aparece_para_usuarios_comuns(self):
+        self._ocultar_pelo_desenvolvedor()
+
+        # Cliente novo: sem as mensagens flash do administrador.
+        cliente_aluno = Client()
+        cliente_aluno.force_login(self.aluno)
+
+        # A prova oculta não aparece nos simulados disponíveis.
+        resposta = cliente_aluno.get(reverse('simulados:lista'))
+        self.assertEqual(resposta.status_code, 200)
+        self.assertNotContains(resposta, 'ENEM Gestão 2024')
+
+        # A listagem administrativa não é acessível ao aluno.
+        resposta = cliente_aluno.get(self.url_lista)
+        self.assertEqual(resposta.status_code, 302)
+
+        # O detalhe aberto direto pela URL não é acessível ao aluno
+        # (área restrita a desenvolvedores).
+        resposta = cliente_aluno.get(self.url_detalhe)
+        self.assertEqual(resposta.status_code, 302)
+
+        # A prova continua salva no banco.
+        self.assertTrue(
+            Prova.objects.filter(id=self.prova.id).exists()
+        )
+
+    def test_prova_oculta_continua_visivel_para_administrador(self):
+        self._ocultar_pelo_desenvolvedor()
+
+        # Listagem administrativa: aparece no filtro "Ocultas" e não
+        # aparece no filtro "Visíveis".
+        resposta = self.client.get(
+            self.url_lista, {'visibilidade': 'ocultas'}
+        )
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, 'ENEM Gestão 2024')
+
+        resposta = self.client.get(
+            self.url_lista, {'visibilidade': 'visiveis'}
+        )
+        self.assertEqual(resposta.status_code, 200)
+        self.assertNotContains(resposta, 'ENEM Gestão 2024')
+
+        # Django Admin continua listando a prova oculta.
+        administrador = User.objects.create_superuser(
+            username='admin_gestao',
+            password='SenhaTeste123!',
+            email='admin@exemplo.com',
+        )
+        self.client.force_login(administrador)
+        resposta = self.client.get(
+            reverse('admin:provas_prova_changelist')
+        )
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, 'ENEM Gestão 2024')
+
+    def test_usuario_comum_nao_pode_ocultar_nem_excluir(self):
+        # Aluno autenticado.
+        self.client.force_login(self.aluno)
+
+        resposta = self.client.post(self.url_ocultar)
+        self.assertEqual(resposta.status_code, 302)
+        self.prova.refresh_from_db()
+        self.assertTrue(self.prova.ativa)
+
+        resposta = self.client.get(self.url_excluir)
+        self.assertEqual(resposta.status_code, 302)
+        resposta = self.client.post(self.url_excluir)
+        self.assertEqual(resposta.status_code, 302)
+
+        # Anônimo.
+        self.client.logout()
+        resposta = self.client.post(self.url_ocultar)
+        self.assertEqual(resposta.status_code, 302)
+
+        self.prova.refresh_from_db()
+        self.assertTrue(self.prova.ativa)
+        self.assertTrue(
+            Prova.objects.filter(id=self.prova.id).exists()
+        )
+        self.assertEqual(Questao.objects.count(), 1)
+
+    def test_acoes_aceitam_somente_post(self):
+        self.client.force_login(self.desenvolvedor)
+
+        resposta = self.client.get(self.url_ocultar)
+        self.assertEqual(resposta.status_code, 405)
+
+        resposta = self.client.get(self.url_reexibir)
+        self.assertEqual(resposta.status_code, 405)
+
+        self.prova.refresh_from_db()
+        self.assertTrue(self.prova.ativa)
+
+    def test_confirmacao_de_exclusao_mostra_o_resumo(self):
+        self.client.force_login(self.desenvolvedor)
+
+        resposta = self.client.get(self.url_excluir)
+
+        self.assertEqual(resposta.status_code, 200)
+        conteudo = resposta.content.decode('utf-8')
+        self.assertIn('ENEM Gestão 2024', conteudo)
+        self.assertIn('Serão removidos', conteudo)
+        self.assertIn('Questões', conteudo)
+        self.assertIn('Alternativas', conteudo)
+        self.assertIn('Imagens extraídas', conteudo)
+        # A simples confirmação não exclui nada.
+        self.assertTrue(
+            Prova.objects.filter(id=self.prova.id).exists()
+        )
+
+    def test_exclusao_bloqueada_com_tentativas_de_alunos(self):
+        self.client.force_login(self.desenvolvedor)
+
+        simulado = self.simulados.objects.create(
+            usuario=self.aluno,
+            prova=self.prova,
+        )
+        self.respostas_simulado.objects.create(
+            simulado=simulado,
+            questao=self.questao,
+            respondida=True,
+            correta=True,
+        )
+
+        # A página de confirmação informa o bloqueio e desabilita o
+        # botão de confirmação.
+        resposta = self.client.get(self.url_excluir)
+        conteudo = resposta.content.decode('utf-8')
+        self.assertIn('Exclusão bloqueada', conteudo)
+        self.assertIn('disabled', conteudo)
+        self.assertIn('oculte', conteudo.lower())
+
+        # O POST também é bloqueado e nada é removido.
+        resposta = self.client.post(
+            self.url_excluir, follow=True
+        )
+        self.assertContains(resposta, 'não pode ser excluída')
+        self.assertTrue(
+            Prova.objects.filter(id=self.prova.id).exists()
+        )
+        self.assertEqual(
+            Questao.objects.filter(prova=self.prova).count(), 1
+        )
+        self.assertEqual(
+            Alternativa.objects.filter(questao=self.questao).count(),
+            1,
+        )
+        self.assertEqual(
+            ImagemProva.objects.filter(prova=self.prova).count(), 1
+        )
+
+    def test_exclusao_definitiva_sem_tentativas(self):
+        self.client.force_login(self.desenvolvedor)
+
+        # Arquivo real no storage para conferir a limpeza de mídia.
+        nome_de_arquivo = default_storage.save(
+            'provas/imagens/gestao-exclusao.png',
+            ContentFile(b'conteudo'),
+        )
+        self.imagem.arquivo = nome_de_arquivo
+        self.imagem.save(update_fields=['arquivo'])
+
+        resposta = self.client.post(self.url_excluir, follow=True)
+
+        self.assertContains(resposta, 'foi excluída definitivamente')
+        self.assertFalse(
+            Prova.objects.filter(id=self.prova.id).exists()
+        )
+        self.assertEqual(
+            Questao.objects.filter(prova_id=self.prova.id).count(), 0
+        )
+        self.assertEqual(
+            Alternativa.objects.filter(questao__prova_id=self.prova.id)
+            .count(),
+            0,
+        )
+        self.assertEqual(
+            ImagemProva.objects.filter(prova_id=self.prova.id).count(),
+            0,
+        )
+        # O arquivo da imagem também é removido do storage.
+        self.assertFalse(default_storage.exists(nome_de_arquivo))

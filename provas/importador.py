@@ -115,8 +115,11 @@ def _normalizar_busca(linha):
 # "Questão 19", "QU EST ãO 20" ou ainda "QU" em uma linha e "ESTãO 01"
 # na seguinte. O texto é compactado (sem espaços) antes da comparação
 # para reconhecer todas essas variações.
+# Os cadernos digitais trazem o cabeçalho completo na mesma linha, como
+# "Questão 91 - Ciências da Natureza e suas Tecnologias". Por isso, o
+# padrão aceita um separador e o texto da área depois do número.
 _PADRAO_MARCADOR_QUESTAO = re.compile(
-    r'^(?:QUESTION|PREGUNTA|(?:QU)?ESTAO)0*(\d{1,3})$'
+    r'^(?:QUESTION|PREGUNTA|(?:QU)?ESTAO)0*(\d{1,3})(?:[-–—:].*)?$'
 )
 
 # Prefixos que podem ficar sozinhos em uma linha, com o restante do
@@ -549,6 +552,34 @@ def _expandir_alternativas_inline(texto):
     return '\n'.join(linhas_expandidas)
 
 
+_PADRAO_LETRA_ISOLADA = re.compile(
+    r'^\(?\s*([A-Ea-e])\s*\)?\s*[.\:\-]?$'
+)
+
+# Um bloco inicial muito maior que o intervalo até a letra B costuma
+# indicar que a letra "A" detectada faz parte do enunciado, e não de
+# uma alternativa. O limite é conservador para não cortar alternativas
+# legitimamente longas.
+LIMITE_LINHAS_BLOCO_INICIAL = 5
+
+
+def _letra_isolada(linha):
+    """Devolve a letra de uma linha que contém apenas o marcador."""
+    if not linha:
+        return None
+
+    resultado = _PADRAO_LETRA_ISOLADA.fullmatch(linha.strip())
+    return resultado.group(1).upper() if resultado else None
+
+
+def _linha_anterior_preenchida(linhas, indice):
+    """Retorna o texto da linha preenchida imediatamente anterior."""
+    for posicao in range(indice - 1, -1, -1):
+        if linhas[posicao].strip():
+            return linhas[posicao]
+    return ''
+
+
 def _encontrar_marcadores_alternativas(
     linhas,
     permitir_marcadores_sem_pontuacao=False,
@@ -576,6 +607,19 @@ def _encontrar_marcadores_alternativas(
             # pontuação/parênteses. Sem isso, " c" é apenas o começo
             # da palavra seguinte ("conservar"), quebrada pelo PDF.
             if letra.isupper() or tem_marca:
+                # O PDF quebra palavras no início das linhas: depois de
+                # um marcador isolado surge, por exemplo, " B" seguido de
+                # "atata chips." (a alternativa A é "Batata chips.").
+                # Nesse caso a letra com espaço inicial é fragmento da
+                # alternativa anterior, não um novo marcador.
+                if (
+                    linha[:1].isspace()
+                    and _letra_isolada(
+                        _linha_anterior_preenchida(linhas, indice)
+                    )
+                ):
+                    continue
+
                 encontrados.append({
                     'letra': letra.upper(),
                     'linha': indice,
@@ -634,12 +678,26 @@ def _encontrar_sequencia_abced(marcadores):
                 selecionados[-1]['linha']
                 - selecionados[0]['linha']
             )
+            distancia_a_b = (
+                selecionados[1]['linha']
+                - selecionados[0]['linha']
+            )
             quantidade_isolados = sum(
                 marcador.get('isolado', False)
                 for marcador in selecionados
             )
             candidatos.append((
-                quantidade_isolados,
+                # Enunciados que começam com "A" podem gerar um falso
+                # marcador A. Nesse caso o "bloco A" absorve todo o
+                # enunciado e fica muito maior que o intervalo até B.
+                distancia_a_b > LIMITE_LINHAS_BLOCO_INICIAL,
+                # Marcadores isolados são mais confiáveis do que letras
+                # junto do texto. Isso evita escolher um bloco A-E
+                # inline da questão seguinte.
+                -quantidade_isolados,
+                # Entre candidatos igualmente confiáveis, prefere o
+                # bloco mais compacto e, depois, o que aparece primeiro.
+                distancia_a_b,
                 selecionados[0]['linha'],
                 distancia,
                 selecionados,
@@ -648,13 +706,8 @@ def _encontrar_sequencia_abced(marcadores):
     if not candidatos:
         return None
 
-    # Marcadores isolados são mais confiáveis do que letras junto do texto.
-    # Isso evita escolher um bloco A-E inline da questão seguinte quando o
-    # bloco real da questão atual aparece primeiro no texto extraído.
-    # Em empate, a sequência que aparece primeiro vence; a distância fica
-    # apenas como critério final para manter a preferência por blocos compactos.
-    candidatos.sort(key=lambda item: (-item[0], item[1], item[2]))
-    return candidatos[0][3]
+    candidatos.sort(key=lambda item: item[:5])
+    return candidatos[0][5]
 
 
 def _montar_texto_alternativa(linhas_alternativa):
@@ -882,7 +935,7 @@ def _idioma_gabarito_na_linha(linhas, indice_linha):
     return None
 
 
-def extrair_gabarito_generico(texto, preservar_idiomas=False):
+def extrair_gabarito_generico(texto, preservar_idiomas=False, idioma_padrao=None):
     if not texto:
         return {}
 
@@ -915,6 +968,12 @@ def extrair_gabarito_generico(texto, preservar_idiomas=False):
         if preservar_idiomas and numero in range(1, 6):
             idioma = _idioma_gabarito_na_linha(linhas, indice_linha)
             if idioma is None:
+                # Gabaritos separados por idioma (ENEM Digital 1º dia)
+                # recebem o idioma informado pelo chamador. Nos
+                # gabaritos bilíngues sem cabeçalho, a primeira
+                # ocorrência é de Inglês e a segunda, de Espanhol.
+                idioma = idioma_padrao
+            if idioma is None:
                 if ('Inglês', numero) not in gabarito:
                     idioma = 'Inglês'
                 elif ('Espanhol', numero) not in gabarito:
@@ -924,8 +983,53 @@ def extrair_gabarito_generico(texto, preservar_idiomas=False):
     return gabarito
 
 
-def extrair_gabarito_enem(texto):
-    return extrair_gabarito_generico(texto, preservar_idiomas=True)
+def extrair_gabarito_enem(texto, idioma_padrao=None):
+    """
+    Extrai o gabarito oficial, preservando o idioma das questões 1–5.
+
+    ``idioma_padrao`` é usado nos PDFs de gabarito separados por
+    idioma (ENEM Digital 1º dia), que não têm cabeçalho de seção.
+    """
+    return extrair_gabarito_generico(
+        texto,
+        preservar_idiomas=True,
+        idioma_padrao=idioma_padrao,
+    )
+
+
+def extrair_questoes_anuladas_gabarito(texto):
+    """
+    Localiza as questões marcadas como anuladas no gabarito oficial.
+
+    O gabarito não traz letra para essas questões, portanto elas não
+    podem ser importadas como se tivessem uma resposta correta.
+    """
+    anuladas = set()
+
+    if not texto:
+        return anuladas
+
+    linhas = texto.splitlines()
+
+    for indice_linha, linha in enumerate(linhas):
+        resultado = re.match(
+            r'^0*(\d{1,3})\s*[-.\:\)]?\s*ANULAD[OA]\b',
+            linha.strip(),
+            re.IGNORECASE,
+        )
+
+        if not resultado:
+            continue
+
+        numero = int(resultado.group(1))
+        idioma = None
+
+        if numero in range(1, 6):
+            idioma = _idioma_gabarito_na_linha(linhas, indice_linha)
+
+        anuladas.add((idioma, numero) if idioma else numero)
+
+    return anuladas
 
 
 def obter_resposta_gabarito(questao, gabarito):
@@ -953,28 +1057,47 @@ def _chave_gabarito_da_questao(questao):
     return numero
 
 
-def validar_questoes_com_gabarito(questoes, gabarito):
+def _prefixo_questao(questao):
+    """
+    Monta o identificador exibido nas mensagens de problema.
+
+    Quando a página é conhecida, ela é incluída para facilitar a
+    localização no PDF. Sem página, o formato antigo é preservado.
+    """
+    numero = questao['numero']
+    idioma = _idioma_efetivo_da_questao(questao)
+    identificador = f'{idioma}: ' if idioma else ''
+    pagina = questao.get('_pagina')
+    pagina_texto = f' (página {pagina})' if pagina else ''
+    return f'Questão {identificador}{numero}{pagina_texto}'
+
+
+def validar_questoes_com_gabarito(questoes, gabarito, anuladas=None):
+    anuladas = anuladas or set()
     erros = []
     if not questoes:
         erros.append('Nenhuma questão foi encontrada no PDF da prova.')
     for questao in questoes:
-        numero = questao['numero']
         alternativas = questao['alternativas']
         if len(alternativas) != 5:
-            erros.append(f'Questão {numero}: {len(alternativas)} alternativas encontradas.')
-        if obter_resposta_gabarito(questao, gabarito) is None:
-            idioma = _idioma_efetivo_da_questao(questao)
-            identificador = f'{idioma}: ' if idioma else ''
-            erros.append(f'Questão {identificador}{numero}: gabarito não encontrado.')
+            erros.append(
+                f'{_prefixo_questao(questao)}: '
+                f'{len(alternativas)} alternativas encontradas.'
+            )
+        if (
+            _chave_gabarito_da_questao(questao) not in anuladas
+            and obter_resposta_gabarito(questao, gabarito) is None
+        ):
+            erros.append(
+                f'{_prefixo_questao(questao)}: gabarito não encontrado.'
+            )
     return erros
 
 
 def _problemas_da_questao(questao):
     """Lista os problemas individuais de uma questão extraída."""
     erros = []
-    numero = questao['numero']
-    idioma = _idioma_efetivo_da_questao(questao)
-    identificador = f'{idioma}: ' if idioma else ''
+    prefixo = _prefixo_questao(questao)
     letras_esperadas = ['A', 'B', 'C', 'D', 'E']
     artefato_impressao = re.compile(
         r'ENEM\s*\d{4}|\*?\d{6}[A-Z]{2}\d+\*?',
@@ -985,27 +1108,30 @@ def _problemas_da_questao(questao):
     letras = [alternativa.get('letra') for alternativa in alternativas]
 
     if not (questao.get('texto') or '').strip():
-        erros.append(
-            f'Questão {identificador}{numero}: enunciado sem texto.'
-        )
+        erros.append(f'{prefixo}: enunciado sem texto.')
 
     if letras != letras_esperadas:
         erros.append(
-            f'Questão {identificador}{numero}: letras encontradas '
+            f'{prefixo}: letras encontradas '
             f'{letras!r}; esperado {letras_esperadas!r}.'
         )
         return erros
 
     for alternativa in alternativas:
         texto = (alternativa.get('texto') or '').strip()
-        if not texto:
+        tem_imagem = bool(
+            alternativa.get('_imagem_alternativa')
+            or alternativa.get('imagem_alternativa')
+        )
+
+        if not texto and not tem_imagem:
             erros.append(
-                f'Questão {identificador}{numero}: alternativa '
+                f'{prefixo}: alternativa '
                 f'{alternativa.get("letra")} sem texto.'
             )
-        elif artefato_impressao.search(texto):
+        elif texto and artefato_impressao.search(texto):
             erros.append(
-                f'Questão {identificador}{numero}: alternativa '
+                f'{prefixo}: alternativa '
                 f'{alternativa.get("letra")} contém artefato de impressão.'
             )
 
@@ -1028,12 +1154,11 @@ def validar_estrutura_questoes(questoes, gabarito):
     for questao in questoes:
         numero = questao['numero']
         idioma = _idioma_efetivo_da_questao(questao)
-        identificador = f'{idioma}: ' if idioma else ''
         chave = (numero, idioma)
 
         if chave in chaves_vistas:
             erros.append(
-                f'Questão {identificador}{numero}: duplicada no PDF.'
+                f'{_prefixo_questao(questao)}: duplicada no PDF.'
             )
         else:
             chaves_vistas.add(chave)
@@ -1057,13 +1182,16 @@ def validar_estrutura_questoes(questoes, gabarito):
     return erros
 
 
-def dividir_questoes_validas(questoes, gabarito):
+def dividir_questoes_validas(questoes, gabarito, anuladas=None):
     """
     Separa as questões que podem ser importadas das que têm problemas.
 
     Uma questão inválida não impede a importação das demais. Os motivos
     são devolvidos individualmente para serem exibidos ao usuário.
+    Questões anuladas no gabarito oficial são relatadas separadamente e
+    não são importadas sem uma resposta correta.
     """
+    anuladas = anuladas or set()
     validas = []
     problemas = []
     chaves_vistas = set()
@@ -1072,13 +1200,12 @@ def dividir_questoes_validas(questoes, gabarito):
     for questao in questoes:
         numero = questao['numero']
         idioma = _idioma_efetivo_da_questao(questao)
-        identificador = f'{idioma}: ' if idioma else ''
         chave = (numero, idioma)
         motivos = []
 
         if chave in chaves_vistas:
             motivos.append(
-                f'Questão {identificador}{numero}: duplicada no PDF.'
+                f'{_prefixo_questao(questao)}: duplicada no PDF.'
             )
         else:
             chaves_vistas.add(chave)
@@ -1088,9 +1215,14 @@ def dividir_questoes_validas(questoes, gabarito):
         )
         motivos.extend(_problemas_da_questao(questao))
 
-        if obter_resposta_gabarito(questao, gabarito) is None:
+        if _chave_gabarito_da_questao(questao) in anuladas:
             motivos.append(
-                f'Questão {identificador}{numero}: gabarito não encontrado.'
+                f'{_prefixo_questao(questao)}: '
+                'anulada no gabarito oficial.'
+            )
+        elif obter_resposta_gabarito(questao, gabarito) is None:
+            motivos.append(
+                f'{_prefixo_questao(questao)}: gabarito não encontrado.'
             )
 
         if motivos:
@@ -1126,6 +1258,10 @@ def preparar_questoes(questoes, gabarito=None):
                 'letra': alternativa['letra'],
                 'texto': limpar_texto_alternativa(alternativa['texto']),
                 'correta': resposta == alternativa['letra'],
+                'imagem_alternativa': (
+                    alternativa.get('_imagem_alternativa')
+                    or alternativa.get('imagem_alternativa')
+                ),
             })
         textos_base = []
         for texto_base in questao.get('textos_base') or []:
@@ -1222,11 +1358,43 @@ def importar_questoes_no_banco(prova, questoes, gabarito=None):
                 correta = letra == resposta
             else:
                 correta = alternativa_data.get('correta', False)
+
+            imagem = None
+            referencia_imagem = alternativa_data.get('imagem_alternativa')
+            if referencia_imagem:
+                from .models import ImagemProva
+
+                filtros = {
+                    'prova': prova,
+                    'pagina': referencia_imagem['pagina'],
+                    'indice_pagina': referencia_imagem['indice_pagina'],
+                }
+
+                hash_referencia = referencia_imagem.get('hash_sha256')
+                if hash_referencia:
+                    filtros['hash_sha256'] = hash_referencia
+
+                imagem = ImagemProva.objects.filter(**filtros).first()
+
+                if imagem is None and hash_referencia:
+                    # Compatibilidade com referências antigas sem hash.
+                    filtros.pop('hash_sha256')
+                    imagem = ImagemProva.objects.filter(
+                        **filtros
+                    ).first()
+
+                if imagem is None:
+                    raise ValueError(
+                        f'Questão {numero}: imagem da alternativa '
+                        f'{letra} não foi extraída do PDF.'
+                    )
+
             Alternativa.objects.create(
                 questao=questao,
                 letra=letra,
                 texto=alternativa_data['texto'],
                 correta=correta,
+                imagem=imagem,
             )
         quantidade_importada += 1
 

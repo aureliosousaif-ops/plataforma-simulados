@@ -153,6 +153,20 @@
                         {{ alternativa.texto|linebreaksbr }}
                     </p>
 
+                    {% if alternativa.imagem %}
+
+                        <figure class="examix-print-alternative-image mb-3">
+
+                            <img
+                                src="{{ alternativa.imagem.arquivo.url }}"
+                                class="img-fluid"
+                                alt="Imagem da alternativa {{ alternativa.letra }} da questão {{ questao.numero }}"
+                            >
+
+                        </figure>
+
+                    {% endif %}
+
                 {% empty %}
 
                     <p class="text-muted mb-0">

@@ -23,6 +23,7 @@ from .forms import ProvaForm
 from .importador import (
     extrair_texto_pdf,
     extrair_gabarito_enem,
+    extrair_questoes_anuladas_gabarito,
     separar_questoes_enem,
     dividir_questoes_validas,
     preparar_questoes_para_importacao,
@@ -31,6 +32,9 @@ from .importador import (
 
 # Funções responsáveis pela extração, associação e revisão das imagens.
 from .imagens import (
+    anotar_alternativas_vetoriais,
+    anotar_imagens_nas_alternativas,
+    anotar_paginas_questoes,
     associar_imagem,
     capturar_confirmacoes,
     confirmar_associacao,
@@ -264,8 +268,40 @@ def processar(request, prova_id):
 
                 texto_prova = extrair_texto_pdf(prova.arquivo_pdf.path)
                 questoes = separar_questoes_enem(texto_prova)
+                anotar_paginas_questoes(prova, questoes)
                 texto_gabarito = extrair_texto_pdf(prova.arquivo_gabarito.path)
                 gabarito = extrair_gabarito_enem(texto_gabarito)
+                anuladas = extrair_questoes_anuladas_gabarito(texto_gabarito)
+
+                # As imagens precisam existir antes da validação para que
+                # alternativas compostas apenas por figuras não sejam
+                # rejeitadas como "sem texto". A falha nessa etapa não
+                # desfaz a importação textual.
+                resultado_imagens = None
+                sugestoes_imagens = 0
+                erro_imagens = ''
+
+                try:
+                    with transaction.atomic():
+                        resultado_imagens = extrair_e_registrar_imagens(
+                            prova
+                        )
+                        anotar_imagens_nas_alternativas(prova, questoes)
+                except Exception as erro_imagens_extraidas:
+                    resultado_imagens = None
+                    erro_imagens = str(erro_imagens_extraidas)
+
+                # Alternativas desenhadas diretamente no PDF (sem texto
+                # extraível e sem imagem incorporada) são rasterizadas
+                # e associadas à alternativa. A falha aqui não desfaz a
+                # importação: as questões voltam a ser rejeitadas com
+                # a mensagem original.
+                try:
+                    anotar_alternativas_vetoriais(prova, questoes)
+                except Exception as erro_alternativas_vetoriais:
+                    erro_imagens = erro_imagens or str(
+                        erro_alternativas_vetoriais
+                    )
 
                 # Uma questão com problema não invalida a importação
                 # inteira: as válidas são preservadas e os erros são
@@ -273,6 +309,7 @@ def processar(request, prova_id):
                 questoes_validas, problemas = dividir_questoes_validas(
                     questoes,
                     gabarito,
+                    anuladas,
                 )
 
                 if not questoes_validas:
@@ -313,23 +350,20 @@ def processar(request, prova_id):
                     confirmacoes_imagens,
                 )
 
-                # A extração de imagens acontece em um savepoint próprio.
-                # Uma falha nessa etapa não desfaz a importação textual.
-                resultado_imagens = None
-                sugestoes_imagens = 0
+                # As sugestões são geradas em um savepoint próprio. Uma
+                # falha nessa etapa não desfaz a importação textual.
                 mensagem_imagens = ''
 
-                try:
-                    with transaction.atomic():
-                        resultado_imagens = extrair_e_registrar_imagens(
-                            prova
-                        )
-                        sugestoes_imagens = gerar_sugestoes_associacao(
-                            prova
-                        )
-                except Exception as erro_imagens:
-                    resultado_imagens = None
-                    sugestoes_imagens = 0
+                if resultado_imagens is not None:
+                    try:
+                        with transaction.atomic():
+                            sugestoes_imagens = gerar_sugestoes_associacao(
+                                prova
+                            )
+                    except Exception as erro_sugestoes:
+                        erro_imagens = str(erro_sugestoes)
+
+                if erro_imagens:
                     mensagem_imagens = (
                         'As questões foram importadas, mas as imagens '
                         'não puderam ser processadas: '

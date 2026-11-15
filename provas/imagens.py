@@ -7,6 +7,7 @@ import re
 from io import BytesIO
 from pathlib import Path
 
+import pypdfium2 as pdfium
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
@@ -14,6 +15,7 @@ from pypdf import PdfReader
 from pypdf.generic import ContentStream
 
 from .importador import (
+    _PADRAO_LETRA_ISOLADA,
     _normalizar_busca,
     detectar_idioma_secao,
     encontrar_marcadores_questoes,
@@ -453,6 +455,741 @@ def mapear_marcadores_pdf(caminho_pdf):
         ]
 
     return marcadores
+
+
+# ============================================================
+# ALTERNATIVAS COMPOSTAS POR IMAGENS
+# ============================================================
+
+# Tolerâncias usadas para ligar uma imagem ao marcador da alternativa.
+# As coordenadas vêm do PDF e a imagem fica ligeiramente acima da
+# linha de base da letra correspondente.
+TOLERANCIA_Y_IMAGEM_ALTERNATIVA = 35.0
+TOLERANCIA_X_IMAGEM_ALTERNATIVA = 80.0
+MARGEM_ACIMA_PRIMEIRA_LETRA = 12.0
+
+# Distância horizontal máxima entre uma letra e o marcador da questão
+# que a antecede. Evita misturar as colunas esquerda e direita.
+TOLERANCIA_X_MARCADOR_QUESTAO = 180.0
+
+
+# ============================================================
+# ALTERNATIVAS DESENHADAS DIRETAMENTE NO PDF (VETORIAIS)
+# ============================================================
+
+# Alturas e margens usadas para delimitar a região de cada
+# alternativa desenhada. A letra fica no canto esquerdo da primeira
+# linha do conteúdo; o desenho ocupa o espaço até a letra seguinte
+# (ou até a margem inferior da página).
+BANDA_ACIMA_LETRA = 12.0
+MARGEM_INFERIOR_PAGINA_BANDA = 25.0
+RECUO_X_BANDA = 15.0
+MARGEM_X_DIREITA_BANDA = 15.0
+
+# Índice inicial dentro da página para as imagens renderizadas. As
+# imagens incorporadas usam índices a partir de zero; o deslocamento
+# evita colisão na busca por (página, índice).
+INDICE_BASE_RENDERIZADA = 1000
+
+# Escala usada para rasterizar a região. O dobro gera aproximadamente
+# 144 DPI, nítidos para leitura na tela.
+ESCALA_RENDERIZACAO_BANDA = 2.0
+
+
+def _letras_alternativas_pagina(pagina):
+    """Localiza as letras A–E isoladas e suas posições na página."""
+    letras = []
+
+    for linha in _linhas_posicionadas(pagina):
+        resultado = _PADRAO_LETRA_ISOLADA.fullmatch(linha['texto'].strip())
+
+        if not resultado:
+            continue
+
+        letras.append({
+            'letra': resultado.group(1).upper(),
+            'x': linha['x'],
+            'y': linha['y'],
+        })
+
+    return letras
+
+
+def _marcador_acima_da_letra(letra, marcadores):
+    """
+    Encontra o marcador de questão imediatamente acima da letra.
+
+    A coluna é limitada para que as alternativas da coluna direita não
+    sejam atribuídas à questão da coluna esquerda (e vice-versa). Quando
+    a página tem apenas um marcador acima da letra, ele é usado mesmo
+    que a questão ocupe as duas colunas.
+    """
+    candidatos = [
+        marcador
+        for marcador in marcadores
+        if (
+            marcador.get('y') is not None
+            and marcador['y'] >= letra['y']
+        )
+    ]
+
+    if not candidatos:
+        return None
+
+    na_coluna = [
+        marcador
+        for marcador in candidatos
+        if abs((marcador.get('x') or 0) - letra['x'])
+        <= TOLERANCIA_X_MARCADOR_QUESTAO
+    ]
+
+    if na_coluna:
+        candidatos = na_coluna
+    elif len(candidatos) != 1:
+        return None
+
+    return min(candidatos, key=lambda marcador: marcador['y'] - letra['y'])
+
+
+def _centro_vertical_imagem(imagem):
+    if imagem.y is None:
+        return None
+
+    altura = imagem.altura_exibicao or 0
+    return float(imagem.y) + float(altura) / 2
+
+
+def associar_imagens_as_letras(letras, imagens):
+    """
+    Associa uma imagem a cada letra A–E pela geometria do PDF.
+
+    Somente devolve o mapa quando as cinco letras encontram imagens
+    distintas na mesma coluna e na mesma faixa vertical. Caso contrário,
+    a associação é considerada ambígua e nenhuma imagem é usada.
+    """
+    if len(letras) != 5:
+        return None
+
+    letras_ordenadas = sorted(letras, key=lambda item: item['letra'])
+
+    if [item['letra'] for item in letras_ordenadas] != ['A', 'B', 'C', 'D', 'E']:
+        return None
+
+    primeira_y = letras_ordenadas[0]['y']
+    disponiveis = [
+        imagem
+        for imagem in imagens
+        if imagem.x is not None and imagem.y is not None
+    ]
+    usadas = set()
+    resultado = {}
+
+    for letra in letras_ordenadas:
+        candidatos = []
+
+        for imagem in disponiveis:
+            if imagem.indice_pagina in usadas:
+                continue
+
+            centro = _centro_vertical_imagem(imagem)
+
+            if centro is None:
+                continue
+
+            # Imagens acima da primeira letra pertencem ao enunciado.
+            if centro > primeira_y + MARGEM_ACIMA_PRIMEIRA_LETRA:
+                continue
+
+            distancia_x = abs(imagem.x - letra['x'])
+            if distancia_x > TOLERANCIA_X_IMAGEM_ALTERNATIVA:
+                continue
+
+            distancia_y = abs(centro - letra['y'])
+            if distancia_y > TOLERANCIA_Y_IMAGEM_ALTERNATIVA:
+                continue
+
+            candidatos.append((distancia_y, distancia_x, imagem))
+
+        if not candidatos:
+            return None
+
+        escolhida = min(
+            candidatos,
+            key=lambda item: (item[0], item[1], item[2].indice_pagina),
+        )[2]
+
+        resultado[letra['letra']] = escolhida
+        usadas.add(escolhida.indice_pagina)
+
+    return resultado
+
+
+def mapear_alternativas_por_imagem(prova):
+    """
+    Mapeia as questões cujas alternativas são imagens.
+
+    O resultado usa a chave ``(numero, idioma)`` e contém a página e um
+    dicionário ``letra -> ImagemProva``.
+    """
+    from .models import ImagemProva
+
+    if not prova.arquivo_pdf:
+        return {}
+
+    caminho = prova.arquivo_pdf.path
+
+    try:
+        marcadores = mapear_marcadores_pdf(caminho)
+    except Exception:
+        return {}
+
+    if not marcadores:
+        return {}
+
+    try:
+        leitor = PdfReader(caminho)
+    except Exception:
+        return {}
+
+    imagens_por_pagina = {}
+
+    for imagem in ImagemProva.objects.filter(
+        prova=prova,
+        exibida=True,
+        ignorada=False,
+    ):
+        imagens_por_pagina.setdefault(imagem.pagina, []).append(imagem)
+
+    resultado = {}
+
+    for numero_pagina in sorted({item['pagina'] for item in marcadores}):
+        if numero_pagina < 1 or numero_pagina > len(leitor.pages):
+            continue
+
+        letras = _letras_alternativas_pagina(
+            leitor.pages[numero_pagina - 1]
+        )
+
+        if not letras:
+            continue
+
+        marcadores_pagina = [
+            marcador
+            for marcador in marcadores
+            if marcador['pagina'] == numero_pagina
+        ]
+
+        grupos = {}
+
+        for letra in letras:
+            marcador = _marcador_acima_da_letra(
+                letra,
+                marcadores_pagina,
+            )
+
+            if marcador is None:
+                continue
+
+            chave = (
+                marcador['numero'],
+                marcador.get('idioma') or None,
+            )
+            grupos.setdefault(chave, []).append(letra)
+
+        for chave, letras_questao in grupos.items():
+            if sorted(
+                item['letra'] for item in letras_questao
+            ) != ['A', 'B', 'C', 'D', 'E']:
+                continue
+
+            associacao = associar_imagens_as_letras(
+                letras_questao,
+                imagens_por_pagina.get(numero_pagina, []),
+            )
+
+            if associacao is None:
+                continue
+
+            resultado[chave] = {
+                'pagina': numero_pagina,
+                'letras': associacao,
+            }
+
+    return resultado
+
+
+def anotar_imagens_nas_alternativas(prova, questoes):
+    """
+    Adiciona metadados de imagem às alternativas antes da validação.
+
+    A gravação no banco só acontece durante a importação, quando as
+    imagens já foram registradas por ``extrair_e_registrar_imagens``.
+    """
+    mapa = mapear_alternativas_por_imagem(prova)
+
+    if not mapa:
+        return 0
+
+    anotadas = 0
+
+    for questao in questoes:
+        chave = (
+            questao['numero'],
+            questao.get('_idioma') or questao.get('idioma') or None,
+        )
+        informacoes = mapa.get(chave)
+
+        if not informacoes:
+            continue
+
+        alternativas = questao.get('alternativas') or []
+
+        if len(alternativas) != 5:
+            continue
+
+        for alternativa in alternativas:
+            imagem = informacoes['letras'].get(
+                alternativa.get('letra')
+            )
+
+            if imagem is None:
+                continue
+
+            alternativa['_imagem_alternativa'] = {
+                'pagina': imagem.pagina,
+                'indice_pagina': imagem.indice_pagina,
+            }
+            anotadas += 1
+
+    return anotadas
+
+
+def _texto_alternativa_vazio(texto):
+    """
+    Indica se o texto extraído da alternativa está efetivamente vazio.
+
+    Além do texto em branco, considera vazio o fragmento ``/`` que
+    alguns PDFs do ENEM deixam no canto inferior da página e que pode
+    vazar como conteúdo da última alternativa.
+    """
+    return (texto or '').strip() in {'', '/'}
+
+
+def mapear_letras_por_questao(caminho_pdf):
+    """
+    Agrupa as letras de alternativa A–E por questão, em ordem de leitura.
+
+    Cada item contém letra, página e posição. As letras de páginas
+    continuadas (sem marcador próprio) ficam com a questão do marcador
+    anterior. Devolve também a largura de cada página.
+    """
+    marcadores = mapear_marcadores_pdf(caminho_pdf)
+
+    try:
+        leitor = PdfReader(caminho_pdf)
+    except Exception:
+        return {}, {}
+
+    marcadores_por_pagina = {}
+    for marcador in marcadores:
+        marcadores_por_pagina.setdefault(
+            marcador['pagina'], []
+        ).append(marcador)
+
+    eventos_por_pagina = {}
+    larguras = {}
+
+    for numero_pagina, pagina in enumerate(leitor.pages, start=1):
+        try:
+            larguras[numero_pagina] = float(pagina.mediabox.width)
+        except Exception:
+            larguras[numero_pagina] = 0.0
+
+        letras = _letras_alternativas_pagina(pagina)
+
+        if not letras and numero_pagina not in marcadores_por_pagina:
+            continue
+
+        eventos = [
+            ('m', marcador)
+            for marcador in marcadores_por_pagina.get(
+                numero_pagina, []
+            )
+        ]
+        for letra in letras:
+            letra = dict(letra)
+            letra['pagina'] = numero_pagina
+            eventos.append(('l', letra))
+
+        # Ordem de leitura: de cima para baixo. Marcadores e letras
+        # na mesma altura mantêm a ordem de inserção (marcador antes).
+        eventos.sort(key=lambda item: -float(item[1]['y'] or 0))
+        eventos_por_pagina[numero_pagina] = eventos
+
+    questao_corrente = None
+    grupos = {}
+
+    for numero_pagina in sorted(eventos_por_pagina):
+        for tipo, item in eventos_por_pagina[numero_pagina]:
+            if tipo == 'm':
+                questao_corrente = (
+                    item['numero'],
+                    item.get('idioma') or None,
+                )
+                continue
+
+            if questao_corrente is None:
+                continue
+
+            # Na página do marcador, a letra precisa estar na mesma
+            # coluna da questão. Fragmentos isolados de fórmulas no
+            # meio da página (um "e" solto de uma operação matemática,
+            # por exemplo) são descartados aqui. Páginas continuadas,
+            # sem marcador, não têm filtro: a questão ocupa a largura
+            # toda da página.
+            numero_marcador, _ = questao_corrente
+            marcador_corrente = next(
+                (
+                    marcador
+                    for marcador in marcadores_por_pagina.get(
+                        numero_pagina, []
+                    )
+                    if marcador['numero'] == numero_marcador
+                ),
+                None,
+            )
+
+            if (
+                marcador_corrente is not None
+                and marcador_corrente.get('x') is not None
+                and item.get('x') is not None
+                and abs(
+                    item['x'] - marcador_corrente['x']
+                ) > TOLERANCIA_X_MARCADOR_QUESTAO
+            ):
+                continue
+
+            grupos.setdefault(questao_corrente, []).append(item)
+
+    return grupos, larguras
+
+
+def _bandas_das_letras(letras, larguras):
+    """
+    Converte as linhas de letras A–E em regiões renderizáveis.
+
+    A região de cada letra vai da sua linha até a linha da letra
+    seguinte (ou até a margem inferior da página, quando a letra é a
+    última da página). Devolve None quando as letras não formam a
+    sequência completa A–E.
+    """
+    ordem = [item['letra'] for item in letras]
+
+    if ordem != ['A', 'B', 'C', 'D', 'E']:
+        return None
+
+    bandas = []
+
+    for indice, item in enumerate(letras):
+        pagina = item['pagina']
+        largura = larguras.get(pagina) or 0.0
+
+        if largura <= 0 or item.get('y') is None:
+            return None
+
+        topo = float(item['y']) + BANDA_ACIMA_LETRA
+
+        seguinte = (
+            letras[indice + 1]
+            if indice + 1 < len(letras)
+            else None
+        )
+
+        if seguinte is not None and seguinte['pagina'] == pagina:
+            base = float(seguinte['y']) + BANDA_ACIMA_LETRA
+        else:
+            base = MARGEM_INFERIOR_PAGINA_BANDA
+
+        x0 = float(item.get('x') or 0) + RECUO_X_BANDA
+        x1 = largura - MARGEM_X_DIREITA_BANDA
+
+        if x1 - x0 <= 0 or topo - base <= 0:
+            return None
+
+        bandas.append({
+            'letra': item['letra'],
+            'pagina': pagina,
+            'x0': x0,
+            'x1': x1,
+            'base': base,
+            'topo': topo,
+        })
+
+    return bandas
+
+
+def _renderizar_banda_png(caminho_pdf, banda):
+    """
+    Renderiza a região de uma alternativa como PNG.
+
+    O recorte é feito no espaço de coordenadas do PDF e a rasterização
+    usa o pypdfium2, que interpreta corretamente o conteúdo vetorial
+    (fórmulas, diagramas e textos desenhados com trajetos).
+    """
+    documento = pdfium.PdfDocument(str(caminho_pdf))
+
+    try:
+        pagina = documento[banda['pagina'] - 1]
+
+        try:
+            largura = float(pagina.get_width())
+            altura = float(pagina.get_height())
+            recorte = (
+                banda['x0'],
+                banda['base'],
+                max(largura - banda['x1'], 0.0),
+                max(altura - banda['topo'], 0.0),
+            )
+            bitmap = pagina.render(
+                scale=ESCALA_RENDERIZACAO_BANDA,
+                crop=recorte,
+            )
+            imagem = bitmap.to_pil()
+        finally:
+            pagina.close()
+    finally:
+        documento.close()
+
+    try:
+        buffer = BytesIO()
+        imagem.save(buffer, format='PNG', optimize=True)
+        dados = buffer.getvalue()
+        return dados, imagem.size
+    finally:
+        imagem.close()
+
+
+def anotar_alternativas_vetoriais(prova, questoes):
+    """
+    Renderiza e associa as alternativas desenhadas diretamente no PDF.
+
+    Algumas provas do ENEM (notadamente o ENEM Digital) apresentam
+    alternativas como fórmulas químicas ou diagramas desenhados com
+    trajetos vetoriais: não há texto extraível nem imagem incorporada,
+    e a importação seria rejeitada por "alternativa sem texto".
+
+    Quando todas as cinco letras da questão são localizadas, cada
+    região é rasterizada, registrada como ``ImagemProva`` e referenci
+    pela alternativa. O texto é zerado porque o conteúdo real é a
+    imagem. Se qualquer letra faltar, a questão não é anotada e segue
+    o comportamento anterior (rejeição com mensagem explícita).
+    """
+    from .models import ImagemProva
+
+    if not prova.arquivo_pdf:
+        return 0
+
+    try:
+        caminho = prova.arquivo_pdf.path
+    except (ValueError, OSError):
+        return 0
+
+    candidatas = []
+
+    for questao in questoes:
+        alternativas = questao.get('alternativas') or []
+
+        if len(alternativas) != 5:
+            continue
+
+        if any(
+            alternativa.get('_imagem_alternativa')
+            or alternativa.get('imagem_alternativa')
+            for alternativa in alternativas
+        ):
+            continue
+
+        if any(
+            _texto_alternativa_vazio(alternativa.get('texto'))
+            for alternativa in alternativas
+        ):
+            candidatas.append(questao)
+
+    if not candidatas:
+        return 0
+
+    try:
+        grupos, larguras = mapear_letras_por_questao(caminho)
+    except Exception:
+        return 0
+
+    if not grupos:
+        return 0
+
+    anotadas = 0
+    contadores_por_pagina = {}
+
+    for questao in candidatas:
+        chave = (
+            questao['numero'],
+            questao.get('_idioma') or questao.get('idioma') or None,
+        )
+        letras = grupos.get(chave)
+
+        if not letras:
+            # Questões de idioma (1–5) podem ter a chave com idioma
+            # diferente entre a extração e os marcadores. Quando existe
+            # um único grupo com o mesmo número, ele é usado.
+            candidatos = [
+                grupo
+                for (numero, _), grupo in grupos.items()
+                if numero == questao['numero']
+            ]
+            if len(candidatos) == 1:
+                letras = candidatos[0]
+
+        if not letras:
+            continue
+
+        bandas = _bandas_das_letras(letras, larguras)
+
+        if bandas is None:
+            continue
+
+        # Todas as regiões são renderizadas antes de qualquer
+        # gravação: uma falha não deixa a questão parcialmente anotada.
+        renderizadas = []
+        completa = True
+
+        for banda in bandas:
+            try:
+                dados, tamanho = _renderizar_banda_png(
+                    caminho,
+                    banda,
+                )
+            except Exception:
+                completa = False
+                break
+
+            renderizadas.append((banda, dados, tamanho))
+
+        if not completa:
+            continue
+
+        with transaction.atomic():
+            for banda, dados, tamanho in renderizadas:
+                hash_sha256 = hashlib.sha256(dados).hexdigest()
+
+                contador = contadores_por_pagina.setdefault(
+                    banda['pagina'], 0
+                )
+                indice_pagina = INDICE_BASE_RENDERIZADA + contador
+                contadores_por_pagina[banda['pagina']] = contador + 1
+
+                existente = ImagemProva.objects.filter(
+                    prova=prova,
+                    hash_sha256=hash_sha256,
+                    pagina=banda['pagina'],
+                    indice_pagina=indice_pagina,
+                ).first()
+
+                if existente is None:
+                    nome = _garantir_arquivo(
+                        prova.id,
+                        hash_sha256,
+                        'png',
+                        dados,
+                    )
+                    existente = ImagemProva.objects.create(
+                        prova=prova,
+                        arquivo=nome,
+                        hash_sha256=hash_sha256,
+                        pagina=banda['pagina'],
+                        indice_pagina=indice_pagina,
+                        nome_original=(
+                            f'alternativa-'
+                            f'{banda["pagina"]}-{banda["letra"]}.png'
+                        ),
+                        largura=tamanho[0],
+                        altura=tamanho[1],
+                        exibida=True,
+                        x=banda['x0'],
+                        y=banda['base'],
+                        largura_exibicao=(
+                            banda['x1'] - banda['x0']
+                        ),
+                        altura_exibicao=(
+                            banda['topo'] - banda['base']
+                        ),
+                    )
+
+                for alternativa in questao['alternativas']:
+                    if alternativa.get('letra') != banda['letra']:
+                        continue
+
+                    alternativa['_imagem_alternativa'] = {
+                        'pagina': banda['pagina'],
+                        'indice_pagina': indice_pagina,
+                        'hash_sha256': hash_sha256,
+                    }
+                    alternativa['texto'] = ''
+                    anotadas += 1
+
+    return anotadas
+
+
+def anotar_paginas_questoes(prova, questoes):
+    """
+    Acrescenta a página de origem às questões extraídas.
+
+    A página é usada nas mensagens de problema para que o usuário saiba
+    exatamente onde procurar no PDF.
+    """
+    if not prova.arquivo_pdf:
+        return 0
+
+    try:
+        marcadores = mapear_marcadores_pdf(prova.arquivo_pdf.path)
+    except Exception:
+        return 0
+
+    paginas = {}
+
+    for marcador in marcadores:
+        chave = (
+            marcador['numero'],
+            marcador.get('idioma') or None,
+        )
+        paginas.setdefault(chave, marcador['pagina'])
+
+    anotadas = 0
+
+    for questao in questoes:
+        chave = (
+            questao['numero'],
+            questao.get('_idioma') or questao.get('idioma') or None,
+        )
+        pagina = paginas.get(chave)
+
+        if pagina is None:
+            pagina = paginas.get((questao['numero'], None))
+
+        if pagina is None:
+            candidatas = [
+                valor
+                for (numero, _), valor in paginas.items()
+                if numero == questao['numero']
+            ]
+            if len(set(candidatas)) == 1:
+                pagina = candidatas[0]
+
+        if pagina is None:
+            continue
+
+        questao['_pagina'] = pagina
+        anotadas += 1
+
+    return anotadas
 
 
 # ============================================================
@@ -1007,6 +1744,7 @@ def gerar_sugestoes_associacao(prova):
             prova=prova,
             ignorada=False,
             exibida=True,
+            alternativas_como_imagem__isnull=True,
         )
     )
 

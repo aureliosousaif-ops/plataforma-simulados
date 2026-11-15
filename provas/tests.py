@@ -8,6 +8,8 @@ from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
@@ -18,7 +20,11 @@ from pypdf import PdfWriter
 from usuarios.models import Perfil
 
 from .imagens import (
+    _marcador_acima_da_letra,
+    _texto_alternativa_vazio,
+    anotar_alternativas_vetoriais,
     associar_imagem,
+    associar_imagens_as_letras,
     confirmar_associacao,
     extrair_e_registrar_imagens,
     extrair_imagens_pdf,
@@ -33,11 +39,13 @@ from .importador import (
     dividir_questoes_validas,
     extrair_gabarito_enem,
     extrair_alternativas_generico,
+    extrair_questoes_anuladas_gabarito,
     extrair_texto_pdf,
     importar_questoes_no_banco,
     limpar_texto,
     limpar_texto_alternativa,
     preparar_questoes,
+    preparar_questoes_para_importacao,
     separar_questoes_enem,
     validar_estrutura_questoes,
 )
@@ -532,6 +540,32 @@ class ParserEnemTestCase(TestCase):
                 == ['A', 'B', 'C', 'D', 'E']
                 for questao in questoes
             )
+        )
+
+    def test_reconhece_marcador_digital_com_area_na_mesma_linha(self):
+        blocos = [
+            criar_bloco_questao(91),
+            criar_bloco_questao(92),
+        ]
+        texto = '\n'.join(blocos)
+        texto = texto.replace(
+            'QUESTÃO 91',
+            'Questão 91 - Ciências da Natureza e suas Tecnologias',
+        )
+        texto = texto.replace(
+            'QUESTÃO 92',
+            'Questão 92 - Ciências da Natureza e suas Tecnologias',
+        )
+
+        questoes = separar_questoes_enem(texto)
+
+        self.assertEqual(
+            [questao['numero'] for questao in questoes],
+            [91, 92],
+        )
+        self.assertEqual(
+            len(questoes[0]['alternativas']),
+            5,
         )
 
     def test_fragmentos_de_palavra_nao_viram_marcadores_de_alternativa(self):
@@ -2717,6 +2751,648 @@ class RevisaoImagensViewTestCase(TestCase):
         self.assertContains(response, imagem.arquivo.url)
         self.assertContains(response, 'Alternativa A.')
         self.assertContains(response, 'window.print()')
+
+
+class CorrecoesImportacaoEnemD2TestCase(TestCase):
+    """Regressões encontradas na importação do ENEM 2025 2º dia."""
+
+    def _questao(self, numero, textos=None, imagens=None):
+        textos = textos or [f'Texto {letra}.' for letra in 'ABCDE']
+        alternativas = []
+
+        for indice, letra in enumerate('ABCDE'):
+            alternativa = {
+                'letra': letra,
+                'texto': textos[indice],
+                'correta': False,
+            }
+
+            if imagens:
+                alternativa['_imagem_alternativa'] = imagens[indice]
+
+            alternativas.append(alternativa)
+
+        return {
+            'numero': numero,
+            'texto': f'Enunciado {numero}.',
+            'alternativas': alternativas,
+        }
+
+    def test_enunciado_iniciado_por_a_nao_vira_alternativa(self):
+        # O primeiro parágrafo do enunciado começa com "A" e, no PDF, o
+        # extrator poderia confundi-lo com o marcador da alternativa A.
+        texto = '\n'.join([
+            'A deficiência da enzima lipase ácida causa uma doença em',
+            'que o portador apresenta células que não degradam colesterol',
+            'esterificado nem triglicerídeos, resultando no depósito desses',
+            'compostos em diversos órgãos, principalmente no fígado.',
+            'Essa doença resulta da insuficiência funcional de qual',
+            'estrutura celular?',
+            'A) Lisossomos.',
+            'B) Ribossomos.',
+            'C) Mitocôndrias.',
+            'D) Peroxissomos.',
+            'E) Retículo endoplasmático liso.',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['texto'] for alternativa in alternativas],
+            [
+                'Lisossomos.',
+                'Ribossomos.',
+                'Mitocôndrias.',
+                'Peroxissomos.',
+                'Retículo endoplasmático liso.',
+            ],
+        )
+
+    def test_quebra_de_palavra_apos_marcador_nao_cria_alternativa_falsa(self):
+        # No PDF da questão 140, "Batata chips." é extraído como
+        # " B" + "atata chips." e a letra solta não é um novo marcador.
+        texto = '\n'.join([
+            'Qual desses produtos deve ser o escolhido pela estudante?',
+            'A', ' B', 'atata chips.',
+            'B', ' P', 'alitos salgados.',
+            'C', ' Bisc', 'oito multigrãos.',
+            'D', ' Bis', 'coito de polvilho.',
+            'E', ' Bisc', 'oito de água e sal.',
+        ])
+
+        alternativas = extrair_alternativas_generico(texto)
+
+        self.assertEqual(
+            [alternativa['letra'] for alternativa in alternativas],
+            ['A', 'B', 'C', 'D', 'E'],
+        )
+        self.assertEqual(
+            [alternativa['texto'] for alternativa in alternativas],
+            [
+                'Batata chips.',
+                'Palitos salgados.',
+                'Biscoito multigrãos.',
+                'Biscoito de polvilho.',
+                'Biscoito de água e sal.',
+            ],
+        )
+
+    def test_gabarito_anulado_e_relatado_com_pagina_e_nao_importado(self):
+        texto_gabarito = '\n'.join([
+            '115 Anulado',
+            '116 A',
+            '121 Anulado',
+        ])
+
+        anuladas = extrair_questoes_anuladas_gabarito(texto_gabarito)
+
+        self.assertEqual(anuladas, {115, 121})
+
+        questao_anulada = self._questao(115)
+        questao_anulada['_pagina'] = 9
+        questao_valida = self._questao(116)
+
+        validas, problemas = dividir_questoes_validas(
+            [questao_anulada, questao_valida],
+            {116: 'A'},
+            anuladas,
+        )
+
+        self.assertEqual(
+            [questao['numero'] for questao in validas],
+            [116],
+        )
+        self.assertIn(
+            'Questão 115 (página 9): anulada no gabarito oficial.',
+            '\n'.join(problemas),
+        )
+
+    def test_alternativa_sem_texto_so_e_aceita_quando_tem_imagem(self):
+        imagens = [
+            {'pagina': 4, 'indice_pagina': indice}
+            for indice in range(5)
+        ]
+        questao = self._questao(
+            101,
+            textos=['', '', '', '', ''],
+            imagens=imagens,
+        )
+
+        erros = validar_estrutura_questoes([questao], {101: 'C'})
+
+        self.assertNotIn(
+            'alternativa A sem texto',
+            '\n'.join(erros),
+        )
+
+        # Sem a referência de imagem, a alternativa vazia continua sendo
+        # rejeitada: a validação não foi afrouxada.
+        for alternativa in questao['alternativas']:
+            alternativa.pop('_imagem_alternativa')
+
+        erros = validar_estrutura_questoes([questao], {101: 'C'})
+
+        self.assertIn(
+            'alternativa A sem texto',
+            '\n'.join(erros),
+        )
+
+    def test_associa_imagens_as_letras_pela_geometria_do_pdf(self):
+        letras = [
+            {'letra': letra, 'x': 60 if indice < 3 else 320,
+             'y': 500 - indice * 100}
+            for indice, letra in enumerate('ABCDE')
+        ]
+        imagens = [
+            SimpleNamespace(
+                indice_pagina=indice,
+                x=60 if indice < 3 else 320,
+                y=470 - indice * 100,
+                altura_exibicao=60,
+            )
+            for indice in range(5)
+        ]
+
+        associacao = associar_imagens_as_letras(letras, imagens)
+
+        self.assertIsNotNone(associacao)
+        self.assertEqual(
+            {
+                letra: imagem.indice_pagina
+                for letra, imagem in associacao.items()
+            },
+            {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4},
+        )
+
+        # Com uma imagem faltando a associação é ambígua e não é usada.
+        self.assertIsNone(
+            associar_imagens_as_letras(letras, imagens[:4])
+        )
+
+    def test_marcador_unico_da_questao_atende_as_duas_colunas(self):
+        marcador = {
+            'numero': 144,
+            'x': 60,
+            'y': 700,
+        }
+        letra_direita = {'letra': 'D', 'x': 320, 'y': 600}
+
+        # A questão ocupa as duas colunas: as letras da direita também
+        # pertencem ao único marcador acima delas.
+        self.assertEqual(
+            _marcador_acima_da_letra(letra_direita, [marcador])['numero'],
+            144,
+        )
+
+        # Com marcadores nas duas colunas, cada letra usa o da sua coluna.
+        marcadores = [
+            {'numero': 144, 'x': 60, 'y': 700},
+            {'numero': 145, 'x': 320, 'y': 700},
+        ]
+
+        self.assertEqual(
+            _marcador_acima_da_letra(
+                {'letra': 'A', 'x': 60, 'y': 600},
+                marcadores,
+            )['numero'],
+            144,
+        )
+        self.assertEqual(
+            _marcador_acima_da_letra(letra_direita, marcadores)['numero'],
+            145,
+        )
+
+    def test_importacao_vincula_imagem_a_alternativa(self):
+        prova = Prova.objects.create(
+            nome='ENEM alternativas com imagem',
+            tipo='enem',
+            ano=2025,
+        )
+        imagens = [
+            ImagemProva.objects.create(
+                prova=prova,
+                arquivo=f'provas/imagens/alternativa_{indice}.png',
+                hash_sha256=f'{indice:064d}',
+                pagina=4,
+                indice_pagina=indice,
+            )
+            for indice in range(5)
+        ]
+        questao = self._questao(
+            101,
+            textos=['', '', '', '', ''],
+            imagens=[
+                {'pagina': 4, 'indice_pagina': indice}
+                for indice in range(5)
+            ],
+        )
+
+        preparadas = preparar_questoes([questao], {101: 'C'})
+        importar_questoes_no_banco(prova, preparadas, {101: 'C'})
+
+        alternativas = list(
+            Alternativa.objects.filter(
+                questao__prova=prova,
+            ).order_by('letra')
+        )
+
+        self.assertEqual(
+            [alternativa.imagem_id for alternativa in alternativas],
+            [imagem.id for imagem in imagens],
+        )
+        self.assertEqual(
+            [alternativa.texto for alternativa in alternativas],
+            ['', '', '', '', ''],
+        )
+        self.assertEqual(
+            [
+                alternativa.letra
+                for alternativa in alternativas
+                if alternativa.correta
+            ],
+            ['C'],
+        )
+
+
+def criar_pdf_vetorial(caminho, paginas):
+    """
+    Cria um PDF sintético com texto posicionado e trajetos vetoriais.
+
+    Cada página é um dicionário com:
+
+    - ``marcador``: texto do cabeçalho ("Questao 101 - Sintetica");
+    - ``letras``: lista de ``(letra, x, y)``;
+    - ``trajetos``: linhas ``(x1, y1, x2, y2)`` desenhadas no PDF.
+
+    O PDF é montado manualmente (sem bibliotecas de desenho) para
+    reproduzir provas digitais em que as alternativas são apenas
+    trajetos vetoriais, sem texto extraível e sem imagem incorporada.
+    """
+    objetos = []
+
+    def adicionar_objeto(corpo):
+        numero = len(objetos) + 1
+        objetos.append((numero, corpo))
+        return numero
+
+    def adicionar_conteudo(bytes_conteudo):
+        corpo = (
+            f'<</Length {len(bytes_conteudo)}>>\nstream\n'.encode()
+            + bytes_conteudo
+            + b'\nendstream'
+        )
+        return adicionar_objeto(corpo)
+
+    fonte = adicionar_objeto(
+        b'<</Type/Font/Subtype/Type1/BaseFont/Helvetica'
+        b'/Encoding/WinAnsiEncoding>>'
+    )
+
+    kids = []
+
+    for pagina in paginas:
+        partes = []
+
+        marcador = pagina.get('marcador')
+        if marcador:
+            texto = marcador.replace('\\', r'\\')
+            texto = texto.replace('(', r'\(').replace(')', r'\)')
+            partes.append(
+                f'BT /F1 11 Tf 150 1150 Td ({texto}) Tj ET'
+            )
+
+        for letra, x, y in pagina.get('letras', []):
+            partes.append(f'BT /F1 11 Tf {x} {y} Td ({letra}) Tj ET')
+
+        for x1, y1, x2, y2 in pagina.get('trajetos', []):
+            partes.append(f'2 w {x1} {y1} m {x2} {y2} l S')
+
+        numero_conteudo = adicionar_conteudo(
+            '\n'.join(partes).encode('ascii')
+        )
+        numero_pagina = adicionar_objeto(
+            f'<</Type/Page/Parent {{}} 0 R/MediaBox[0 0 842 1190]'
+            f'/Resources<</Font<</F1 {fonte} 0 R>>>>'
+            f'/Contents {numero_conteudo} 0 R>>'.encode()
+        )
+        kids.append(numero_pagina)
+
+    numero_paginas = adicionar_objeto(
+        f'<</Type/Pages/Kids[{" ".join(f"{kid} 0 R" for kid in kids)}]'
+        f'/Count {len(kids)}>>'.encode()
+    )
+
+    for kid in kids:
+        numero, corpo = objetos[kid - 1]
+        objetos[kid - 1] = (
+            numero,
+            corpo.replace(b'{} 0 R', f'{numero_paginas} 0 R'.encode()),
+        )
+
+    catalogo = adicionar_objeto(
+        f'<</Type/Catalog/Pages {numero_paginas} 0 R>>'.encode()
+    )
+
+    saida = bytearray(b'%PDF-1.4\n')
+    deslocamentos = {}
+
+    for numero, corpo in objetos:
+        deslocamentos[numero] = len(saida)
+        saida += f'{numero} 0 obj\n'.encode()
+        saida += corpo
+        saida += b'\nendobj\n'
+
+    inicio_xref = len(saida)
+    total = len(objetos) + 1
+    saida += f'xref\n0 {total}\n'.encode()
+    saida += b'0000000000 65535 f \n'
+
+    for numero in range(1, total):
+        saida += f'{deslocamentos[numero]:010d} 00000 n \n'.encode()
+
+    saida += (
+        f'trailer\n<</Size {total}/Root {catalogo} 0 R>>\n'
+        f'startxref\n{inicio_xref}\n%%EOF\n'.encode()
+    )
+
+    caminho = Path(caminho)
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    caminho.write_bytes(bytes(saida))
+    return caminho
+
+
+class AlternativasVetoriaisTestCase(TestCase):
+    """
+    Questões cujas alternativas são desenhadas diretamente no PDF.
+
+    Fórmulas químicas e diagramas vetoriais não produzem texto
+    extraível nem imagens incorporadas. Sem o raster das regiões, a
+    importação seria rejeitada por "alternativa sem texto".
+    """
+
+    def setUp(self):
+        pasta = tempfile.TemporaryDirectory()
+        self.addCleanup(pasta.cleanup)
+        self.pasta = Path(pasta.name)
+
+        configuracao = override_settings(MEDIA_ROOT=pasta.name)
+        configuracao.enable()
+        self.addCleanup(configuracao.disable)
+
+        self.prova = Prova.objects.create(
+            nome='ENEM digital com alternativas desenhadas',
+            tipo='enem',
+            ano=2022,
+        )
+
+    def _anexar_pdf(self, paginas, nome='provas/digital.pdf'):
+        caminho = criar_pdf_vetorial(
+            self.pasta / 'originais' / 'digital.pdf',
+            paginas,
+        )
+        self.prova.arquivo_pdf.save(
+            nome,
+            ContentFile(caminho.read_bytes()),
+        )
+
+    @staticmethod
+    def _questao(numero, textos=None):
+        textos = textos or ['', '', '', '', '']
+        return {
+            'numero': numero,
+            'texto': f'Enunciado {numero}.',
+            'alternativas': [
+                {'letra': letra, 'texto': textos[indice], 'correta': False}
+                for indice, letra in enumerate('ABCDE')
+            ],
+        }
+
+    def test_questao_com_alternativas_desenhadas_e_importada(self):
+        paginas = [{
+            'marcador': 'Questao 101 - Sintetica',
+            'letras': [
+                ('A', 161, 900), ('B', 161, 700), ('C', 161, 500),
+                ('D', 161, 300), ('E', 161, 100),
+            ],
+            'trajetos': [
+                (200, 850, 420, 850), (200, 650, 420, 650),
+                (200, 450, 420, 450), (200, 250, 420, 250),
+                (200, 50, 420, 50),
+            ],
+        }]
+        self._anexar_pdf(paginas)
+        questao = self._questao(101)
+
+        anotadas = anotar_alternativas_vetoriais(
+            self.prova,
+            [questao],
+        )
+
+        self.assertEqual(anotadas, 5)
+
+        for alternativa in questao['alternativas']:
+            self.assertEqual(alternativa['texto'], '')
+            self.assertIn('_imagem_alternativa', alternativa)
+
+        registros = list(
+            ImagemProva.objects.filter(prova=self.prova).order_by('id')
+        )
+        self.assertEqual(len(registros), 5)
+        self.assertEqual(
+            [registro.indice_pagina for registro in registros],
+            [1000, 1001, 1002, 1003, 1004],
+        )
+
+        # O desenho vetorial foi rasterizado dentro da região.
+        primeira = registros[0]
+        with primeira.arquivo.open() as enviada:
+            rasterizada = Image.open(enviada).convert('L')
+        menor = min(rasterizada.getdata())
+        self.assertLess(menor, 100)
+
+        validas, problemas = dividir_questoes_validas(
+            [questao],
+            {101: 'C'},
+            set(),
+        )
+
+        self.assertEqual(problemas, [])
+        self.assertEqual(len(validas), 1)
+
+        preparadas = preparar_questoes_para_importacao(
+            validas,
+            {101: 'C'},
+        )
+        quantidade = importar_questoes_no_banco(
+            self.prova,
+            preparadas,
+            {101: 'C'},
+        )
+        self.assertEqual(quantidade, 1)
+
+        alternativa_correta = Alternativa.objects.get(
+            questao__prova=self.prova,
+            letra='C',
+        )
+        self.assertTrue(alternativa_correta.correta)
+        self.assertIsNotNone(alternativa_correta.imagem_id)
+
+    def test_letras_divididas_em_duas_paginas(self):
+        paginas = [
+            {
+                'marcador': 'Questao 102 - Sintetica',
+                'letras': [('A', 161, 900), ('B', 161, 300)],
+                'trajetos': [
+                    (200, 850, 420, 850), (200, 250, 420, 250),
+                ],
+            },
+            {
+                'letras': [
+                    ('C', 161, 1000), ('D', 161, 700), ('E', 161, 300),
+                ],
+                'trajetos': [
+                    (200, 950, 420, 950), (200, 650, 420, 650),
+                    (200, 250, 420, 250),
+                ],
+            },
+        ]
+        self._anexar_pdf(paginas)
+        questao = self._questao(102)
+
+        anotadas = anotar_alternativas_vetoriais(
+            self.prova,
+            [questao],
+        )
+
+        self.assertEqual(anotadas, 5)
+
+        registros = list(
+            ImagemProva.objects.filter(prova=self.prova).order_by('id')
+        )
+        self.assertEqual(len(registros), 5)
+        self.assertEqual(
+            [(registro.pagina, registro.indice_pagina) for registro in registros],
+            [
+                (1, 1000), (1, 1001),
+                (2, 1000), (2, 1001), (2, 1002),
+            ],
+        )
+
+    def test_letras_incompletas_nao_sao_anotadas(self):
+        paginas = [{
+            'marcador': 'Questao 103 - Sintetica',
+            'letras': [
+                ('A', 161, 900), ('B', 161, 700),
+                ('C', 161, 500), ('D', 161, 300),
+            ],
+            'trajetos': [(200, 850, 420, 850)],
+        }]
+        self._anexar_pdf(paginas)
+        questao = self._questao(103)
+
+        anotadas = anotar_alternativas_vetoriais(
+            self.prova,
+            [questao],
+        )
+
+        self.assertEqual(anotadas, 0)
+        self.assertEqual(
+            ImagemProva.objects.filter(prova=self.prova).count(), 0
+        )
+
+        validas, problemas = dividir_questoes_validas(
+            [questao],
+            {103: 'A'},
+            set(),
+        )
+
+        self.assertEqual(validas, [])
+        self.assertIn(
+            'alternativa A sem texto',
+            '\n'.join(problemas),
+        )
+
+    def test_renderizacao_e_deterministica_e_nao_duplica(self):
+        paginas = [{
+            'marcador': 'Questao 104 - Sintetica',
+            'letras': [
+                ('A', 161, 900), ('B', 161, 700), ('C', 161, 500),
+                ('D', 161, 300), ('E', 161, 100),
+            ],
+            'trajetos': [(200, 850, 420, 850)],
+        }]
+        self._anexar_pdf(paginas)
+
+        primeira = self._questao(104)
+        anotar_alternativas_vetoriais(self.prova, [primeira])
+
+        # Reimportação: questões recriadas do zero, mesma prova.
+        segunda = self._questao(104)
+        anotar_alternativas_vetoriais(self.prova, [segunda])
+
+        self.assertEqual(
+            ImagemProva.objects.filter(prova=self.prova).count(), 5
+        )
+
+    def test_questao_com_texto_completo_nao_e_alterada(self):
+        paginas = [{
+            'marcador': 'Questao 105 - Sintetica',
+            'letras': [
+                ('A', 161, 900), ('B', 161, 700), ('C', 161, 500),
+                ('D', 161, 300), ('E', 161, 100),
+            ],
+        }]
+        self._anexar_pdf(paginas)
+        questao = self._questao(
+            105,
+            textos=[f'Texto {letra}.' for letra in 'ABCDE'],
+        )
+
+        anotadas = anotar_alternativas_vetoriais(
+            self.prova,
+            [questao],
+        )
+
+        self.assertEqual(anotadas, 0)
+        self.assertEqual(
+            ImagemProva.objects.filter(prova=self.prova).count(), 0
+        )
+        self.assertEqual(
+            [alternativa['texto'] for alternativa in questao['alternativas']],
+            [f'Texto {letra}.' for letra in 'ABCDE'],
+        )
+
+    def test_letras_fora_da_coluna_da_questao_sao_descartadas(self):
+        # Fragmentos isolados de fórmulas ("e" de uma operação
+        # matemática, por exemplo) ficam no meio da página e não são
+        # letras de alternativa.
+        paginas = [{
+            'marcador': 'Questao 106 - Sintetica',
+            'letras': [
+                ('E', 679, 1100), ('E', 674, 1080),
+                ('A', 161, 900), ('B', 161, 700), ('C', 161, 500),
+                ('D', 161, 300), ('E', 161, 100),
+            ],
+            'trajetos': [(200, 850, 420, 850)],
+        }]
+        self._anexar_pdf(paginas)
+        questao = self._questao(106)
+
+        anotadas = anotar_alternativas_vetoriais(
+            self.prova,
+            [questao],
+        )
+
+        self.assertEqual(anotadas, 5)
+        self.assertEqual(
+            ImagemProva.objects.filter(prova=self.prova).count(), 5
+        )
+
+    def test_texto_alternativa_vazio(self):
+        self.assertTrue(_texto_alternativa_vazio(''))
+        self.assertTrue(_texto_alternativa_vazio('   '))
+        self.assertTrue(_texto_alternativa_vazio('/'))
+        self.assertFalse(_texto_alternativa_vazio('Texto da alternativa.'))
 
 
 class NormalizacaoEnunciadoTestCase(unittest.TestCase):

@@ -3827,3 +3827,323 @@ class GestaoAdministrativaProvasTestCase(TestCase):
         )
         # O arquivo da imagem também é removido do storage.
         self.assertFalse(default_storage.exists(nome_de_arquivo))
+
+# =========================================================
+# EDIÇÃO DE PROVA
+# =========================================================
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp(prefix='provas-editar-media-'))
+class EditarProvaTestCase(TestCase):
+    """
+    Edição de provas na área administrativa.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        from simulados.models import RespostaSimulado, Simulado
+
+        cls.respostas_simulado = RespostaSimulado
+
+        cls.desenvolvedor = User.objects.create_user(
+            username='dev_edicao',
+            password='SenhaTeste123!',
+        )
+        Perfil.objects.update_or_create(
+            usuario=cls.desenvolvedor,
+            defaults={'tipo': 'desenvolvedor'},
+        )
+
+        cls.aluno = User.objects.create_user(
+            username='aluno_edicao',
+            password='SenhaTeste123!',
+        )
+        Perfil.objects.update_or_create(
+            usuario=cls.aluno,
+            defaults={'tipo': 'aluno'},
+        )
+
+        cls.disciplina = Disciplina.objects.create(
+            nome='Disciplina da edicao'
+        )
+
+        cls.prova = Prova.objects.create(
+            nome='ENEM Edicao 2024',
+            tipo='enem',
+            ano=2024,
+            descricao='Descricao original da prova.',
+            arquivo_pdf=ContentFile(
+                b'%PDF-arquivo-antigo',
+                name='provas/pdf-antigo.pdf',
+            ),
+            status_importacao='processada',
+        )
+
+        cls.questao = Questao.objects.create(
+            prova=cls.prova,
+            disciplina=cls.disciplina,
+            numero=1,
+            enunciado='Enunciado da questao 1.',
+        )
+
+        cls.alternativa = Alternativa.objects.create(
+            questao=cls.questao,
+            letra='A',
+            texto='Texto da alternativa A.',
+        )
+
+        cls.simulado = Simulado.objects.create(
+            usuario=cls.aluno,
+            prova=cls.prova,
+        )
+
+        cls.resposta = cls.respostas_simulado.objects.create(
+            simulado=cls.simulado,
+            questao=cls.questao,
+            alternativa=cls.alternativa,
+        )
+
+        cls.url = reverse('provas:editar', args=[cls.prova.id])
+        cls.url_lista = reverse('provas:lista')
+
+    def _logar_desenvolvedor(self):
+        self.client.force_login(self.desenvolvedor)
+
+    def _dados_da_prova(self, **substituicoes):
+        dados = {
+            'nome': self.prova.nome,
+            'tipo': self.prova.tipo,
+            'ano': self.prova.ano,
+            'descricao': self.prova.descricao,
+            'arquivo_pdf': '',
+            'arquivo_gabarito': '',
+        }
+
+        # Checkbox: ausente no POST significa desmarcado.
+        if self.prova.ativa:
+            dados['ativa'] = 'on'
+
+        dados.update(substituicoes)
+        return dados
+
+    def test_botao_editar_aparece_na_listagem(self):
+        """
+        A listagem administrativa oferece o botão Editar por prova.
+        """
+
+        self._logar_desenvolvedor()
+
+        resposta = self.client.get(self.url_lista)
+
+        self.assertContains(
+            resposta,
+            reverse('provas:editar', args=[self.prova.id]),
+        )
+
+    def test_desenvolvedor_edita_prova(self):
+        """
+        O desenvolvedor altera nome, ano e descrição com sucesso
+        e volta para a listagem.
+        """
+
+        self._logar_desenvolvedor()
+
+        resposta = self.client.post(
+            self.url,
+            self._dados_da_prova(
+                nome='ENEM Edicao 2024 Revisada',
+                ano=2025,
+                descricao='Descricao atualizada.',
+            )
+        )
+
+        self.assertRedirects(resposta, self.url_lista)
+
+        self.prova.refresh_from_db()
+
+        self.assertEqual(self.prova.nome, 'ENEM Edicao 2024 Revisada')
+        self.assertEqual(self.prova.ano, 2025)
+        self.assertEqual(self.prova.descricao, 'Descricao atualizada.')
+
+    def test_dados_antigos_aparecem_preenchidos(self):
+        """
+        Ao abrir a edição, o formulário vem preenchido com os
+        dados atuais e a página indica que é uma edição.
+        """
+
+        self._logar_desenvolvedor()
+
+        resposta = self.client.get(self.url)
+
+        self.assertEqual(resposta.status_code, 200)
+
+        form = resposta.context['form']
+
+        self.assertEqual(form.instance.pk, self.prova.pk)
+        self.assertEqual(form.initial.get('nome'), 'ENEM Edicao 2024')
+        self.assertEqual(form.initial.get('ano'), 2024)
+
+        self.assertContains(resposta, 'Editar prova')
+
+    def test_usuarios_sem_permissao_nao_editam(self):
+        """
+        Visitantes anônimos e alunos são redirecionados; a prova
+        permanece com os dados originais.
+        """
+
+        for cliente in (Client(), None):
+            if cliente is None:
+                self.client.force_login(self.aluno)
+                cliente = self.client
+
+            resposta_get = cliente.get(self.url)
+
+            self.assertEqual(resposta_get.status_code, 302)
+
+            resposta_post = cliente.post(
+                self.url,
+                self._dados_da_prova(nome='Hacker 2099'),
+            )
+
+            self.assertEqual(resposta_post.status_code, 302)
+
+            self.prova.refresh_from_db()
+
+            self.assertEqual(self.prova.nome, 'ENEM Edicao 2024')
+
+        # Nenhuma alteração passou.
+        self.assertFalse(
+            Prova.objects.filter(nome='Hacker 2099').exists()
+        )
+
+    def test_prova_mantem_questoes_e_alternativas_apos_edicao(self):
+        """
+        Salvar a edição não apaga questões, alternativas nem
+        disciplinas vinculadas.
+        """
+
+        self._logar_desenvolvedor()
+
+        resposta = self.client.post(self.url, self._dados_da_prova())
+
+        self.assertEqual(resposta.status_code, 302)
+
+        questao = self.prova.questoes.get()
+
+        self.assertEqual(questao.numero, 1)
+        self.assertEqual(questao.disciplina, self.disciplina)
+        self.assertEqual(questao.alternativas.get(), self.alternativa)
+
+    def test_pdf_antigo_e_preservado_sem_novo_envio(self):
+        """
+        Sem envio de novo arquivo, o PDF atual permanece.
+        """
+
+        self._logar_desenvolvedor()
+
+        nome_antigo = self.prova.arquivo_pdf.name
+
+        resposta = self.client.post(self.url, self._dados_da_prova())
+
+        self.assertEqual(resposta.status_code, 302)
+
+        self.prova.refresh_from_db()
+
+        self.assertEqual(self.prova.arquivo_pdf.name, nome_antigo)
+        self.assertTrue(default_storage.exists(nome_antigo))
+
+    def test_pdf_pode_ser_substituido(self):
+        """
+        Enviar um novo PDF troca o arquivo da prova.
+        """
+
+        self._logar_desenvolvedor()
+
+        nome_antigo = self.prova.arquivo_pdf.name
+
+        novo = SimpleUploadedFile(
+            'prova-nova.pdf',
+            b'%PDF-arquivo-novo',
+            content_type='application/pdf',
+        )
+
+        resposta = self.client.post(
+            self.url,
+            self._dados_da_prova(arquivo_pdf=novo),
+        )
+
+        self.assertEqual(resposta.status_code, 302)
+
+        self.prova.refresh_from_db()
+
+        self.assertNotEqual(self.prova.arquivo_pdf.name, nome_antigo)
+        self.assertTrue(self.prova.arquivo_pdf.name.endswith('.pdf'))
+        self.assertTrue(default_storage.exists(self.prova.arquivo_pdf.name))
+
+    def test_prova_oculta_continua_oculta_apos_edicao(self):
+        """
+        Editar uma prova oculta não a torna visível por acidente.
+        """
+
+        self.prova.ativa = False
+        self.prova.save()
+
+        self._logar_desenvolvedor()
+
+        resposta = self.client.post(self.url, self._dados_da_prova())
+
+        self.assertEqual(resposta.status_code, 302)
+
+        self.prova.refresh_from_db()
+
+        self.assertFalse(self.prova.ativa)
+
+    def test_prova_importada_do_catalogo_permite_edicao(self):
+        """
+        Provas importadas do catálogo (status importado) podem
+        ser editadas sem perder os metadados de importação.
+        """
+
+        self.prova.chave_oficial = '2024_D1_CD1'
+        self.prova.save()
+
+        self._logar_desenvolvedor()
+
+        resposta = self.client.post(self.url, self._dados_da_prova())
+
+        self.assertEqual(resposta.status_code, 302)
+
+        self.prova.refresh_from_db()
+
+        self.assertEqual(self.prova.chave_oficial, '2024_D1_CD1')
+        self.assertEqual(
+            self.prova.status_importacao,
+            'processada',
+        )
+
+    def test_tentativas_e_vinculos_com_simulados_permanecem(self):
+        """
+        Tentativas de simulados e respostas dos alunos continuam
+        vinculadas à prova depois da edição.
+        """
+
+        self._logar_desenvolvedor()
+
+        resposta = self.client.post(self.url, self._dados_da_prova())
+
+        self.assertEqual(resposta.status_code, 302)
+
+        self.prova.refresh_from_db()
+
+        simulado = self.prova.simulados.get()
+
+        self.assertEqual(simulado.usuario, self.aluno)
+
+        resposta_simulado = self.respostas_simulado.objects.get(
+            simulado=self.simulado,
+        )
+
+        self.assertEqual(resposta_simulado.questao, self.questao)
+        self.assertEqual(
+            resposta_simulado.alternativa,
+            self.alternativa,
+        )

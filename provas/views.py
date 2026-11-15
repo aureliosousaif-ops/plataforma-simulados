@@ -152,6 +152,70 @@ def criar(request):
 
 
 # =========================================================
+# SEÇÃO 2.1 — EDITAR PROVA
+# =========================================================
+
+@desenvolvedor_required
+def editar(request, prova_id):
+    """
+    Edita os dados de uma prova já cadastrada.
+
+    Reaproveita o formulário de cadastro preenchido com os dados
+    atuais. Os arquivos PDF só são substituídos quando um novo
+    arquivo é enviado; sem envio, o arquivo atual é preservado.
+    """
+
+    # Procura a prova pelo ID.
+    prova = get_object_or_404(
+        Prova,
+        id=prova_id
+    )
+
+    # Verifica se o formulário foi enviado.
+    if request.method == 'POST':
+
+        # Cria o formulário com os dados e arquivos enviados,
+        # vinculando a prova existente.
+        form = ProvaForm(
+            request.POST,
+            request.FILES,
+            instance=prova
+        )
+
+        # Verifica se todos os dados são válidos.
+        if form.is_valid():
+
+            # Salva apenas os campos do formulário: questões,
+            # alternativas, imagens, gabaritos, vínculos com
+            # simulados e histórico permanecem intactos.
+            form.save()
+
+            # Exibe uma mensagem de sucesso.
+            messages.success(
+                request,
+                'Prova atualizada com sucesso!'
+            )
+
+            # Volta para a listagem de provas.
+            return redirect('provas:lista')
+
+    else:
+
+        # Formulário preenchido com os dados atuais da prova.
+        form = ProvaForm(instance=prova)
+
+    # Exibe o formulário no modo de edição.
+    return render(
+        request,
+        'provas/form.html',
+        {
+            'form': form,
+            'prova': prova,
+        }
+    )
+
+
+# =========================================================
 # SEÇÃO 3 — DETALHES DA PROVA
 # =========================================================
 

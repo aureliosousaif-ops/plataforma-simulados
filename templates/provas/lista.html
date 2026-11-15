@@ -146,6 +146,14 @@
                             <!-- Ações administrativas -->
                             <div class="d-flex flex-column flex-sm-row gap-2">
 
+                                <!-- Editar prova -->
+                                <a
+                                    href="{% url 'provas:editar' prova.id %}"
+                                    class="btn btn-outline-primary flex-fill"
+                                >
+                                    Editar
+                                </a>
+
                                 {% if prova.ativa %}
 
                                     <!-- Ocultar prova -->

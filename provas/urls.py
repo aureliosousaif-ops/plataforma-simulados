@@ -25,6 +25,13 @@ urlpatterns = [
         name='criar'
     ),
 
+    # Edita uma prova existente.
+    path(
+        '<int:prova_id>/editar/',
+        views.editar,
+        name='editar'
+    ),
+
     # Mostra os detalhes de uma prova.
     path(
         '<int:prova_id>/',

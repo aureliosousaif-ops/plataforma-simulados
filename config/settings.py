@@ -339,28 +339,14 @@ GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
 
+# O login com Google só fica ativo quando as duas credenciais existem.
+# Sem elas, o provedor é mantido registrado, mas sem APPS: o allauth
+# responde com erro amigável em vez de enviar client_id vazio para o
+# Google, e os templates escondem o botão.
+GOOGLE_OAUTH_CONFIGURADO = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
-        'APPS': [
-            {
-                'client_id': GOOGLE_CLIENT_ID,
-                'secret': GOOGLE_CLIENT_SECRET,
-                'key': '',
-
-                'settings': {
-                    'scope': [
-                        'profile',
-                        'email',
-                    ],
-
-                    'auth_params': {
-                        'access_type': 'online',
-                    },
-                },
-            },
-        ],
-
         'SCOPE': [
             'profile',
             'email',
@@ -371,6 +357,50 @@ SOCIALACCOUNT_PROVIDERS = {
         },
     },
 }
+
+if GOOGLE_OAUTH_CONFIGURADO:
+
+    SOCIALACCOUNT_PROVIDERS['google']['APPS'] = [
+        {
+            'client_id': GOOGLE_CLIENT_ID,
+            'secret': GOOGLE_CLIENT_SECRET,
+            'key': '',
+            'settings': {
+                'scope': [
+                    'profile',
+                    'email',
+                ],
+                'auth_params': {
+                    'access_type': 'online',
+                },
+            },
+        },
+    ]
+
+
+# ==========================================
+# FLUXO DE CONTAS (django-allauth)
+# ==========================================
+
+# A plataforma não tem servidor de e-mail em produção; a verificação
+# por e-mail travaria cadastros. O e-mail do Google já chega verificado.
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+
+# O cadastro social cria a conta automaticamente a partir do e-mail
+# verificado pelo Google, sem passar por uma página de cadastro extra.
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+SOCIALACCOUNT_QUERY_EMAIL = True
+
+# E-mail verificado pelo Google entra na conta local já existente em
+# vez de criar uma segunda conta para a mesma pessoa. Isso é seguro
+# apenas com provedores confiáveis (Google valida o e-mail por OAuth),
+# que é a pré-condição documentada pelo django-allauth.
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+
+# Vincula a identidade do Google à conta local no primeiro login,
+# para que os logins seguintes usem a própria identidade.
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 
 # ==========================================

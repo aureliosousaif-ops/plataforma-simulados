@@ -137,26 +137,30 @@
         </form>
 
         <!-- Login com Google -->
-        <div class="text-center my-3">
+        {% if login_google_disponivel %}
 
-            <span class="text-muted">
-                ou
-            </span>
+            <div class="text-center my-3">
 
-        </div>
+                <span class="text-muted">
+                    ou
+                </span>
 
-        <a
-            href="{% url 'google_login' %}"
-            class="examix-google-button text-decoration-none"
-        >
+            </div>
 
-            <span class="examix-google-icon">
-                G
-            </span>
+            <a
+                href="{% url 'google_login' %}"
+                class="examix-google-button text-decoration-none"
+            >
 
-            Continuar com Google
+                <span class="examix-google-icon">
+                    G
+                </span>
 
-        </a>
+                Continuar com Google
+
+            </a>
+
+        {% endif %}
 
         <!-- Links -->
         <div class="text-center mt-4">

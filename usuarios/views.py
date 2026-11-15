@@ -2,12 +2,19 @@
 # IMPORTAÇÕES
 # =========================================================
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
+
+from allauth.socialaccount.providers.google.views import (
+    GoogleOAuth2Adapter,
+    OAuth2CallbackView,
+    OAuth2LoginView,
+)
 
 from .forms import CadastroForm, USERNAME_EM_USO
 
@@ -136,3 +143,51 @@ def perfil(request):
         request,
         'usuarios/perfil.html'
     )
+
+
+# =========================================================
+# SEÇÃO 5 - LOGIN COM GOOGLE
+# =========================================================
+
+def _google_indisponivel(request):
+    """
+    Encaminha o usuário para a tela de login com um aviso
+    quando as credenciais OAuth do Google não estão no ambiente.
+    """
+
+    messages.warning(
+        request,
+        'O login com Google não está disponível no momento. '
+        'Use seu usuário e senha.'
+    )
+
+    return redirect('usuarios:login')
+
+
+def google_login(request):
+    """
+    Porta de entrada do login com Google.
+
+    Sem credenciais OAuth no ambiente, o allauth quebraria com
+    SocialApp.DoesNotExist; aqui o visitante recebe a tela de
+    login com um aviso em vez de um erro interno.
+    """
+
+    if not getattr(settings, 'GOOGLE_OAUTH_CONFIGURADO', False):
+        return _google_indisponivel(request)
+
+    return OAuth2LoginView.adapter_view(GoogleOAuth2Adapter)(request)
+
+
+def google_callback(request):
+    """
+    Retorno do Google com o código de autorização.
+
+    Segue a mesma proteção da tela de entrada: sem credenciais,
+    devolve o usuário para o login com aviso em vez de erro.
+    """
+
+    if not getattr(settings, 'GOOGLE_OAUTH_CONFIGURADO', False):
+        return _google_indisponivel(request)
+
+    return OAuth2CallbackView.adapter_view(GoogleOAuth2Adapter)(request)

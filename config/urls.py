@@ -11,6 +11,9 @@ from django.shortcuts import render
 # Entrega arquivos de mídia também fora do modo de desenvolvimento.
 from django.views.static import serve
 
+# Rotas protegidas do login com Google.
+from usuarios import views as usuarios
+
 def home(request):
     """
     Exibe a página inicial da plataforma.
@@ -109,6 +112,19 @@ urlpatterns = [
         'desempenho/',
         include('desempenho.urls')
     ),
+    # Login com Google: rotas específicas antes do include do
+    # allauth. Sem credenciais OAuth no ambiente, devolvem o
+    # visitante para o login com um aviso em vez de erro interno;
+    # com credenciais, delegam ao fluxo padrão do allauth.
+    path(
+        'accounts/google/login/',
+        usuarios.google_login
+    ),
+    path(
+        'accounts/google/login/callback/',
+        usuarios.google_callback
+    ),
+
     # URLs do sistema de autenticação do django-allauth.
     path('accounts/', include('allauth.urls')),
     

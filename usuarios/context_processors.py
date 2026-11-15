@@ -1,3 +1,6 @@
+from django.conf import settings
+
+
 def usuario_info(request):
     """
     Disponibiliza informações do usuário
@@ -22,6 +25,12 @@ def usuario_info(request):
             # continua sendo tratado como aluno.
             is_desenvolvedor = False
 
+    # O botão do Google só aparece quando as credenciais OAuth
+    # estão configuradas no ambiente; caso contrário, o clique
+    # levaria a um erro.
     return {
-        'is_desenvolvedor': is_desenvolvedor
+        'is_desenvolvedor': is_desenvolvedor,
+        'login_google_disponivel': getattr(
+            settings, 'GOOGLE_OAUTH_CONFIGURADO', False
+        ),
     }

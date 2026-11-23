@@ -1,0 +1,389 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Revisar imagens - {{ prova.nome }}
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+
+        <div>
+            <h1>Revisar imagens</h1>
+
+            <p class="text-muted mb-0">
+                {{ prova.nome }} — {{ prova.tipo }} {{ prova.ano }}
+            </p>
+        </div>
+
+        <a
+            href="{% url 'provas:detalhe' prova.id %}"
+            class="btn btn-secondary"
+        >
+            Voltar para a prova
+        </a>
+
+    </div>
+
+    <!-- Mensagens -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Resumo -->
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ imagens|length }}</h3>
+                    <p class="text-muted mb-0">Imagens extraídas</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ pendentes }}</h3>
+                    <p class="text-muted mb-0">Sem associação confirmada</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ questoes|length }}</h3>
+                    <p class="text-muted mb-0">Questões disponíveis</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Ações gerais -->
+    <div class="d-flex flex-wrap gap-2 mb-4">
+
+        <form
+            method="post"
+            action="{% url 'provas:extrair_imagens' prova.id %}"
+        >
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                Extrair/reprocessar imagens
+            </button>
+        </form>
+
+        {% if pendentes %}
+            <form
+                method="post"
+                action="{% url 'provas:acao_imagem' prova.id %}"
+            >
+                {% csrf_token %}
+                <input type="hidden" name="acao" value="confirmar_sugestoes">
+                <button type="submit" class="btn btn-outline-success">
+                    Confirmar todas as sugestões
+                </button>
+            </form>
+        {% endif %}
+
+        <a
+            href="{% url 'provas:imprimir' prova.id %}"
+            class="btn btn-outline-secondary"
+        >
+            Imprimir prova
+        </a>
+
+    </div>
+
+    {% if not imagens %}
+
+        <div class="alert alert-info">
+            Nenhuma imagem foi extraída ainda. Use o botão
+            “Extrair/reprocessar imagens” ou processe a prova novamente.
+        </div>
+
+    {% else %}
+
+        {% regroup imagens by pagina as paginas %}
+
+        {% for pagina in paginas %}
+
+            <div class="d-flex align-items-center gap-2 mt-4 mb-3">
+                <h5 class="mb-0">Página {{ pagina.grouper }}</h5>
+
+                <span class="badge text-bg-secondary">
+                    {{ pagina.list|length }} imagem{{ pagina.list|length|pluralize }}
+                </span>
+            </div>
+
+            <div class="row g-3">
+
+                {% for imagem in pagina.list %}
+
+                    <div class="col-xl-6">
+
+                        <div class="card shadow-sm h-100 {% if imagem.ignorada %}opacity-75{% endif %}">
+
+                            <div class="row g-0 h-100">
+
+                                <!-- Miniatura -->
+                                <div class="col-md-5 border-end d-flex align-items-center justify-content-center p-3">
+
+                                    {% if imagem.arquivo %}
+
+                                        <a
+                                            href="{{ imagem.arquivo.url }}"
+                                            target="_blank"
+                                            rel="noopener"
+                                        >
+                                            <img
+                                                src="{{ imagem.arquivo.url }}"
+                                                alt="Imagem da página {{ imagem.pagina }}"
+                                                class="img-fluid rounded examix-review-image"
+                                            >
+                                        </a>
+
+                                    {% else %}
+
+                                        <span class="text-muted small">
+                                            Arquivo indisponível
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+                                <!-- Dados e ações -->
+                                <div class="col-md-7">
+
+                                    <div class="card-body">
+
+                                        <div class="d-flex flex-wrap gap-1 mb-2">
+
+                                            <span class="badge text-bg-light border">
+                                                Página {{ imagem.pagina }}
+                                            </span>
+
+                                            <span class="badge text-bg-light border">
+                                                #{{ imagem.indice_pagina }}
+                                            </span>
+
+                                            {% if imagem.largura and imagem.altura %}
+                                                <span class="badge text-bg-light border">
+                                                    {{ imagem.largura }} × {{ imagem.altura }} px
+                                                </span>
+                                            {% endif %}
+
+                                            {% if not imagem.exibida %}
+                                                <span class="badge text-bg-warning">
+                                                    Não exibida no PDF
+                                                </span>
+                                            {% endif %}
+
+                                            {% if imagem.ignorada %}
+                                                <span class="badge text-bg-secondary">
+                                                    Ignorada
+                                                </span>
+                                            {% endif %}
+
+                                        </div>
+
+                                        {% if imagem.nome_original %}
+                                            <p class="small text-muted text-break mb-3">
+                                                {{ imagem.nome_original }}
+                                            </p>
+                                        {% endif %}
+
+                                        <!-- Associações existentes -->
+                                        {% with associacoes=imagem.associacoes.all %}
+
+                                            {% if associacoes %}
+
+                                                <div class="mb-3">
+
+                                                    {% for associacao in associacoes %}
+
+                                                        <div class="border rounded p-2 mb-2">
+
+                                                            <div class="d-flex justify-content-between align-items-start gap-2">
+
+                                                                <div>
+
+                                                                    <strong>
+                                                                        Questão {{ associacao.questao.numero }}
+                                                                        {% if associacao.questao.idioma %}
+                                                                            — {{ associacao.questao.idioma }}
+                                                                        {% endif %}
+                                                                    </strong>
+
+                                                                    <div class="small text-muted">
+                                                                        {{ associacao.questao.disciplina.nome }}
+                                                                    </div>
+
+                                                                    {% if associacao.confirmada %}
+                                                                        <span class="badge text-bg-success mt-1">
+                                                                            Confirmada
+                                                                        </span>
+                                                                    {% elif associacao.origem == 'automatica' %}
+                                                                        <span class="badge text-bg-warning mt-1">
+                                                                            Sugestão automática
+                                                                        </span>
+                                                                    {% else %}
+                                                                        <span class="badge text-bg-secondary mt-1">
+                                                                            Pendente
+                                                                        </span>
+                                                                    {% endif %}
+
+                                                                </div>
+
+                                                                <div class="d-flex flex-column gap-1">
+
+                                                                    {% if not associacao.confirmada %}
+                                                                        <form
+                                                                            method="post"
+                                                                            action="{% url 'provas:acao_imagem' prova.id %}"
+                                                                        >
+                                                                            {% csrf_token %}
+                                                                            <input type="hidden" name="acao" value="confirmar">
+                                                                            <input type="hidden" name="associacao_id" value="{{ associacao.id }}">
+                                                                            <button type="submit" class="btn btn-sm btn-success w-100">
+                                                                                Confirmar
+                                                                            </button>
+                                                                        </form>
+                                                                    {% endif %}
+
+                                                                    <form
+                                                                        method="post"
+                                                                        action="{% url 'provas:acao_imagem' prova.id %}"
+                                                                    >
+                                                                        {% csrf_token %}
+                                                                        <input type="hidden" name="acao" value="remover">
+                                                                        <input type="hidden" name="associacao_id" value="{{ associacao.id }}">
+                                                                        <button
+                                                                            type="submit"
+                                                                            class="btn btn-sm btn-outline-danger w-100"
+                                                                            onclick="return confirm('Remover esta associação? A imagem original será preservada.');"
+                                                                        >
+                                                                            Remover
+                                                                        </button>
+                                                                    </form>
+
+                                                                </div>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    {% endfor %}
+
+                                                </div>
+
+                                            {% else %}
+
+                                                <p class="small text-muted mb-3">
+                                                    Nenhuma associação para esta imagem.
+                                                </p>
+
+                                            {% endif %}
+
+                                        {% endwith %}
+
+                                        <!-- Associação manual -->
+                                        <form
+                                            method="post"
+                                            action="{% url 'provas:acao_imagem' prova.id %}"
+                                            class="mb-3"
+                                        >
+                                            {% csrf_token %}
+                                            <input type="hidden" name="acao" value="associar">
+                                            <input type="hidden" name="imagem_id" value="{{ imagem.id }}">
+
+                                            <label
+                                                class="form-label small fw-bold"
+                                                for="questao_{{ imagem.id }}"
+                                            >
+                                                Associar manualmente
+                                            </label>
+
+                                            <div class="input-group input-group-sm">
+
+                                                <select
+                                                    name="questao_id"
+                                                    id="questao_{{ imagem.id }}"
+                                                    class="form-select"
+                                                    required
+                                                >
+                                                    <option value="">
+                                                        Selecione a questão
+                                                    </option>
+
+                                                    {% for questao in questoes %}
+                                                        <option value="{{ questao.id }}">
+                                                            Questão {{ questao.numero }}{% if questao.idioma %} — {{ questao.idioma }}{% endif %} — {{ questao.disciplina.nome }}
+                                                        </option>
+                                                    {% endfor %}
+                                                </select>
+
+                                                <button type="submit" class="btn btn-outline-primary">
+                                                    Associar e confirmar
+                                                </button>
+
+                                            </div>
+                                        </form>
+
+                                        <!-- Ignorar/reativar -->
+                                        <form
+                                            method="post"
+                                            action="{% url 'provas:acao_imagem' prova.id %}"
+                                        >
+                                            {% csrf_token %}
+
+                                            {% if imagem.ignorada %}
+                                                <input type="hidden" name="acao" value="reativar">
+                                                <input type="hidden" name="imagem_id" value="{{ imagem.id }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                    Reativar imagem
+                                                </button>
+                                            {% else %}
+                                                <input type="hidden" name="acao" value="ignorar">
+                                                <input type="hidden" name="imagem_id" value="{{ imagem.id }}">
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-sm btn-outline-secondary"
+                                                    onclick="return confirm('Ignorar esta imagem na revisão? O arquivo original não será apagado.');"
+                                                >
+                                                    Ignorar imagem
+                                                </button>
+                                            {% endif %}
+                                        </form>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

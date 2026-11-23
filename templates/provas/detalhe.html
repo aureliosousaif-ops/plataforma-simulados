@@ -133,6 +133,55 @@
 
             </div>
 
+            <!-- Imagens extraídas -->
+            <div class="mb-3">
+
+                <strong>Imagens:</strong>
+
+                <p class="text-muted mb-2 mt-1">
+                    {{ total_imagens }} imagem{{ total_imagens|pluralize }} extraída{{ total_imagens|pluralize }}
+                    {% if imagens_pendentes %}
+                        — {{ imagens_pendentes }} sem associação confirmada
+                    {% endif %}
+                </p>
+
+                <div class="d-flex flex-wrap gap-2">
+
+                    <a
+                        href="{% url 'provas:revisar_imagens' prova.id %}"
+                        class="btn btn-outline-primary btn-sm"
+                    >
+                        Revisar imagens
+                    </a>
+
+                    <a
+                        href="{% url 'provas:imprimir' prova.id %}"
+                        class="btn btn-outline-secondary btn-sm"
+                    >
+                        Imprimir prova
+                    </a>
+
+                    {% if prova.arquivo_pdf %}
+
+                        <form
+                            method="post"
+                            action="{% url 'provas:extrair_imagens' prova.id %}"
+                        >
+                            {% csrf_token %}
+                            <button
+                                type="submit"
+                                class="btn btn-outline-secondary btn-sm"
+                            >
+                                Extrair imagens
+                            </button>
+                        </form>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
             <!-- Botão de processamento -->
             {% if prova.status_importacao != 'processando' %}
 
@@ -167,6 +216,21 @@
         </div>
 
     </div>
+
+    <!-- Mensagem de importação parcial -->
+    {% if prova.status_importacao == 'processada' and prova.mensagem_importacao %}
+
+        <div class="alert alert-warning">
+
+            <h5 class="alert-heading">
+                Importação com avisos
+            </h5>
+
+            <pre class="mb-0">{{ prova.mensagem_importacao }}</pre>
+
+        </div>
+
+    {% endif %}
 
     <!-- Mensagem de erro -->
     {% if prova.status_importacao == 'erro' and prova.mensagem_importacao %}
@@ -210,6 +274,9 @@
 
                             <strong>
                                 Questão {{ questao.numero }}
+                                {% if questao.idioma %}
+                                    — {{ questao.idioma }}
+                                {% endif %}
                             </strong>
 
                             <span class="text-muted">

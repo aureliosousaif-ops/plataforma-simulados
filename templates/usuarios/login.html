@@ -40,7 +40,7 @@
         <!-- ================================================= -->
 
         <p class="examix-auth-description">
-            Entre na sua conta para continuar.
+            Entre na sua conta para continuar seus estudos para o ENEM.
         </p>
 
 
@@ -174,27 +174,31 @@
         <!-- GOOGLE -->
         <!-- ================================================= -->
 
-        <div class="text-center my-3">
+        {% if login_google_disponivel %}
 
-            <span class="text-muted">
-                ou
-            </span>
+            <div class="text-center my-3">
 
-        </div>
+                <span class="text-muted">
+                    ou
+                </span>
+
+            </div>
 
 
-        <a
-            href="{% url 'google_login' %}"
-            class="examix-google-button text-decoration-none"
-        >
+            <a
+                href="{% url 'google_login' %}"
+                class="examix-google-button text-decoration-none"
+            >
 
-            <span class="examix-google-icon">
-                G
-            </span>
+                <span class="examix-google-icon">
+                    G
+                </span>
 
-            Continuar com Google
+                Continuar com Google
 
-        </a>
+            </a>
+
+        {% endif %}
 
 
         <!-- ================================================= -->

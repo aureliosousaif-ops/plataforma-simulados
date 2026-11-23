@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    Simulados | Examix
+    Simulados ENEM | Examix
 {% endblock %}
 
 {% block content %}
@@ -11,11 +11,11 @@
     <!-- Cabeçalho da página -->
     <div class="mb-4">
         <h1 class="fw-bold">
-            Simulados
+            Simulados ENEM
         </h1>
 
         <p class="text-muted mb-0">
-            Escolha uma prova para começar seu simulado.
+            Escolha uma prova do ENEM para começar seu simulado.
         </p>
     </div>
 
@@ -34,6 +34,23 @@
 
                         <div class="card-body d-flex flex-column">
 
+                            <!-- Identificação da prova -->
+                            <div class="mb-2">
+
+                                <span class="badge text-bg-primary">
+                                    {{ prova.get_tipo_display }}
+                                </span>
+
+                                {% if prova.ano %}
+
+                                    <span class="badge text-bg-light text-dark border">
+                                        {{ prova.ano }}
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
                             <!-- Nome da prova -->
                             <h5 class="card-title fw-bold">
                                 {{ prova.nome }}
@@ -49,7 +66,7 @@
                             {% else %}
 
                                 <p class="card-text text-muted">
-                                    Simulado disponível para realização.
+                                    Simulado do ENEM disponível para realização.
                                 </p>
 
                             {% endif %}
@@ -59,7 +76,7 @@
 
                                 <small class="text-muted">
                                     📝
-                                    {{ prova.questoes.count }}
+                                    {{ prova.total_questoes }}
                                     questões
                                 </small>
 
@@ -79,12 +96,48 @@
                                 <!-- Proteção CSRF do Django -->
                                 {% csrf_token %}
 
+                                <!--
+                                    Quando a prova possui as duas
+                                    variantes de língua estrangeira,
+                                    o aluno escolhe qual responder.
+                                -->
+                                {% if prova.idiomas_disponiveis|length > 1 %}
+
+                                    <div class="mb-3">
+
+                                        <label
+                                            for="idioma_{{ prova.id }}"
+                                            class="form-label small text-muted mb-1"
+                                        >
+                                            Idioma das questões 1–5
+                                        </label>
+
+                                        <select
+                                            name="idioma"
+                                            id="idioma_{{ prova.id }}"
+                                            class="form-select form-select-sm"
+                                        >
+
+                                            {% for idioma in prova.idiomas_disponiveis %}
+
+                                                <option value="{{ idioma }}">
+                                                    {{ idioma }}
+                                                </option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                {% endif %}
+
                                 <!-- Botão para iniciar -->
                                 <button
                                     type="submit"
                                     class="btn btn-primary w-100"
                                 >
-                                    🚀 Fazer simulado
+                                    🚀 Fazer simulado ENEM
                                 </button>
 
                             </form>
@@ -111,11 +164,11 @@
                 </div>
 
                 <h4 class="fw-bold">
-                    Nenhum simulado disponível
+                    Nenhum simulado do ENEM disponível
                 </h4>
 
                 <p class="text-muted mb-0">
-                    No momento não existem provas disponíveis
+                    No momento não existem provas do ENEM disponíveis
                     para realizar.
                 </p>
 

@@ -2,13 +2,21 @@
 # IMPORTAÇÕES
 # =========================================================
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
+from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
 
-from .forms import CadastroForm
+from allauth.socialaccount.providers.google.views import (
+    GoogleOAuth2Adapter,
+    OAuth2CallbackView,
+    OAuth2LoginView,
+)
+
+from .forms import CadastroForm, USERNAME_EM_USO
 
 
 # =========================================================
@@ -34,23 +42,44 @@ def cadastro(request):
         # Verifica se os dados são válidos.
         if form.is_valid():
 
-            # Cria o usuário e o perfil.
-            usuario = form.save()
+            try:
 
-            # Faz login automaticamente após o cadastro.
-            login(
-                request,
-                usuario
-            )
+                # Garante que usuário e perfil sejam gravados juntos.
+                #
+                # O bloco atômico também protege contra dois envios
+                # simultâneos do mesmo nome de usuário: a validação do
+                # formulário pode passar nos dois, mas só um grava.
+                with transaction.atomic():
 
-            # Mostra mensagem de sucesso.
-            messages.success(
-                request,
-                'Cadastro realizado com sucesso!'
-            )
+                    # Cria o usuário e o perfil.
+                    usuario = form.save()
 
-            # Vai para a página inicial.
-            return redirect('home')
+            except IntegrityError:
+
+                # Alguém cadastrou o mesmo nome entre a validação e a
+                # gravação. Mostra o erro no formulário em vez de 500.
+                form.add_error('username', USERNAME_EM_USO)
+
+            else:
+
+                # Faz login automaticamente após o cadastro.
+                #
+                # O backend precisa ser informado porque o projeto
+                # usa dois backends de autenticação (allauth e Django).
+                login(
+                    request,
+                    usuario,
+                    backend='django.contrib.auth.backends.ModelBackend'
+                )
+
+                # Mostra mensagem de sucesso.
+                messages.success(
+                    request,
+                    'Cadastro realizado com sucesso!'
+                )
+
+                # Vai para a página inicial.
+                return redirect('home')
 
     else:
 
@@ -114,3 +143,51 @@ def perfil(request):
         request,
         'usuarios/perfil.html'
     )
+
+
+# =========================================================
+# SEÇÃO 5 - LOGIN COM GOOGLE
+# =========================================================
+
+def _google_indisponivel(request):
+    """
+    Encaminha o usuário para a tela de login com um aviso
+    quando as credenciais OAuth do Google não estão no ambiente.
+    """
+
+    messages.warning(
+        request,
+        'O login com Google não está disponível no momento. '
+        'Use seu usuário e senha.'
+    )
+
+    return redirect('usuarios:login')
+
+
+def google_login(request):
+    """
+    Porta de entrada do login com Google.
+
+    Sem credenciais OAuth no ambiente, o allauth quebraria com
+    SocialApp.DoesNotExist; aqui o visitante recebe a tela de
+    login com um aviso em vez de um erro interno.
+    """
+
+    if not getattr(settings, 'GOOGLE_OAUTH_CONFIGURADO', False):
+        return _google_indisponivel(request)
+
+    return OAuth2LoginView.adapter_view(GoogleOAuth2Adapter)(request)
+
+
+def google_callback(request):
+    """
+    Retorno do Google com o código de autorização.
+
+    Segue a mesma proteção da tela de entrada: sem credenciais,
+    devolve o usuário para o login com aviso em vez de erro.
+    """
+
+    if not getattr(settings, 'GOOGLE_OAUTH_CONFIGURADO', False):
+        return _google_indisponivel(request)
+
+    return OAuth2CallbackView.adapter_view(GoogleOAuth2Adapter)(request)

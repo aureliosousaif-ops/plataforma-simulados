@@ -1,16 +1,18 @@
 # Importa as configurações de arquivos de mídia.
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path, include
+from django.urls import include, path, re_path
 # Importa o painel administrativo do Django.
 from django.contrib import admin
 
 # Permite renderizar páginas.
 from django.shortcuts import render
 
-# Importa as funções para criar as URLs.
-from django.urls import include, path
+# Entrega arquivos de mídia também fora do modo de desenvolvimento.
+from django.views.static import serve
 
+# Rotas protegidas do login com Google.
+from usuarios import views as usuarios
 
 def home(request):
     """
@@ -110,6 +112,19 @@ urlpatterns = [
         'desempenho/',
         include('desempenho.urls')
     ),
+    # Login com Google: rotas específicas antes do include do
+    # allauth. Sem credenciais OAuth no ambiente, devolvem o
+    # visitante para o login com um aviso em vez de erro interno;
+    # com credenciais, delegam ao fluxo padrão do allauth.
+    path(
+        'accounts/google/login/',
+        usuarios.google_login
+    ),
+    path(
+        'accounts/google/login/callback/',
+        usuarios.google_callback
+    ),
+
     # URLs do sistema de autenticação do django-allauth.
     path('accounts/', include('allauth.urls')),
     
@@ -124,3 +139,15 @@ if settings.DEBUG:
         settings.MEDIA_URL,
         document_root=settings.MEDIA_ROOT
     )
+
+# Em produção o DEBUG fica desligado, mas as imagens e os PDFs
+# enviados para a pasta de mídia continuam precisando ser servidos.
+else:
+
+    urlpatterns += [
+        re_path(
+            r'^media/(?P<path>.*)$',
+            serve,
+            {'document_root': settings.MEDIA_ROOT},
+        ),
+    ]

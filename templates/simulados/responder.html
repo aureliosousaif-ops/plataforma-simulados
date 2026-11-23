@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 
+{% load examix_texto %}
+
 {% block title %}
-    Responder simulado | Examix
+    Responder simulado ENEM | Examix
 {% endblock %}
 
 {% block content %}
@@ -19,7 +21,7 @@
 
             <!-- Status -->
             <div class="text-primary fw-bold small mb-2">
-                SIMULADO EM ANDAMENTO
+                SIMULADO ENEM EM ANDAMENTO
             </div>
 
             <!-- Nome da prova -->
@@ -67,6 +69,9 @@
                 <span class="badge bg-primary-subtle text-primary px-3 py-2">
 
                     Questão {{ resposta.questao.numero }}
+                    {% if resposta.questao.idioma %}
+                        — {{ resposta.questao.idioma }}
+                    {% endif %}
 
                 </span>
 
@@ -74,15 +79,26 @@
 
 
             <!-- =====================================
-                 04. ENUNCIADO
+                 04. TEXTO-BASE COMPARTILHADO
+                 ===================================== -->
+
+            {% if resposta.questao.textos_base_exibicao %}
+
+                {% include 'includes/texto_base.html' with textos_base=resposta.questao.textos_base_exibicao %}
+
+            {% endif %}
+
+
+            <!-- =====================================
+                 04.1 ENUNCIADO
                  ===================================== -->
 
             <div class="examix-question-text mb-4">
 
                 {% if resposta.questao.enunciado %}
 
-                    <!-- Mostra somente o enunciado -->
-                    {{ resposta.questao.enunciado|linebreaks }}
+                    <!-- Mostra o enunciado com as linhas do PDF reorganizadas -->
+                    {{ resposta.questao.enunciado|normalizar_enunciado|linebreaks }}
 
                 {% else %}
 
@@ -99,6 +115,33 @@
 
 
             <!-- =====================================
+                 04.1 IMAGENS DA QUESTÃO
+                 ===================================== -->
+
+            {% if resposta.questao.imagens_exibicao %}
+
+                <div class="examix-question-images mb-4">
+
+                    {% for imagem in resposta.questao.imagens_exibicao %}
+
+                        <figure class="examix-question-image">
+
+                            <img
+                                src="{{ imagem.url }}"
+                                alt="Imagem da questão {{ resposta.questao.numero }}"
+                                loading="lazy"
+                            >
+
+                        </figure>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- =====================================
                  05. FORMULÁRIO DE RESPOSTA
                  ===================================== -->
 
@@ -112,12 +155,12 @@
                      06. ALTERNATIVAS
                      ================================= -->
 
-                <div class="examix-alternativas">
+                <div class="examix-alternatives">
 
                     {% for alternativa in resposta.questao.alternativas.all %}
 
                         <label
-                            class="examix-alternativa"
+                            class="examix-alternative"
                             for="alternativa_{{ alternativa.id }}"
                         >
 
@@ -127,6 +170,7 @@
                                 name="alternativa"
                                 id="alternativa_{{ alternativa.id }}"
                                 value="{{ alternativa.id }}"
+                                required
 
                                 {% if resposta.alternativa_id == alternativa.id %}
                                     checked
@@ -135,7 +179,7 @@
 
 
                             <!-- Letra -->
-                            <strong>
+                            <strong class="examix-alternative-letter">
 
                                 {{ alternativa.letra }})
 
@@ -143,9 +187,24 @@
 
 
                             <!-- Texto -->
-                            <span class="examix-alternativa-texto">
+                            <span class="examix-alternative-text">
 
                                 {{ alternativa.texto|linebreaksbr }}
+
+                                {% if alternativa.imagem %}
+
+                                    <figure class="mt-2 mb-0">
+
+                                        <img
+                                            src="{{ alternativa.imagem.arquivo.url }}"
+                                            class="img-fluid"
+                                            alt="Imagem da alternativa {{ alternativa.letra }} da questão {{ resposta.questao.numero }}"
+                                            loading="lazy"
+                                        >
+
+                                    </figure>
+
+                                {% endif %}
 
                             </span>
 
@@ -260,30 +319,61 @@
     <div class="mt-4">
 
         <!-- Título -->
-        <h6 class="fw-bold mb-3">
+        <h6 class="fw-bold mb-2">
 
             Navegação das questões
 
         </h6>
 
 
+        <!-- Legenda dos estados -->
+        <div class="examix-question-legend">
+
+            <span>
+                <span class="examix-legend-dot"></span>
+                Não respondida
+            </span>
+
+            <span>
+                <span class="examix-legend-dot is-answered"></span>
+                Respondida
+            </span>
+
+            <span>
+                <span class="examix-legend-dot is-current"></span>
+                Questão atual
+            </span>
+
+        </div>
+
+
         <!-- Números das questões -->
-        <div class="examix-question-navigation">
+        <div
+            class="examix-question-navigation"
+            role="navigation"
+            aria-label="Navegação das questões"
+        >
 
             {% for item in respostas %}
 
                 <a
-                    href="?questao={{ item.questao.numero }}"
+                    href="?questao={{ forloop.counter }}"
                     class="
                         examix-question-number
-
-                        {% if item.questao.numero == resposta.questao.numero %}
-                            active
-                        {% endif %}
+                        {% if item.respondida %}is-answered{% endif %}
+                        {% if forloop.counter == numero_atual %}is-current{% endif %}
                     "
+                    {% if forloop.counter == numero_atual %}aria-current="page"{% endif %}
+                    title="Questão {{ item.questao.numero }}{% if item.questao.idioma == 'Inglês' %} (Inglês){% elif item.questao.idioma == 'Espanhol' %} (Espanhol){% endif %} — {% if item.respondida %}respondida{% else %}não respondida{% endif %}"
                 >
 
-                    {{ item.questao.numero }}
+                    <span>{{ item.questao.numero }}</span>
+
+                    {% if item.questao.idioma == "Inglês" %}
+                        <small>(ING)</small>
+                    {% elif item.questao.idioma == "Espanhol" %}
+                        <small>(ESP)</small>
+                    {% endif %}
 
                 </a>
 

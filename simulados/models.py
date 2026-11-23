@@ -124,7 +124,7 @@ class RespostaSimulado(models.Model):
             )
         ]
 
-        ordering = ['questao__numero']
+        ordering = ['questao__numero', 'questao__idioma']
 
     def __str__(self):
         return (

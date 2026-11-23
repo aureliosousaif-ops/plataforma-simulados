@@ -75,6 +75,21 @@ Alternativas
                     —
                     {{ alternativa.texto }}
 
+                    {% if alternativa.imagem %}
+
+                        <div class="mt-2">
+
+                            <img
+                                src="{{ alternativa.imagem.arquivo.url }}"
+                                class="img-fluid"
+                                style="max-height: 160px;"
+                                alt="Imagem da alternativa {{ alternativa.letra }}"
+                            >
+
+                        </div>
+
+                    {% endif %}
+
                     {% if alternativa.correta %}
 
                         <span class="badge bg-success ms-2">

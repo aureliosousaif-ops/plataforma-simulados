@@ -1015,39 +1015,24 @@ main {
 }
 
 
-/* Número */
-
-.examix-question-number {
-    display: inline-flex;
-
-    align-items: center;
-
-    min-height: 34px;
-
-    padding: 5px 13px;
-
-    background: #eff6ff;
-
-    border-radius: 8px;
-
-    color: var(--examix-blue);
-
-    font-size: 0.85rem;
-
-    font-weight: 800;
-}
+/* Número da questão: estilos na seção 23 (navegação das questões). */
 
 
 /* Enunciado */
 
 .examix-question-text {
+    width: 100%;
+    max-width: none;
+
     margin-top: 25px;
 
     color: var(--examix-text);
 
-    font-size: 1.08rem;
+    font-size: 1.12rem;
 
-    line-height: 1.8;
+    line-height: 1.85;
+
+    text-align: left;
 
     overflow-wrap: break-word;
 
@@ -1055,7 +1040,7 @@ main {
 }
 
 .examix-question-text p {
-    margin-bottom: 15px;
+    margin-bottom: 1.05rem;
 }
 
 .examix-question-text p:last-child {
@@ -1234,18 +1219,162 @@ main {
    23. NAVEGAÇÃO DAS QUESTÕES
    ========================================================= */
 
-.examix-question-navigation {
+.examix-question-legend {
     display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
 
     flex-wrap: wrap;
 
+    gap: 6px 16px;
+
+    margin-bottom: 14px;
+
+    color: var(--examix-muted);
+
+    font-size: 0.8rem;
+
+    font-weight: 600;
+}
+
+.examix-question-legend > span {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 6px;
+}
+
+.examix-legend-dot {
+    display: inline-block;
+
+    width: 12px;
+    height: 12px;
+
+    background: #ffffff;
+
+    border: 1px solid var(--examix-border);
+
+    border-radius: 4px;
+}
+
+.examix-legend-dot.is-answered {
+    background: #ecfdf5;
+
+    border-color: #6ee7b7;
+}
+
+.examix-legend-dot.is-current {
+    background: var(--examix-blue);
+
+    border-color: var(--examix-blue);
+}
+
+.examix-question-navigation {
+    display: grid;
+
+    /* Grade responsiva: mantém vários números lado a lado
+       em qualquer largura de tela. */
+    grid-template-columns:
+        repeat(auto-fill, minmax(46px, 1fr));
+
     gap: 8px;
 
-    margin-top: 25px;
+    margin-top: 0;
+}
+
+.examix-question-number {
+    display: inline-flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 1px;
+
+    min-width: 0;
+    min-height: 46px;
+
+    padding: 4px 2px;
+
+    background: #ffffff;
+
+    border: 1px solid var(--examix-border);
+
+    border-radius: 10px;
+
+    color: var(--examix-text);
+
+    font-size: 0.88rem;
+
+    font-weight: 800;
+
+    line-height: 1.05;
+
+    text-decoration: none;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+/* Idioma (ING/ESP) não quebra o alinhamento da grade. */
+.examix-question-number small {
+    display: block;
+
+    color: var(--examix-muted);
+
+    font-size: 0.55rem;
+
+    font-weight: 800;
+
+    letter-spacing: 0.2px;
+
+    line-height: 1;
+
+    white-space: nowrap;
+}
+
+.examix-question-number:hover {
+    background: #eff6ff;
+
+    border-color: #93c5fd;
+
+    color: var(--examix-blue);
+
+    transform: translateY(-1px);
+}
+
+.examix-question-number.is-answered {
+    background: #ecfdf5;
+
+    border-color: #a7f3d0;
+
+    color: #047857;
+}
+
+.examix-question-number.is-answered small {
+    color: #059669;
+}
+
+.examix-question-number.is-current,
+.examix-question-number.is-current:hover {
+    background: var(--examix-blue);
+
+    border-color: var(--examix-blue);
+
+    color: #ffffff;
+
+    box-shadow:
+        0 4px 12px rgba(37, 99, 235, 0.28);
+
+    transform: none;
+}
+
+.examix-question-number.is-current small {
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .examix-navigation-button {
@@ -1441,43 +1570,7 @@ main {
 }
 
 
-/* Compatibilidade com navegação antiga */
-
-.examix-question-number {
-    width: 42px;
-    height: 42px;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 8px;
-
-    border: 1px solid #d9dee8;
-
-    background: #ffffff;
-
-    color: #172033;
-
-    text-decoration: none;
-
-    font-weight: 600;
-}
-
-.examix-question-number:hover {
-    background: #eef4ff;
-
-    border-color: #9bbcff;
-}
-
-.examix-question-number.active {
-    background: #0d6efd;
-
-    border-color: #0d6efd;
-
-    color: #ffffff;
-}
+/* A navegação rápida possui estilos próprios na seção 23. */
 
 
 /* =========================================================
@@ -1539,7 +1632,10 @@ main {
     }
 
     .examix-question-navigation {
-        flex-direction: column;
+        grid-template-columns:
+            repeat(auto-fill, minmax(44px, 1fr));
+
+        gap: 7px;
     }
 
     .examix-secondary-button,
@@ -1694,5 +1790,73 @@ main {
 
     .examix-question-card {
         padding: 16px;
+    }
+}
+
+
+/* =========================================================
+   IMAGENS DAS QUESTÕES
+   ========================================================= */
+
+.examix-question-images {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.examix-question-image {
+    margin: 0;
+
+    padding: 12px;
+
+    background: var(--examix-white);
+
+    border: 1px solid var(--examix-border);
+    border-radius: 10px;
+
+    text-align: center;
+}
+
+.examix-question-image img {
+    display: block;
+
+    max-width: 100%;
+    height: auto;
+
+    margin: 0 auto;
+
+    object-fit: contain;
+}
+
+.examix-review-image {
+    max-height: 260px;
+    width: auto;
+}
+
+
+/* =========================================================
+   IMPRESSÃO DAS QUESTÕES
+   ========================================================= */
+
+@media print {
+
+    .examix-navbar,
+    .examix-footer,
+    .examix-no-print {
+        display: none !important;
+    }
+
+    body {
+        background: #fff !important;
+    }
+
+    .examix-question-image {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .examix-question-image img {
+        max-width: 100% !important;
+        height: auto !important;
     }
 }

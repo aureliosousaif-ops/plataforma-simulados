@@ -1,0 +1,35 @@
+{% load examix_texto %}
+
+{% for texto_base in textos_base %}
+
+    <div class="examix-texto-base card border-0 bg-light mb-4">
+
+        <div class="card-body">
+
+            {% if texto_base.identificador %}
+
+                <div class="text-primary fw-bold small mb-2">
+                    {{ texto_base.identificador }}
+                </div>
+
+            {% endif %}
+
+
+            {% if texto_base.titulo %}
+
+                <h5 class="fw-bold mb-3">
+                    {{ texto_base.titulo }}
+                </h5>
+
+            {% endif %}
+
+
+            <div class="examix-question-text">
+                {{ texto_base.texto|normalizar_enunciado|linebreaks }}
+            </div>
+
+        </div>
+
+    </div>
+
+{% endfor %}

@@ -3,29 +3,72 @@
 # =========================================================
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.core.files.storage import default_storage
+from django.db import transaction
+from django.db.models import Exists, OuterRef
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 # Decorator que permite acesso somente aos desenvolvedores.
 from usuarios.decorators import desenvolvedor_required
 
-from .models import Prova
+# Tentativas de simulados bloqueiam a exclusão definitiva da prova.
+from simulados.models import RespostaSimulado
+
+from .models import (
+    Alternativa,
+    ImagemProva,
+    ImagemQuestao,
+    Prova,
+    distribuir_textos_base,
+)
 from .forms import ProvaForm
 
 # Funções responsáveis pelo processamento automático dos PDFs.
 from .importador import (
     extrair_texto_pdf,
     extrair_gabarito_enem,
+    extrair_questoes_anuladas_gabarito,
     separar_questoes_enem,
-    validar_questoes_com_gabarito,
+    dividir_questoes_validas,
     preparar_questoes_para_importacao,
     importar_questoes_no_banco,
+)
+
+# Funções responsáveis pela extração, associação e revisão das imagens.
+from .imagens import (
+    anotar_alternativas_vetoriais,
+    anotar_imagens_nas_alternativas,
+    anotar_paginas_questoes,
+    associar_imagem,
+    capturar_confirmacoes,
+    confirmar_associacao,
+    confirmar_todas_sugestoes,
+    extrair_e_registrar_imagens,
+    gerar_sugestoes_associacao,
+    ignorar_imagem,
+    remover_associacao,
+    restaurar_confirmacoes,
 )
 
 
 # =========================================================
 # SEÇÃO 1 — LISTA DE PROVAS
 # =========================================================
+
+# Verifica se o usuário é administrador (desenvolvedor).
+def _e_desenvolvedor(usuario):
+
+    if not usuario.is_authenticated:
+        return False
+
+    try:
+        return usuario.perfil.tipo == 'desenvolvedor'
+    except Exception:
+        return False
+
 
 @desenvolvedor_required
 def lista(request):
@@ -36,12 +79,22 @@ def lista(request):
     # Busca todas as provas cadastradas.
     provas = Prova.objects.all()
 
+    # Filtro de visibilidade exclusivo da área administrativa:
+    # ocultar uma prova é justamente desativá-la (Prova.ativa).
+    visibilidade = request.GET.get('visibilidade', 'todas')
+
+    if visibilidade == 'visiveis':
+        provas = provas.filter(ativa=True)
+    elif visibilidade == 'ocultas':
+        provas = provas.filter(ativa=False)
+
     # Envia as provas para o template.
     return render(
         request,
         'provas/lista.html',
         {
-            'provas': provas
+            'provas': provas,
+            'visibilidade': visibilidade,
         }
     )
 
@@ -99,6 +152,70 @@ def criar(request):
 
 
 # =========================================================
+# SEÇÃO 2.1 — EDITAR PROVA
+# =========================================================
+
+@desenvolvedor_required
+def editar(request, prova_id):
+    """
+    Edita os dados de uma prova já cadastrada.
+
+    Reaproveita o formulário de cadastro preenchido com os dados
+    atuais. Os arquivos PDF só são substituídos quando um novo
+    arquivo é enviado; sem envio, o arquivo atual é preservado.
+    """
+
+    # Procura a prova pelo ID.
+    prova = get_object_or_404(
+        Prova,
+        id=prova_id
+    )
+
+    # Verifica se o formulário foi enviado.
+    if request.method == 'POST':
+
+        # Cria o formulário com os dados e arquivos enviados,
+        # vinculando a prova existente.
+        form = ProvaForm(
+            request.POST,
+            request.FILES,
+            instance=prova
+        )
+
+        # Verifica se todos os dados são válidos.
+        if form.is_valid():
+
+            # Salva apenas os campos do formulário: questões,
+            # alternativas, imagens, gabaritos, vínculos com
+            # simulados e histórico permanecem intactos.
+            form.save()
+
+            # Exibe uma mensagem de sucesso.
+            messages.success(
+                request,
+                'Prova atualizada com sucesso!'
+            )
+
+            # Volta para a listagem de provas.
+            return redirect('provas:lista')
+
+    else:
+
+        # Formulário preenchido com os dados atuais da prova.
+        form = ProvaForm(instance=prova)
+
+    # Exibe o formulário no modo de edição.
+    return render(
+        request,
+        'provas/form.html',
+        {
+            'form': form,
+            'prova': prova,
+        }
+    )
+
+
+# =========================================================
 # SEÇÃO 3 — DETALHES DA PROVA
 # =========================================================
 
@@ -114,11 +231,41 @@ def detalhe(request, prova_id):
         id=prova_id
     )
 
+    # Prova oculta: somente administradores podem abrir o detalhe
+    # diretamente pela URL.
+    if not prova.ativa and not _e_desenvolvedor(request.user):
+        raise Http404('Prova não disponível.')
+
     # Busca todas as questões relacionadas à prova.
-    questoes = prova.questoes.all()
+    questoes = (
+        prova.questoes
+        .select_related('disciplina')
+        .prefetch_related(
+            'imagens_associadas__imagem',
+            'textos_base_vinculados__texto_base',
+        )
+    )
 
     # Verifica se a prova já possui simulados.
     possui_simulados = prova.simulados.exists()
+
+    # Estatísticas das imagens extraídas.
+    total_imagens = prova.imagens.count()
+
+    imagens_pendentes = (
+        prova.imagens
+        .filter(ignorada=False)
+        .annotate(
+            tem_confirmacao=Exists(
+                ImagemQuestao.objects.filter(
+                    imagem=OuterRef('pk'),
+                    confirmada=True,
+                )
+            )
+        )
+        .filter(tem_confirmacao=False)
+        .count()
+    )
 
     # Exibe a página de detalhes.
     return render(
@@ -128,6 +275,8 @@ def detalhe(request, prova_id):
             'prova': prova,
             'questoes': questoes,
             'possui_simulados': possui_simulados,
+            'total_imagens': total_imagens,
+            'imagens_pendentes': imagens_pendentes,
         }
     )
 
@@ -164,221 +313,627 @@ def processar(request, prova_id):
             prova_id=prova_id
         )
 
-    # Busca a prova pelo ID.
-    prova = get_object_or_404(
-        Prova,
-        id=prova_id
-    )
-
-    # ---------------------------------------------------------
-    # SEÇÃO 4.1 — PROTEÇÃO CONTRA REPROCESSAMENTO
-    # ---------------------------------------------------------
-
-    # Se a prova já foi utilizada em algum simulado,
-    # não permitimos apagar e recriar suas questões.
-    #
-    # Isso protege o histórico dos alunos.
-    if prova.simulados.exists():
-
-        messages.error(
-            request,
-            'Esta prova já possui simulados vinculados '
-            'e não pode ser reprocessada para preservar '
-            'o histórico dos alunos.'
+    with transaction.atomic():
+        prova = get_object_or_404(
+            Prova.objects.select_for_update(),
+            id=prova_id,
         )
 
-        return redirect(
-            'provas:detalhe',
-            prova_id=prova.id
-        )
-
-    # ---------------------------------------------------------
-    # SEÇÃO 4.2 — VERIFICAÇÃO DO PDF DA PROVA
-    # ---------------------------------------------------------
-
-    # Verifica se o PDF da prova foi enviado.
-    if not prova.arquivo_pdf:
-
-        messages.error(
-            request,
-            'Esta prova não possui um PDF.'
-        )
-
-        return redirect(
-            'provas:detalhe',
-            prova_id=prova.id
-        )
-
-    # ---------------------------------------------------------
-    # SEÇÃO 4.3 — VERIFICAÇÃO DO GABARITO
-    # ---------------------------------------------------------
-
-    # Verifica se o PDF do gabarito foi enviado.
-    if not prova.arquivo_gabarito:
-
-        messages.error(
-            request,
-            'Esta prova não possui um PDF de gabarito.'
-        )
-
-        return redirect(
-            'provas:detalhe',
-            prova_id=prova.id
-        )
-
-    try:
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.4 — MARCA A PROVA COMO PROCESSANDO
-        # -----------------------------------------------------
-
-        prova.status_importacao = 'processando'
-
-        # Limpa uma mensagem de erro anterior.
-        prova.mensagem_importacao = ''
-
-        # Salva somente esses campos.
-        prova.save(
-            update_fields=[
-                'status_importacao',
-                'mensagem_importacao'
-            ]
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.5 — EXTRAI O TEXTO DO PDF DA PROVA
-        # -----------------------------------------------------
-
-        texto_prova = extrair_texto_pdf(
-            prova.arquivo_pdf.path
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.6 — SEPARA AS QUESTÕES
-        # -----------------------------------------------------
-
-        questoes = separar_questoes_enem(
-            texto_prova
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.7 — EXTRAI O TEXTO DO GABARITO
-        # -----------------------------------------------------
-
-        texto_gabarito = extrair_texto_pdf(
-            prova.arquivo_gabarito.path
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.8 — EXTRAI AS RESPOSTAS DO GABARITO
-        # -----------------------------------------------------
-
-        gabarito = extrair_gabarito_enem(
-            texto_gabarito
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.9 — VALIDA AS QUESTÕES
-        # -----------------------------------------------------
-
-        problemas = validar_questoes_com_gabarito(
-            questoes,
-            gabarito
-        )
-
-        # Se existirem problemas, não salva as questões.
-        if problemas:
-
-            # Junta todos os problemas em uma única mensagem.
-            mensagem = '\n'.join(
-                problemas
-            )
-
-            # Marca a prova como erro.
-            prova.status_importacao = 'erro'
-
-            # Salva os detalhes do problema.
-            prova.mensagem_importacao = mensagem
-
-            prova.save(
-                update_fields=[
-                    'status_importacao',
-                    'mensagem_importacao'
-                ]
-            )
-
-            # Mostra uma mensagem para o usuário.
+        if prova.tipo != 'enem':
             messages.error(
                 request,
-                'A prova não pôde ser processada. '
+                'A plataforma está configurada para processar apenas provas do ENEM.'
+            )
+            return redirect('provas:detalhe', prova_id=prova.id)
+
+        if prova.status_importacao == 'processando':
+            messages.error(
+                request,
+                'Esta prova já está sendo processada. Aguarde a conclusão.'
+            )
+            return redirect('provas:detalhe', prova_id=prova.id)
+
+        if prova.simulados.exists():
+            messages.error(
+                request,
+                'Esta prova já possui simulados vinculados e não pode ser reprocessada '
+                'para preservar o histórico dos alunos.'
+            )
+            return redirect('provas:detalhe', prova_id=prova.id)
+
+        if not prova.arquivo_pdf:
+            messages.error(request, 'Esta prova não possui um PDF.')
+            return redirect('provas:detalhe', prova_id=prova.id)
+
+        if not prova.arquivo_gabarito:
+            messages.error(request, 'Esta prova não possui um PDF de gabarito.')
+            return redirect('provas:detalhe', prova_id=prova.id)
+
+        prova.status_importacao = 'processando'
+        prova.mensagem_importacao = ''
+        prova.data_processamento = None
+        prova.save(update_fields=[
+            'status_importacao',
+            'mensagem_importacao',
+            'data_processamento',
+        ])
+
+        try:
+            with transaction.atomic():
+                # Guarda as associações confirmadas antes de recriar
+                # as questões, para restaurá-las após a importação.
+                confirmacoes_imagens = capturar_confirmacoes(prova)
+
+                texto_prova = extrair_texto_pdf(prova.arquivo_pdf.path)
+                questoes = separar_questoes_enem(texto_prova)
+                anotar_paginas_questoes(prova, questoes)
+                texto_gabarito = extrair_texto_pdf(prova.arquivo_gabarito.path)
+                gabarito = extrair_gabarito_enem(texto_gabarito)
+                anuladas = extrair_questoes_anuladas_gabarito(texto_gabarito)
+
+                # As imagens precisam existir antes da validação para que
+                # alternativas compostas apenas por figuras não sejam
+                # rejeitadas como "sem texto". A falha nessa etapa não
+                # desfaz a importação textual.
+                resultado_imagens = None
+                sugestoes_imagens = 0
+                erro_imagens = ''
+
+                try:
+                    with transaction.atomic():
+                        resultado_imagens = extrair_e_registrar_imagens(
+                            prova
+                        )
+                        anotar_imagens_nas_alternativas(prova, questoes)
+                except Exception as erro_imagens_extraidas:
+                    resultado_imagens = None
+                    erro_imagens = str(erro_imagens_extraidas)
+
+                # Alternativas desenhadas diretamente no PDF (sem texto
+                # extraível e sem imagem incorporada) são rasterizadas
+                # e associadas à alternativa. A falha aqui não desfaz a
+                # importação: as questões voltam a ser rejeitadas com
+                # a mensagem original.
+                try:
+                    anotar_alternativas_vetoriais(prova, questoes)
+                except Exception as erro_alternativas_vetoriais:
+                    erro_imagens = erro_imagens or str(
+                        erro_alternativas_vetoriais
+                    )
+
+                # Uma questão com problema não invalida a importação
+                # inteira: as válidas são preservadas e os erros são
+                # relatados individualmente.
+                questoes_validas, problemas = dividir_questoes_validas(
+                    questoes,
+                    gabarito,
+                    anuladas,
+                )
+
+                if not questoes_validas:
+                    detalhes = '\n'.join(problemas)
+                    if not detalhes:
+                        detalhes = (
+                            'Nenhuma questão válida foi encontrada '
+                            'no PDF da prova.'
+                        )
+                    raise ValueError(detalhes)
+
+                questoes_preparadas = preparar_questoes_para_importacao(
+                    questoes_validas,
+                    gabarito,
+                )
+                quantidade = importar_questoes_no_banco(
+                    prova,
+                    questoes_preparadas,
+                    gabarito,
+                )
+
+                questoes_ignoradas = len(questoes) - len(questoes_validas)
+                relatorio_problemas = ''
+                if problemas:
+                    relatorio_problemas = (
+                        f'{quantidade} questão(ões) importada(s) de '
+                        f'{len(questoes)} extraída(s). '
+                        f'{questoes_ignoradas} ignorada(s) por inconsistência.'
+                        '\n\nProblemas encontrados:\n'
+                        + '\n'.join(
+                            f'- {problema}'
+                            for problema in problemas
+                        )
+                    )
+
+                restaurar_confirmacoes(
+                    prova,
+                    confirmacoes_imagens,
+                )
+
+                # As sugestões são geradas em um savepoint próprio. Uma
+                # falha nessa etapa não desfaz a importação textual.
+                mensagem_imagens = ''
+
+                if resultado_imagens is not None:
+                    try:
+                        with transaction.atomic():
+                            sugestoes_imagens = gerar_sugestoes_associacao(
+                                prova
+                            )
+                    except Exception as erro_sugestoes:
+                        erro_imagens = str(erro_sugestoes)
+
+                if erro_imagens:
+                    mensagem_imagens = (
+                        'As questões foram importadas, mas as imagens '
+                        'não puderam ser processadas: '
+                        f'{erro_imagens}'
+                    )
+
+                prova.status_importacao = 'processada'
+                prova.data_processamento = timezone.now()
+                prova.mensagem_importacao = '\n\n'.join(
+                    parte
+                    for parte in (relatorio_problemas, mensagem_imagens)
+                    if parte
+                )
+                prova.save(update_fields=[
+                    'status_importacao',
+                    'data_processamento',
+                    'mensagem_importacao',
+                ])
+        except Exception as erro:
+            prova.status_importacao = 'erro'
+            prova.mensagem_importacao = str(erro)
+            prova.data_processamento = None
+            prova.save(update_fields=[
+                'status_importacao',
+                'mensagem_importacao',
+                'data_processamento',
+            ])
+            messages.error(
+                request,
+                'Ocorreu um erro durante o processamento da prova. '
                 'Verifique os detalhes.'
             )
+            return redirect('provas:detalhe', prova_id=prova.id)
 
-            return redirect(
-                'provas:detalhe',
-                prova_id=prova.id
-            )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.10 — PREPARA AS QUESTÕES
-        # -----------------------------------------------------
-
-        questoes_preparadas = (
-            preparar_questoes_para_importacao(
-                questoes,
-                gabarito
-            )
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.11 — SALVA AS QUESTÕES NO BANCO
-        # -----------------------------------------------------
-
-        quantidade = importar_questoes_no_banco(
-            prova,
-            questoes_preparadas
-        )
-
-        # -----------------------------------------------------
-        # SEÇÃO 4.12 — SUCESSO
-        # -----------------------------------------------------
-
-        messages.success(
-            request,
-            f'Prova processada com sucesso! '
+        mensagem_sucesso = (
+            'Prova processada! '
             f'{quantidade} questões foram importadas.'
         )
 
-    except Exception as erro:
+        if resultado_imagens:
+            mensagem_sucesso += (
+                f' {resultado_imagens["criadas"]} imagens foram extraídas'
+                f' e {sugestoes_imagens} sugestões de associação criadas.'
+            )
 
-        # -----------------------------------------------------
-        # SEÇÃO 4.13 — TRATAMENTO DE ERRO
-        # -----------------------------------------------------
+        messages.success(request, mensagem_sucesso)
 
-        # Marca a prova como erro.
-        prova.status_importacao = 'erro'
+        if problemas:
+            messages.warning(
+                request,
+                f'{quantidade} questões foram importadas, mas '
+                f'{len(problemas)} problema(s) foi(ram) encontrado(s). '
+                'Confira os detalhes na página da prova.'
+            )
 
-        # Salva a mensagem técnica do erro.
-        prova.mensagem_importacao = str(
-            erro
+        if mensagem_imagens:
+            messages.warning(request, mensagem_imagens)
+
+        return redirect('provas:detalhe', prova_id=prova.id)
+
+
+# =========================================================
+# SEÇÃO 5 — REVISÃO DAS IMAGENS
+# =========================================================
+
+@desenvolvedor_required
+def revisar_imagens(request, prova_id):
+    """
+    Mostra as imagens extraídas para revisão e associação manual.
+    """
+    prova = get_object_or_404(Prova, id=prova_id)
+
+    imagens = (
+        prova.imagens
+        .prefetch_related('associacoes__questao__disciplina')
+        .order_by('pagina', 'indice_pagina', 'id')
+    )
+
+    questoes = (
+        prova.questoes
+        .select_related('disciplina')
+        .order_by('numero', 'idioma')
+    )
+
+    pendentes = (
+        prova.imagens
+        .filter(ignorada=False)
+        .annotate(
+            tem_confirmacao=Exists(
+                ImagemQuestao.objects.filter(
+                    imagem=OuterRef('pk'),
+                    confirmada=True,
+                )
+            )
         )
+        .filter(tem_confirmacao=False)
+        .count()
+    )
 
-        # Atualiza o banco.
-        prova.save(
-            update_fields=[
-                'status_importacao',
-                'mensagem_importacao'
-            ]
-        )
+    return render(
+        request,
+        'provas/imagens.html',
+        {
+            'prova': prova,
+            'imagens': imagens,
+            'questoes': questoes,
+            'pendentes': pendentes,
+        }
+    )
 
-        # Mostra uma mensagem simples para o usuário.
+
+# =========================================================
+# SEÇÃO 6 — EXTRAIR IMAGENS DE UMA PROVA JÁ PROCESSADA
+# =========================================================
+
+@desenvolvedor_required
+def extrair_imagens(request, prova_id):
+    """
+    Extrai/reprocessa apenas as imagens de uma prova já importada.
+    """
+    if request.method != 'POST':
         messages.error(
             request,
-            'Ocorreu um erro durante o processamento da prova.'
+            'A extração de imagens deve ser iniciada pelo botão da plataforma.'
+        )
+        return redirect('provas:detalhe', prova_id=prova_id)
+
+    prova = get_object_or_404(Prova, id=prova_id)
+
+    if not prova.arquivo_pdf:
+        messages.error(request, 'Esta prova não possui um PDF.')
+        return redirect('provas:detalhe', prova_id=prova.id)
+
+    try:
+        resultado = extrair_e_registrar_imagens(prova)
+    except Exception as erro:
+        messages.error(
+            request,
+            f'Não foi possível extrair as imagens: {erro}'
+        )
+        return redirect('provas:detalhe', prova_id=prova.id)
+
+    try:
+        sugestoes = gerar_sugestoes_associacao(prova)
+    except Exception as erro:
+        sugestoes = 0
+        messages.warning(
+            request,
+            'As imagens foram extraídas, mas não foi possível gerar '
+            f'as sugestões automáticas: {erro}'
         )
 
-    # Volta para a página da prova.
-    return redirect(
-        'provas:detalhe',
-        prova_id=prova.id
+    messages.success(
+        request,
+        f'{resultado["extraidas"]} imagens encontradas, '
+        f'{resultado["criadas"]} novas e '
+        f'{resultado["reutilizadas"]} já existentes. '
+        f'{sugestoes} sugestões de associação criadas.'
     )
+
+    return redirect('provas:revisar_imagens', prova_id=prova.id)
+
+
+# =========================================================
+# SEÇÃO 7 — AÇÕES DE REVISÃO DAS IMAGENS
+# =========================================================
+
+@desenvolvedor_required
+def acao_imagem(request, prova_id):
+    """
+    Executa as ações POST da tela de revisão de imagens.
+    """
+    prova = get_object_or_404(Prova, id=prova_id)
+
+    if request.method != 'POST':
+        messages.error(
+            request,
+            'As ações de imagem devem ser enviadas pelo formulário da revisão.'
+        )
+        return redirect('provas:revisar_imagens', prova_id=prova.id)
+
+    acao = request.POST.get('acao', '')
+
+    if acao == 'associar':
+        imagem = get_object_or_404(
+            ImagemProva,
+            id=request.POST.get('imagem_id'),
+            prova=prova,
+        )
+        questao_id = request.POST.get('questao_id')
+
+        if not questao_id:
+            messages.error(
+                request,
+                'Selecione uma questão para associar à imagem.'
+            )
+            return redirect('provas:revisar_imagens', prova_id=prova.id)
+
+        questao = get_object_or_404(
+            prova.questoes,
+            id=questao_id,
+        )
+
+        associar_imagem(
+            imagem,
+            questao,
+            origem='manual',
+            confirmar=True,
+        )
+        messages.success(
+            request,
+            f'Imagem associada manualmente à questão {questao.numero}.'
+        )
+
+    elif acao == 'confirmar':
+        associacao = get_object_or_404(
+            ImagemQuestao,
+            id=request.POST.get('associacao_id'),
+            imagem__prova=prova,
+        )
+        confirmar_associacao(associacao)
+        messages.success(
+            request,
+            'Sugestão confirmada e imagem liberada no simulado.'
+        )
+
+    elif acao == 'remover':
+        associacao = get_object_or_404(
+            ImagemQuestao,
+            id=request.POST.get('associacao_id'),
+            imagem__prova=prova,
+        )
+        questao = associacao.questao
+        remover_associacao(associacao)
+        messages.success(
+            request,
+            f'Associação com a questão {questao.numero} removida.'
+        )
+
+    elif acao == 'ignorar':
+        imagem = get_object_or_404(
+            ImagemProva,
+            id=request.POST.get('imagem_id'),
+            prova=prova,
+        )
+
+        if ignorar_imagem(imagem, True):
+            messages.success(request, 'Imagem ignorada na revisão.')
+        else:
+            messages.error(
+                request,
+                'Remova a associação confirmada antes de ignorar esta imagem.'
+            )
+
+    elif acao == 'reativar':
+        imagem = get_object_or_404(
+            ImagemProva,
+            id=request.POST.get('imagem_id'),
+            prova=prova,
+        )
+        ignorar_imagem(imagem, False)
+        messages.success(request, 'Imagem reativada na revisão.')
+
+    elif acao == 'confirmar_sugestoes':
+        quantidade = confirmar_todas_sugestoes(prova)
+        messages.success(
+            request,
+            f'{quantidade} sugestões foram confirmadas.'
+        )
+
+    else:
+        messages.error(request, 'Ação de imagem desconhecida.')
+
+    return redirect('provas:revisar_imagens', prova_id=prova.id)
+
+
+# =========================================================
+# SEÇÃO 8 — IMPRESSÃO DA PROVA COM IMAGENS
+# =========================================================
+
+@desenvolvedor_required
+def imprimir(request, prova_id):
+    """
+    Exibe uma versão da prova preparada para impressão.
+    """
+    prova = get_object_or_404(Prova, id=prova_id)
+
+    questoes = list(
+        prova.questoes
+        .select_related('disciplina')
+        .prefetch_related(
+            'alternativas',
+            'imagens_associadas__imagem',
+            'textos_base_vinculados__texto_base',
+        )
+        .order_by('numero', 'idioma')
+    )
+
+    distribuir_textos_base(questoes)
+
+    return render(
+        request,
+        'provas/imprimir.html',
+        {
+            'prova': prova,
+            'questoes': questoes,
+        }
+    )
+
+
+# =========================================================
+# SEÇÃO 9 — GESTÃO ADMINISTRATIVA DA PROVA
+# =========================================================
+
+def _caminhos_de_arquivos_da_prova(prova):
+    """
+    Lista os nomes de arquivo no storage que pertencem à prova:
+    PDFs (incluindo os em espanhol) e todas as imagens extraídas.
+    """
+
+    nomes = []
+
+    for campo in (
+        'arquivo_pdf',
+        'arquivo_gabarito',
+        'arquivo_pdf_espanhol',
+        'arquivo_gabarito_espanhol',
+    ):
+        nome = getattr(prova, campo).name
+        if nome:
+            nomes.append(nome)
+
+    for imagem in prova.imagens.all():
+        if imagem.arquivo.name:
+            nomes.append(imagem.arquivo.name)
+
+    return nomes
+
+
+@desenvolvedor_required
+@require_POST
+def ocultar(request, prova_id):
+    """
+    Oculta a prova da plataforma.
+
+    A prova continua salva no banco e visível na área
+    administrativa; apenas deixa de ser oferecida a alunos
+    (listagens e novos simulados).
+    """
+
+    prova = get_object_or_404(Prova, id=prova_id)
+
+    prova.ativa = False
+    prova.save(update_fields=['ativa'])
+
+    messages.success(
+        request,
+        f'A prova "{prova.nome}" foi ocultada. '
+        'Ela continua salva e pode ser reexibida a qualquer momento.'
+    )
+
+    return redirect('provas:lista')
+
+
+@desenvolvedor_required
+@require_POST
+def reexibir(request, prova_id):
+    """
+    Reexibe uma prova que foi ocultada.
+    """
+
+    prova = get_object_or_404(Prova, id=prova_id)
+
+    prova.ativa = True
+    prova.save(update_fields=['ativa'])
+
+    messages.success(
+        request,
+        f'A prova "{prova.nome}" voltou a ficar visível na plataforma.'
+    )
+
+    return redirect('provas:lista')
+
+
+@desenvolvedor_required
+def excluir(request, prova_id):
+    """
+    Exclui definitivamente uma prova, com confirmação.
+
+    A página de confirmação mostra exatamente o que será removido.
+    Se existirem tentativas de simulados vinculadas, a exclusão é
+    bloqueada: o histórico dos alunos não pode ser perdido — nesse
+    caso o administrador deve ocultar a prova.
+    """
+
+    prova = get_object_or_404(Prova, id=prova_id)
+
+    # Relacionamentos que serão avaliados antes da exclusão.
+    totais = {
+        'questoes': prova.questoes.count(),
+        'alternativas': Alternativa.objects.filter(
+            questao__prova=prova
+        ).count(),
+        'imagens': prova.imagens.count(),
+        'textos_base': prova.textos_base.count(),
+        'tentativas': prova.simulados.count(),
+        'respostas': RespostaSimulado.objects.filter(
+            simulado__prova=prova
+        ).count(),
+    }
+
+    if request.method == 'POST':
+
+        # Histórico de alunos impede a exclusão definitiva. A
+        # verificação é repetida aqui para evitar corridas entre a
+        # confirmação e a execução.
+        if totais['tentativas'] > 0:
+            messages.error(
+                request,
+                f'A prova "{prova.nome}" não pode ser excluída: '
+                f'existem {totais["tentativas"]} tentativa(s) de '
+                'simulado vinculada(s). Excluir a prova apagaria o '
+                'histórico dos alunos. Oculte a prova para retirá-la '
+                'da plataforma preservando o histórico.'
+            )
+            return redirect('provas:lista')
+
+        # Arquivos no storage são coletados antes da exclusão, pois
+        # os registros somem junto com a prova.
+        nomes_de_arquivos = _caminhos_de_arquivos_da_prova(prova)
+
+        try:
+
+            # Transação: a exclusão acontece por completo ou não
+            # acontece (o banco também protege Simulado/Resposta
+            # com on_delete=PROTECT).
+            with transaction.atomic():
+                prova.delete()
+
+        except ProtectedError:
+            messages.error(
+                request,
+                f'A prova "{prova.nome}" não pode ser excluída: '
+                'existem registros vinculados (simulados de alunos). '
+                'Oculte a prova para retirá-la da plataforma '
+                'preservando o histórico.'
+            )
+            return redirect('provas:lista')
+
+        # Remoção dos arquivos depois do commit: uma falha aqui não
+        # desfaz a exclusão no banco; arquivos remanescentes ficam
+        # órfãos e podem ser limpos manualmente.
+        for nome in nomes_de_arquivos:
+            try:
+                default_storage.delete(nome)
+            except Exception:
+                pass
+
+        messages.success(
+            request,
+            f'A prova "{prova.nome}" foi excluída definitivamente.'
+        )
+
+        return redirect('provas:lista')
+
+    # GET: página de confirmação com o resumo do que será removido.
+    return render(
+        request,
+        'provas/excluir.html',
+        {
+            'prova': prova,
+            'totais': totais,
+        }
+    )
+

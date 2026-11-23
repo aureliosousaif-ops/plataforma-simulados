@@ -1,7 +1,7 @@
 # Ambiente virtual
 venv/
 .venv/
-
+env/
 
 # Python
 __pycache__/
@@ -9,11 +9,28 @@ __pycache__/
 *$py.class
 
 # Django
-db.sqlite3
 *.log
 
-# Variáveis de ambiente
+# Variáveis de ambiente e segredos
 .env
+.env.*
+
+# Banco de dados local e backups
+db.sqlite3
+db.sqlite3.backup
+*.sqlite3
+dados_backup.json
+backup_antes_limpar_usuarios.json
+
+# Exportação de dados para o PostgreSQL do Render (contém hashes de senha)
+dados_producao.json
+backups/
+
+# Backups locais gerados durante correções
+outputs/*.zip
+
+# Diagnósticos, pilotos e relatórios locais (banco, mídia e PDFs do INEP)
+outputs/
 
 # Arquivos enviados
 media/
@@ -25,9 +42,6 @@ media/
 # Sistema
 Thumbs.db
 .DS_Store
-
-# Backup do banco de dados
-dados_backup.json
 
 # Arquivos estáticos gerados pelo collectstatic
 staticfiles/

@@ -9,6 +9,12 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import Perfil
 
 
+# Mensagem única para nome de usuário já cadastrado.
+USERNAME_EM_USO = (
+    'Este nome de usuário já está em uso. Escolha outro.'
+)
+
+
 # =========================================================
 # SEÇÃO 1 — FORMULÁRIO DE CADASTRO
 # =========================================================
@@ -52,9 +58,16 @@ class CadastroForm(UserCreationForm):
     # OBJETIVO
     # ---------------------------------------------------------
 
+    # A plataforma é exclusivamente voltada para o ENEM.
+    # As demais opções continuam disponíveis no admin para
+    # preservar os dados históricos, mas não são exibidas
+    # no cadastro público.
     objetivo = forms.ChoiceField(
-        choices=Perfil.OBJETIVOS,
+        choices=[
+            ('enem', 'ENEM'),
+        ],
         required=False,
+        initial='enem',
         label='Objetivo de estudo'
     )
 
@@ -112,17 +125,35 @@ class CadastroForm(UserCreationForm):
             'username': 'Nome de usuário'
         }
 
+        error_messages = {
+            'username': {
+                'unique': USERNAME_EM_USO,
+            },
+        }
+
     # =========================================================
-    # VALIDAÇÃO DA SENHA
+    # NOME DE USUÁRIO
     # =========================================================
 
-    def validate_password(self, password, user=None):
+    def clean_username(self):
         """
-        Mantém a senha sem os validadores extras
-        configurados pelo Django.
+        Impede o cadastro de um nome de usuário já existente.
+
+        A comparação ignora maiúsculas/minúsculas, pois dois nomes
+        que diferem apenas na caixa confundem o login do usuário.
         """
 
-        return
+        username = self.cleaned_data.get('username')
+
+        if not username:
+            return username
+
+        # Verifica antes de tentar salvar no banco.
+        if User.objects.filter(username__iexact=username).exists():
+
+            raise forms.ValidationError(USERNAME_EM_USO)
+
+        return username
 
     # =========================================================
     # CONFIRMAÇÃO DA SENHA
@@ -172,17 +203,15 @@ class CadastroForm(UserCreationForm):
             # Salva o usuário.
             usuario.save()
 
-            # Cria automaticamente o perfil como aluno.
-            Perfil.objects.create(
+            # Atualiza o perfil criado pelo signal.
+            perfil, _ = Perfil.objects.get_or_create(
                 usuario=usuario,
-                tipo='aluno',
-                idade=self.cleaned_data.get('idade'),
-                escolaridade=self.cleaned_data.get(
-                    'escolaridade'
-                ),
-                objetivo=self.cleaned_data.get(
-                    'objetivo'
-                )
             )
+
+            perfil.tipo = 'aluno'
+            perfil.idade = self.cleaned_data.get('idade')
+            perfil.escolaridade = self.cleaned_data.get('escolaridade')
+            perfil.objetivo = self.cleaned_data.get('objetivo')
+            perfil.save()
 
         return usuario

@@ -1,0 +1,55 @@
+# ============================================================
+# BLUEPRINT DO RENDER PARA O EXAMIX
+# ============================================================
+# Cria o banco PostgreSQL e o serviço web Django.
+# Documentação: DEPLOY_RENDER.md
+# ============================================================
+
+databases:
+  - name: examix-db
+    databaseName: examix
+    user: examix
+    plan: free
+    region: oregon
+    # Versão estável suportada pelo Django 6.1.
+    postgresMajorVersion: "17"
+
+services:
+  - type: web
+    name: examix
+    runtime: python
+    plan: free
+    region: oregon
+    branch: corrigir_processar_provas
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+    healthCheckPath: /
+    autoDeployTrigger: commit
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.7"
+
+      # Gerado pelo Render; nunca fica no repositório.
+      - key: SECRET_KEY
+        generateValue: true
+
+      - key: DEBUG
+        value: "False"
+
+      # O domínio real (RENDER_EXTERNAL_HOSTNAME) é incluído
+      # automaticamente pelo settings.py.
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com,localhost,127.0.0.1"
+
+      - key: DATABASE_URL
+        fromDatabase:
+          name: examix-db
+          property: connectionString
+
+      - key: WEB_CONCURRENCY
+        value: "2"
+
+      # Nenhuma variável é pedida na criação do Blueprint.
+      # Superusuário e login com Google podem ser adicionados
+      # depois em examix -> Environment (veja DEPLOY_RENDER.md).

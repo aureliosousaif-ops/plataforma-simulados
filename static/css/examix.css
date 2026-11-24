@@ -904,6 +904,455 @@ main {
 
 
 /* =========================================================
+   17.1 ORGANIZAÇÃO DAS PROVAS POR DIA (1º / 2º)
+   ========================================================= */
+
+.examix-dias-page {
+    padding: 46px 0 70px;
+}
+
+.examix-dias-header h1 {
+    font-size: clamp(2rem, 4vw, 2.6rem);
+}
+
+.examix-dia-categorias {
+    align-items: stretch;
+}
+
+.examix-dia-card {
+    animation: examix-dia-fade-in 0.35s ease both;
+
+    text-decoration: none;
+
+    color: inherit;
+}
+
+.examix-dia-card:nth-child(2) {
+    animation-delay: 0.07s;
+}
+
+.examix-dia-card:hover {
+    text-decoration: none;
+
+    color: inherit;
+}
+
+@keyframes examix-dia-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.examix-dia-card-etiqueta {
+    display: inline-block;
+
+    margin-bottom: 10px;
+
+    color: var(--examix-blue);
+
+    font-size: 0.72rem;
+
+    font-weight: 800;
+
+    letter-spacing: 1.4px;
+
+    text-transform: uppercase;
+}
+
+.examix-dia-card-botao {
+    pointer-events: none;
+}
+
+/* Navegação entre categorias */
+
+.examix-dia-navegacao {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 14px;
+
+    margin-bottom: 24px;
+}
+
+.examix-voltar-link {
+    color: var(--examix-muted);
+
+    font-size: 0.9rem;
+
+    font-weight: 700;
+
+    transition: color 0.2s ease;
+}
+
+.examix-voltar-link:hover {
+    color: var(--examix-blue);
+
+    text-decoration: none;
+}
+
+.examix-dia-tabs {
+    display: inline-flex;
+
+    gap: 4px;
+
+    padding: 5px;
+
+    background: #eef2ff;
+
+    border-radius: 12px;
+}
+
+.examix-dia-tab {
+    padding: 9px 16px;
+
+    border-radius: 9px;
+
+    color: var(--examix-muted);
+
+    font-size: 0.9rem;
+
+    font-weight: 700;
+
+    transition:
+        color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.examix-dia-tab:hover {
+    color: var(--examix-blue);
+
+    text-decoration: none;
+}
+
+.examix-dia-tab.is-active {
+    background: var(--examix-white);
+
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+
+    color: var(--examix-blue);
+}
+
+/* Cabeçalho da categoria selecionada */
+
+.examix-dia-detalhe {
+    display: flex;
+
+    align-items: center;
+
+    gap: 16px;
+
+    margin-bottom: 30px;
+
+    padding: 20px 22px;
+
+    background: linear-gradient(135deg, #eff6ff, #eef2ff);
+
+    border: 1px solid #dbeafe;
+
+    border-radius: 18px;
+}
+
+.examix-dia-detalhe-icono {
+    display: flex;
+
+    width: 54px;
+    height: 54px;
+
+    flex-shrink: 0;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background: var(--examix-white);
+
+    border-radius: 14px;
+
+    font-size: 1.6rem;
+}
+
+.examix-dia-detalhe-texto h2 {
+    margin: 0;
+
+    color: var(--examix-dark);
+
+    font-size: 1.4rem;
+
+    font-weight: 800;
+}
+
+.examix-dia-detalhe-texto p {
+    margin: 4px 0 0;
+
+    color: var(--examix-muted);
+}
+
+/* Provas agrupadas por ano */
+
+.examix-dia-grupo {
+    margin-bottom: 32px;
+}
+
+.examix-dia-grupo-titulo {
+    margin-bottom: 14px;
+
+    padding-bottom: 10px;
+
+    border-bottom: 1px solid var(--examix-border);
+
+    color: var(--examix-dark);
+
+    font-size: 1.05rem;
+
+    font-weight: 800;
+}
+
+.examix-dia-grupo-lista {
+    display: grid;
+
+    gap: 14px;
+}
+
+.examix-prova-card {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 18px;
+
+    padding: 22px 24px;
+
+    background: var(--examix-white);
+
+    border: 1px solid var(--examix-border);
+
+    border-radius: 16px;
+
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+
+    animation: examix-dia-fade-in 0.3s ease both;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.examix-prova-card:hover {
+    transform: translateY(-2px);
+
+    border-color: rgba(37, 99, 235, 0.25);
+
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.examix-prova-card.is-indisponivel {
+    background: #f8fafc;
+}
+
+.examix-prova-card-corpo {
+    flex: 1;
+}
+
+.examix-prova-card-topo {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+.examix-prova-card-topo h4 {
+    flex: 1 1 260px;
+
+    margin: 0;
+
+    color: var(--examix-dark);
+
+    font-size: 1.1rem;
+
+    font-weight: 800;
+}
+
+.examix-prova-ano {
+    padding: 5px 10px;
+
+    background: #f1f5f9;
+
+    border-radius: 8px;
+
+    color: var(--examix-muted);
+
+    font-size: 0.82rem;
+
+    font-weight: 700;
+}
+
+.examix-prova-status {
+    padding: 5px 11px;
+
+    border-radius: 999px;
+
+    font-size: 0.78rem;
+
+    font-weight: 700;
+}
+
+.examix-prova-status.is-disponivel {
+    background: #dcfce7;
+
+    color: #166534;
+}
+
+.examix-prova-status.is-indisponivel {
+    background: #fee2e2;
+
+    color: #991b1b;
+}
+
+.examix-prova-descricao {
+    margin: 10px 0 12px;
+
+    color: var(--examix-muted);
+
+    line-height: 1.6;
+}
+
+.examix-prova-meta {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 8px;
+}
+
+.examix-prova-meta span {
+    padding: 6px 10px;
+
+    background: #f8fafc;
+
+    border: 1px solid var(--examix-border);
+
+    border-radius: 8px;
+
+    color: var(--examix-muted);
+
+    font-size: 0.82rem;
+}
+
+.examix-prova-motivo {
+    background: #fef2f2 !important;
+
+    border-color: #fecaca !important;
+
+    color: #991b1b !important;
+}
+
+.examix-prova-card-acao {
+    display: flex;
+
+    min-width: 230px;
+
+    flex-direction: column;
+
+    justify-content: center;
+}
+
+.examix-prova-botao {
+    min-height: 44px;
+
+    font-size: 0.92rem;
+}
+
+.examix-prova-bloqueada {
+    align-items: center;
+
+    gap: 6px;
+
+    padding: 14px;
+
+    background: var(--examix-white);
+
+    border: 1px dashed var(--examix-border);
+
+    border-radius: 10px;
+
+    color: var(--examix-muted);
+
+    font-size: 0.85rem;
+
+    text-align: center;
+}
+
+.examix-dias-aviso {
+    margin-top: 20px;
+
+    padding: 30px;
+}
+
+@media (max-width: 768px) {
+
+    .examix-dia-navegacao {
+        flex-direction: column;
+
+        align-items: flex-start;
+    }
+
+    .examix-dia-tabs {
+        width: 100%;
+    }
+
+    .examix-dia-tab {
+        flex: 1;
+
+        padding: 9px 10px;
+
+        text-align: center;
+    }
+
+    .examix-dia-detalhe {
+        padding: 16px;
+    }
+
+    .examix-prova-card {
+        padding: 18px;
+    }
+
+    .examix-prova-card-acao {
+        width: 100%;
+
+        min-width: 0;
+    }
+
+    .examix-dia-grupo-titulo {
+        font-size: 1rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .examix-dia-card,
+    .examix-prova-card {
+        animation: none;
+    }
+}
+
+
+/* =========================================================
    18. TELA DE RESPONDER SIMULADO
    ========================================================= */
 

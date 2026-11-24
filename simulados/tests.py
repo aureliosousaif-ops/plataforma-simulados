@@ -537,8 +537,10 @@ class IniciarSimuladoTestCase(TestCase):
         )
 
     def test_lista_exibe_total_real_e_seletor_de_idioma(self):
+        # A lista agora abre com as categorias; as provas aparecem
+        # depois de escolher o dia.
         response = self.client.get(
-            reverse('simulados:lista')
+            reverse('simulados:lista') + '?dia=1'
         )
         prova = response.context['provas'][0]
 
@@ -555,7 +557,7 @@ class IniciarSimuladoTestCase(TestCase):
         ).delete()
 
         response = self.client.get(
-            reverse('simulados:lista')
+            reverse('simulados:lista') + '?dia=1'
         )
         prova = response.context['provas'][0]
 

@@ -30,8 +30,8 @@
 
     </div>
 
-    <!-- Filtro de visibilidade -->
-    <div class="mb-4">
+    <!-- Filtros de visibilidade e de dia -->
+    <div class="d-flex flex-wrap gap-3 mb-4">
 
         <div
             class="btn-group examix-filtro-visibilidade"
@@ -40,24 +40,53 @@
         >
 
             <a
-                href="?visibilidade=todas"
+                href="?visibilidade=todas{% if filtro_dia != 'todas' %}&amp;dia={{ filtro_dia }}{% endif %}"
                 class="btn btn-outline-primary{% if visibilidade == 'todas' %} active{% endif %}"
             >
                 Todas
             </a>
 
             <a
-                href="?visibilidade=visiveis"
+                href="?visibilidade=visiveis{% if filtro_dia != 'todas' %}&amp;dia={{ filtro_dia }}{% endif %}"
                 class="btn btn-outline-primary{% if visibilidade == 'visiveis' %} active{% endif %}"
             >
                 Visíveis
             </a>
 
             <a
-                href="?visibilidade=ocultas"
+                href="?visibilidade=ocultas{% if filtro_dia != 'todas' %}&amp;dia={{ filtro_dia }}{% endif %}"
                 class="btn btn-outline-primary{% if visibilidade == 'ocultas' %} active{% endif %}"
             >
                 Ocultas
+            </a>
+
+        </div>
+
+        <div
+            class="btn-group examix-filtro-dia"
+            role="group"
+            aria-label="Filtro do dia da prova"
+        >
+
+            <a
+                href="?dia=todas{% if visibilidade != 'todas' %}&amp;visibilidade={{ visibilidade }}{% endif %}"
+                class="btn btn-outline-primary{% if filtro_dia == 'todas' %} active{% endif %}"
+            >
+                Todas
+            </a>
+
+            <a
+                href="?dia=1{% if visibilidade != 'todas' %}&amp;visibilidade={{ visibilidade }}{% endif %}"
+                class="btn btn-outline-primary{% if filtro_dia == '1' or filtro_dia == 'd1' %} active{% endif %}"
+            >
+                1º Dia
+            </a>
+
+            <a
+                href="?dia=2{% if visibilidade != 'todas' %}&amp;visibilidade={{ visibilidade }}{% endif %}"
+                class="btn btn-outline-primary{% if filtro_dia == '2' or filtro_dia == 'd2' %} active{% endif %}"
+            >
+                2º Dia
             </a>
 
         </div>
@@ -99,6 +128,25 @@
                             <p class="mb-2">
                                 <strong>Ano:</strong>
                                 {{ prova.ano }}
+                            </p>
+
+                            <!-- Dia da prova -->
+                            <p class="mb-2">
+                                <strong>Dia:</strong>
+
+                                {% if prova.dia == 1 %}
+                                    <span class="badge text-bg-primary">
+                                        1º Dia
+                                    </span>
+                                {% elif prova.dia == 2 %}
+                                    <span class="badge text-bg-info">
+                                        2º Dia
+                                    </span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary">
+                                        Não informado
+                                    </span>
+                                {% endif %}
                             </p>
 
                             <!-- Estado atual da prova -->

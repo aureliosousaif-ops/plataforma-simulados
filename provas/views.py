@@ -25,6 +25,7 @@ from .models import (
     distribuir_textos_base,
 )
 from .forms import ProvaForm
+from .dias import normalizar_dia
 
 # Funções responsáveis pelo processamento automático dos PDFs.
 from .importador import (
@@ -88,6 +89,14 @@ def lista(request):
     elif visibilidade == 'ocultas':
         provas = provas.filter(ativa=False)
 
+    # Filtro pelo dia da prova. O valor "todas" mantém o comportamento
+    # anterior e também aceita os aliases d1/d2 usados na área pública.
+    filtro_dia = request.GET.get('dia', 'todas')
+    dia = normalizar_dia(filtro_dia)
+
+    if dia:
+        provas = provas.filter(dia=dia)
+
     # Envia as provas para o template.
     return render(
         request,
@@ -95,6 +104,7 @@ def lista(request):
         {
             'provas': provas,
             'visibilidade': visibilidade,
+            'filtro_dia': filtro_dia,
         }
     )
 

@@ -8,6 +8,12 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from provas.dias import (
+    CATEGORIAS_DIA,
+    inferir_dia,
+    normalizar_dia,
+    obter_categoria,
+)
 from provas.models import (
     Alternativa,
     Prova,
@@ -47,24 +53,32 @@ def _idiomas_disponiveis(questoes):
 
 def lista(request):
     """
-    Mostra as provas disponíveis.
+    Mostra as duas categorias do ENEM (1º e 2º dia).
 
-    Esta página é pública.
-    Qualquer visitante pode visualizar
-    os simulados disponíveis sem fazer login.
+    Sem filtro, exibe os cards das categorias. Com ``?dia=1`` ou
+    ``?dia=2``, exibe somente as provas daquele dia, em ordem
+    decrescente de ano.
+
+    Esta página é pública. Qualquer visitante pode visualizar os
+    simulados disponíveis sem fazer login.
     """
 
-    # Busca somente provas ativas, já processadas e do ENEM.
-    provas = list(
+    dia_selecionado = normalizar_dia(request.GET.get('dia'))
+
+    # Provas do ENEM visíveis ao público. Provas ocultas (ativa=False)
+    # continuam invisíveis para o aluno, como antes; as demais podem
+    # aparecer como "Indisponível" quando ainda não foram processadas.
+    # A ordenação padrão do banco é -ano, nome; repetimos aqui para
+    # garantir a ordem decrescente de ano.
+    registros = list(
         Prova.objects.filter(
+            tipo='enem',
             ativa=True,
-            status_importacao='processada',
-            tipo='enem'
-        )
+        ).order_by('-ano', 'nome')
     )
 
     # Prepara os dados exibidos em cada card.
-    for prova in provas:
+    for prova in registros:
 
         # Busca as questões ativas da prova.
         questoes = list(
@@ -84,12 +98,105 @@ def lista(request):
             questoes
         )
 
-    # Exibe a lista de provas.
+        # Dia efetivo: o campo do banco tem prioridade. Para provas
+        # antigas sem dia, a inferência usa chave oficial, arquivos,
+        # faixa de questões e só depois o nome/descrição.
+        numeros = list(
+            prova.questoes.values_list('numero', flat=True)
+        )
+        prova.dia_efetivo = prova.dia or inferir_dia(
+            prova,
+            numeros,
+        )
+
+        # Disponibilidade: mesma regra usada pela view iniciar().
+        prova.disponivel = (
+            prova.status_importacao == 'processada'
+            and prova.total_questoes > 0
+        )
+
+        prova.motivo_indisponivel = None
+        if prova.status_importacao != 'processada':
+            prova.motivo_indisponivel = (
+                'Importação ' + prova.get_status_importacao_display().lower()
+            )
+        elif prova.total_questoes == 0:
+            prova.motivo_indisponivel = 'Sem questões disponíveis'
+
+    disponiveis = [
+        prova for prova in registros
+        if prova.disponivel
+    ]
+
+    # Cards das categorias: contam apenas provas que podem ser feitas.
+    categorias = []
+
+    for categoria in CATEGORIAS_DIA:
+        provas_categoria = [
+            prova for prova in disponiveis
+            if prova.dia_efetivo == categoria['numero']
+        ]
+
+        anos = []
+        for prova in provas_categoria:
+            if prova.ano not in anos:
+                anos.append(prova.ano)
+
+        item = dict(categoria)
+        item['total'] = len(provas_categoria)
+        item['anos'] = anos
+        item['url'] = f"?dia={categoria['slug']}"
+
+        categorias.append(item)
+
+    grupos = []
+
+    if dia_selecionado:
+        # Mantém as provas indisponíveis visíveis (com o selo
+        # "Indisponível"), mas sem botão de início.
+        provas_filtradas = [
+            prova for prova in registros
+            if prova.dia_efetivo == dia_selecionado
+        ]
+
+        for prova in provas_filtradas:
+            if not grupos or grupos[-1]['ano'] != prova.ano:
+                grupos.append({
+                    'ano': prova.ano,
+                    'provas': [],
+                })
+
+            grupos[-1]['provas'].append(prova)
+
+        for grupo in grupos:
+            # Disponíveis primeiro dentro de cada ano.
+            grupo['provas'].sort(
+                key=lambda prova: (
+                    not prova.disponivel,
+                    prova.nome,
+                )
+            )
+
+        # Compatibilidade: o contexto "provas" continua existindo e,
+        # no filtro, traz somente as provas do dia selecionado.
+        provas_contexto = provas_filtradas
+        categoria_selecionada = obter_categoria(dia_selecionado)
+    else:
+        provas_contexto = disponiveis
+        categoria_selecionada = None
+
     return render(
         request,
         'simulados/lista.html',
         {
-            'provas': provas
+            # Contexto histórico, usado por testes e por integrações
+            # que esperam apenas as provas realizáveis.
+            'provas': provas_contexto,
+            'categorias': categorias,
+            'categoria_selecionada': categoria_selecionada,
+            'dia_selecionado': dia_selecionado,
+            'grupos': grupos,
+            'total_disponiveis': len(disponiveis),
         }
     )
 

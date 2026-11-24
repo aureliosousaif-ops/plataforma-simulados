@@ -61,6 +61,19 @@
 
             {% endif %}
 
+            <!-- Dia da prova -->
+            <p class="mb-2">
+                <strong>Dia:</strong>
+
+                {% if prova.dia == 1 %}
+                    <span class="badge text-bg-primary">1º Dia</span>
+                {% elif prova.dia == 2 %}
+                    <span class="badge text-bg-info">2º Dia</span>
+                {% else %}
+                    <span class="badge text-bg-secondary">Não informado</span>
+                {% endif %}
+            </p>
+
             <!-- Status -->
             <p class="mb-3">
 

@@ -90,6 +90,27 @@
             {% endif %}
         </div>
 
+        <!-- Dia da prova -->
+        <div class="mb-3">
+            <label for="{{ form.dia.id_for_label }}" class="form-label">
+                {{ form.dia.label }}
+            </label>
+
+            {{ form.dia }}
+
+            {% if form.dia.help_text %}
+                <div class="form-text">
+                    {{ form.dia.help_text }}
+                </div>
+            {% endif %}
+
+            {% if form.dia.errors %}
+                <div class="text-danger small mt-1">
+                    {{ form.dia.errors }}
+                </div>
+            {% endif %}
+        </div>
+
         <!-- Descrição -->
         <div class="mb-3">
             <label for="{{ form.descricao.id_for_label }}" class="form-label">
